@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+"""texplain
+  Create a clean output directory with only included files/citations.
+
+  This script provides the option to copy figures to the same folder as the main TeX-file
+  (--flatten-figures). If that option is used the file-names are modified as follows:
+
+      example/path/to/figure -> example_path_to_figure
+
+  Similar for `--flatting-scripts`.
+
+Usage:
+  texplain [options] <input.tex> <output-directory>
+
+Options:
+      --clean             Cleans output directory.
+      --copy-bbl          Copy existing bbl-files.
+      --flatten-figures   Copy figures to the same folder as the main TeX-file.
+      --flatten-scripts   Same as `flatten-figures` for scripts (in "\\lstinputlisting{...}").
+      --version           Show version.
+  -h, --help              Show help.
+
+(c - MIT) T.W.J. de Geus | tom@geus.me | www.geus.me | github.com/tdegeus/texplain
+"""
+
+# ==================================================================================================
+
+import os, re, sys, docopt, click
+
+from shutil import copyfile
+from shutil import rmtree
+
+# ==================================================================================================
+# support functions
+# ==================================================================================================
+
+# extract include commands and their file-names from TeX
+# ------------------------------------------------------
+
+def tex2incl(tex, cmd=r'\includegraphics'):
+
+  # mimic the LaTeX behavior where an extension is automatically added to a
+  # file-name without any extension
+  def filename(name):
+    if   os.path.isfile(name       ): return name
+    elif os.path.isfile(name+'.pdf'): return name+'.pdf'
+    elif os.path.isfile(name+'.png'): return name+'.png'
+    elif os.path.isfile(name+'.jpg'): return name+'.jpg'
+    elif os.path.isfile(name+'.tex'): return name+'.tex'
+    print('Cannot find {0}').format(name)
+
+  # read files in the include-commands
+  include = [i.split('{')[1].split('}')[0] for i in tex.split(cmd)[1:]]
+  files   = [filename(i) for i in include]
+
+  # reduce to unique lists
+  unique_include = []
+  unique_files   = []
+
+  for i,(inc,fil) in enumerate(zip(include,files)):
+    if inc not in include[:i] and fil not in files[:i]:
+      unique_include.append(inc)
+      unique_files  .append(fil)
+
+  # return ( include-command , file-names   )
+  return   ( unique_include  , unique_files )
+
+# flatten file-names and corresponding commands
+# ---------------------------------------------
+
+def flatten(include,files,tex,cmd=r'\includegraphics'):
+
+  # flatten file-names
+  new_files = [i.replace('/','_') for i in files]
+
+  # check uniqueness
+  for ifig,i in enumerate(files):
+    if '/' in i:
+      n = i.replace('/','_')
+      j = 1
+      while True:
+
+        if ifig>0:
+          if not os.path.isfile(n) and n not in new_files[:ifig]: break
+        else:
+          if not os.path.isfile(n): break
+
+        name,ext = os.path.splitext(n)
+        n        = name+'_{0:d}'.format(j)+ext
+        j       += 1
+
+      new_files[ifig] = n
+
+  # convert file-names to commands as they were
+  new_include = [fil.split(inc.split('/')[-1])[0]+inc.split('/')[-1] for inc,fil in zip(include,new_files)]
+
+  # modify names in TeX
+  for f,n in zip(include,new_include):
+    tex = re.sub(r'(%s.*\{)('%cmd+f+r')(\}.*)',r'\1'+n+r'\3',tex)
+
+  return new_files,new_include,tex
+
+# extract citation-names
+# ----------------------
+
+def tex2cite(tex):
+
+  # extract keys from "cite"
+  def extract(string):
+    try   : return list(re.split('([pt])?(\[.*\]\[.*\])?(\{[a-zA-Z0-9\,\-\ ]*\})',string)[3][1:-1].split(','))
+    except: print('Error in interpreting\n {0} ...').format(string[:100])
+
+  # read all keys in "cite", "citet", "citep" commands
+  cite = [extract(i) for i in tex.split(r'\cite')[1:]]
+  cite = list(set([item for sublist in cite for item in sublist]))
+  cite = [i.replace(' ','') for i in cite]
+
+  return cite
+
+# copy (and create path)
+# ----------------------
+
+def cp(orig,dest):
+
+  path = os.path.dirname(dest)
+
+  if not os.path.isdir(path):
+    os.makedirs(path)
+
+  copyfile(orig,dest)
+
+# ==================================================================================================
+
+# parse command-line options/arguments
+args = docopt.docopt(__doc__,version='0.1.0')
+
+# check that the input-file exists
+if not os.path.isfile(args['<input.tex>']):
+  Error('"{0:s}" does not exist'.format(args['<input.tex>']))
+
+# list with files to copy [(source, destination)]
+copy = []
+
+# read information
+# ----------------
+
+# read TeX-file, extract citations
+tex  = open(args['<input.tex>'],'r').read()
+cite = tex2cite(tex)
+
+# check for unsupported features
+if re.search(r'(.*)(\\input\{)(.*)(\})', tex, re.MULTILINE) or re.search(r'(.*)(\\include\{)(.*)(\})', tex, re.MULTILINE):
+  print(r'TeX-files with \input{...} or \include{...} not yet supported')
+  sys.exit(1)
+
+# copy figures/scripts
+# --------------------
+
+for cmd, opt in zip([r'\includegraphics', r'\lstinputlisting'],[args['--flatten-figures'],args['--flatten-scripts']]):
+
+  # extract include-commands and file-names
+  (include,files) = tex2incl(tex, cmd=cmd)
+
+  # set default: retain file-names
+  new_files = [file for file in files]
+
+  # optional: flatten file-names
+  if opt:
+    new_files, new_include, tex = flatten(include, files, tex, cmd='\\'+cmd)
+
+  # copy files
+  for f,n in zip(files,new_files):
+    copy += [(f, os.path.join(args['<output-directory>'],n))]
+
+# copy bibliography
+# -----------------
+
+# read file-name
+bibname = tex.split(r'\bibliography{')[1].split('}')[0]+'.bib'
+
+# extract citations
+bib = list(filter(None,open(bibname,'r').read().split('@')))[1:]
+bib = [i for i in bib if re.split(r'(.*\{)(.*)(,\n.*)',i)[2] in cite]
+bib = '\n@'+'\n@'.join(bib)
+
+# copy: style / class / bst
+# -------------------------
+
+path  = os.path.dirname(args['<input.tex>'])
+path  = '.' if len(path)==0 else path
+files = os.listdir(path)
+
+# set extension to copy
+ext = ['.sty','.cls','.bst']
+if args['--copy-bbl']: ext.append('.bbl')
+
+# find auxiliary files
+aux = []
+for e in ext:
+  aux += [i for i in files if re.match('.*\%s'%e,i)]
+
+# copy files
+for file in aux:
+  copy += [(file,os.path.join(args['<output-directory>'],file))]
+
+# copy figures referenced in style-files
+files = []
+for file in aux:
+  files += tex2incl(open(file,'r').read())[1]
+for file in files:
+  copy += [(file,os.path.join(args['<output-directory>'],file))]
+
+# clean output directory
+# ----------------------
+
+if args['--clean']:
+
+  if os.path.exists(args['<output-directory>']):
+
+    if not click.confirm('Clean "{0:s}" and all its subdirectories?'.format(args['<output-directory>'])):
+      sys.exit(1)
+
+    rmtree(args['<output-directory>'])
+
+# check existence
+# ---------------
+
+if os.path.isdir(args['<output-directory>']):
+
+  overwrite  = [fname for (_, fname) in copy]
+  overwrite += [\
+    os.path.join(args['<output-directory>'],args['<input.tex>']),
+    os.path.join(args['<output-directory>'],bibname),
+  ]
+
+  overwrite = [fname for fname in overwrite if os.path.isfile(fname)]
+
+  if len(overwrite) > 0:
+    if not click.confirm('Overwrites existing:\n' + '\n'.join(overwrite) + '\nContinue?'):
+      sys.exit(1)
+
+# write files
+# -----------
+
+# create output-directory
+if not os.path.isdir(args['<output-directory>']):
+  os.mkdir(args['<output-directory>'])
+
+# write bibliography: only include citations
+open(os.path.join(args['<output-directory>'],bibname),'w').write(bib)
+
+# write TeX
+open(os.path.join(args['<output-directory>'],args['<input.tex>']),'w').write(tex)
+
+# copy files
+for src, dest in copy:
+  cp(src, dest)
