@@ -16,6 +16,7 @@ Options:
       --clean             Cleans output directory.
       --copy-bbl          Copy existing bbl-files.
       --flatten-figures   Copy figures to the same folder as the main TeX-file.
+      --renumber-figures  Same as `flatten-figures` and renames to FigureNUM.ext
       --flatten-scripts   Same as `flatten-figures` for scripts (in "\\lstinputlisting{...}").
       --version           Show version.
   -h, --help              Show help.
@@ -37,21 +38,34 @@ from shutil import rmtree
 # extract include commands and their file-names from TeX
 # ------------------------------------------------------
 
-def tex2incl(tex, cmd=r'\includegraphics'):
+def tex2incl(tex, main_dir, cmd=r'\includegraphics'):
+  r'''
+Input:
+- `tex`: the TeX text (read from the TeX-file).
+- `tex_dir`: the directory of the main TeX-file.
 
-  # mimic the LaTeX behavior where an extension is automatically added to a
+Output:
+- unique_include
+  '''
+
+  # mimic the LaTeX behaviour where an extension is automatically added to a
   # file-name without any extension
-  def filename(name):
-    if   os.path.isfile(name       ): return name
-    elif os.path.isfile(name+'.pdf'): return name+'.pdf'
-    elif os.path.isfile(name+'.png'): return name+'.png'
-    elif os.path.isfile(name+'.jpg'): return name+'.jpg'
-    elif os.path.isfile(name+'.tex'): return name+'.tex'
-    print('Cannot find {0}').format(name)
+  def filename(name, main_dir):
+    if   os.path.isfile(name         ): return name
+    elif os.path.isfile(name + '.pdf'): return name + '.pdf'
+    elif os.path.isfile(name + '.png'): return name + '.png'
+    elif os.path.isfile(name + '.jpg'): return name + '.jpg'
+    elif os.path.isfile(name + '.tex'): return name + '.tex'
+    elif os.path.isfile(os.path.join(main_dir, name)         ): return os.path.join(main_dir, name)
+    elif os.path.isfile(os.path.join(main_dir, name) + '.pdf'): return os.path.join(main_dir, name) + '.pdf'
+    elif os.path.isfile(os.path.join(main_dir, name) + '.png'): return os.path.join(main_dir, name) + '.png'
+    elif os.path.isfile(os.path.join(main_dir, name) + '.jpg'): return os.path.join(main_dir, name) + '.jpg'
+    elif os.path.isfile(os.path.join(main_dir, name) + '.tex'): return os.path.join(main_dir, name) + '.tex'
+    print('Cannot find {0}'.format(name))
 
   # read files in the include-commands
   include = [i.split('{')[1].split('}')[0] for i in tex.split(cmd)[1:]]
-  files   = [filename(i) for i in include]
+  files   = [filename(i, main_dir) for i in include]
 
   # reduce to unique lists
   unique_include = []
@@ -98,7 +112,42 @@ def flatten(include,files,tex,cmd=r'\includegraphics'):
   for f,n in zip(include,new_include):
     tex = re.sub(r'(%s.*\{)('%cmd+f+r')(\}.*)',r'\1'+n+r'\3',tex)
 
-  return new_files,new_include,tex
+  return new_files, new_include, tex
+
+# flatten and number file-names and corresponding commands
+# --------------------------------------------------------
+
+def renum_flatten(include, files, tex, cmd=r'\includegraphics'):
+
+  # flatten file-names
+  new_files = [i.replace('/','_') for i in files]
+
+  # check uniqueness
+  for ifig,i in enumerate(files):
+    if '/' in i:
+      n = i.replace('/','_')
+      j = 1
+      while True:
+
+        if ifig>0:
+          if not os.path.isfile(n) and n not in new_files[:ifig]: break
+        else:
+          if not os.path.isfile(n): break
+
+        name,ext = os.path.splitext(n)
+        n        = name+'_{0:d}'.format(j)+ext
+        j       += 1
+
+      new_files[ifig] = n
+
+  # convert file-names to commands as they were
+  new_include = [fil.split(inc.split('/')[-1])[0]+inc.split('/')[-1] for inc,fil in zip(include,new_files)]
+
+  # modify names in TeX
+  for f,n in zip(include,new_include):
+    tex = re.sub(r'(%s.*\{)('%cmd+f+r')(\}.*)',r'\1'+n+r'\3',tex)
+
+  return new_files, new_include, tex
 
 # extract citation-names
 # ----------------------
@@ -132,7 +181,7 @@ def cp(orig,dest):
 # ==================================================================================================
 
 # parse command-line options/arguments
-args = docopt.docopt(__doc__,version='0.1.0')
+args = docopt.docopt(__doc__, version='0.2.0')
 
 # check that the input-file exists
 if not os.path.isfile(args['<input.tex>']):
@@ -144,8 +193,11 @@ copy = []
 # read information
 # ----------------
 
-# read TeX-file, extract citations
-tex  = open(args['<input.tex>'],'r').read()
+# read TeX-file,
+tex = open(args['<input.tex>'],'r').read()
+main_dir = os.path.dirname(args['<input.tex>'])
+
+# extract citations
 cite = tex2cite(tex)
 
 # check for unsupported features
@@ -156,10 +208,16 @@ if re.search(r'(.*)(\\input\{)(.*)(\})', tex, re.MULTILINE) or re.search(r'(.*)(
 # copy figures/scripts
 # --------------------
 
+commands = (
+  (r'\includegraphics', args['--flatten-figures'], flatten),
+  (r'\lstinputlisting', args['--flatten-scripts'], flatten),
+)
+
+
 for cmd, opt in zip([r'\includegraphics', r'\lstinputlisting'],[args['--flatten-figures'],args['--flatten-scripts']]):
 
   # extract include-commands and file-names
-  (include,files) = tex2incl(tex, cmd=cmd)
+  include, files = tex2incl(tex, main_dir, cmd=cmd)
 
   # set default: retain file-names
   new_files = [file for file in files]
@@ -169,7 +227,7 @@ for cmd, opt in zip([r'\includegraphics', r'\lstinputlisting'],[args['--flatten-
     new_files, new_include, tex = flatten(include, files, tex, cmd='\\'+cmd)
 
   # copy files
-  for f,n in zip(files,new_files):
+  for f,n in zip(files, new_files):
     copy += [(f, os.path.join(args['<output-directory>'],n))]
 
 # copy bibliography
@@ -206,7 +264,7 @@ for file in aux:
 # copy figures referenced in style-files
 files = []
 for file in aux:
-  files += tex2incl(open(file,'r').read())[1]
+  files += tex2incl(open(file,'r').read(), main_dir)[1]
 for file in files:
   copy += [(file,os.path.join(args['<output-directory>'],file))]
 
