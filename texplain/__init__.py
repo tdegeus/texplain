@@ -19,6 +19,8 @@ import sys
 import docopt
 import click
 
+from copy import deepcopy
+
 from shutil import copyfile
 from shutil import rmtree
 
@@ -219,7 +221,7 @@ Main function (see command-line help)
     os.makedirs(newdir)
 
     old = TeX(args['<input.tex>'])
-    new = TeX(args['<input.tex>'])
+    new = deepcopy(old)
     new.dirname = newdir
 
     includegraphics = old.read_float(r'\includegraphics')
@@ -252,6 +254,10 @@ Main function (see command-line help)
                 okey,
                 nkey,
                 r'\includegraphics')
+            print(okey, nkey)
+            print(os.path.join(old.dirname, ofile),
+                  os.path.join(new.dirname, nfile))
+            print(new.tex)
             copyfile(
                 os.path.join(old.dirname, ofile),
                 os.path.join(new.dirname, nfile))
