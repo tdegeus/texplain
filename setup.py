@@ -17,5 +17,5 @@ setup(
     keywords = 'LaTeX',
     url = 'https://github.com/tdegeus/texplain',
     packages = find_packages(),
-    install_requires = ['docopt>=0.6.2', 'click>=4.0'],
+    install_requires = ['docopt>=0.6.2', 'click>=4.0', 'numpy>=0.0.1'],
     entry_points = {'console_scripts': ['texplain = texplain:main']})
