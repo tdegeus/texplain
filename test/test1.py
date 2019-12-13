@@ -45,11 +45,11 @@ assert(filecmp.cmp(
     os.path.join('test1', 'goose-article.cls')))
 
 assert(filecmp.cmp(
-    os.path.join(dirname, 'input1', 'figures/Sequential.pdf'),
+    os.path.join(dirname, 'input1', 'figures', 'Sequential.pdf'),
     os.path.join('test1', 'figure_1.pdf')))
 
 assert(filecmp.cmp(
-    os.path.join(dirname, 'input1', 'figures/Diverging.pdf'),
+    os.path.join(dirname, 'input1', 'figures', 'Diverging.pdf'),
     os.path.join('test1', 'figure_2.pdf')))
 
 assert(filecmp.cmp(

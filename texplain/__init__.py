@@ -82,7 +82,7 @@ reconstruct their file-names.
             if os.path.isfile(os.path.join(dirname, name) + '.bib'):
                 return os.path.relpath(os.path.join(dirname, name) + '.bib', dirname)
 
-            print('Cannot find {0}'.format(name))
+            raise IOError('Cannot find {0}'.format(name))
 
         # read the contents of the command and extract the filename
         include = [i.split('{')[1].split('}')[0] for i in self.tex.split(cmd)[1:]]
@@ -228,6 +228,9 @@ Main function (see command-line help)
     bibfiles = old.read_float(r'\bibliography')
     bibkeys = old.read_citation_keys()
     config_files = old.read_config()
+
+    print(old.dirname)
+    print(new.dirname)
 
     # Copy configuration files
 
