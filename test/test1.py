@@ -12,18 +12,54 @@ def run(cmd):
 # run test
 # --------
 
-run("texplain input1/example.tex test1")
+dirname = os.path.dirname(os.path.realpath(__file__))
 
-assert(filecmp.cmp('output1/example.tex', 'test1/example.tex', shallow = False))
-assert(filecmp.cmp('output1/library.bib', 'test1/library.bib', shallow = False))
-assert(filecmp.cmp('output1/figure_1.pdf', 'test1/figure_1.pdf'))
-assert(filecmp.cmp('output1/figure_2.pdf', 'test1/figure_2.pdf'))
-assert(filecmp.cmp('output1/apalike.bst', 'test1/apalike.bst'))
-assert(filecmp.cmp('output1/unsrtnat.bst', 'test1/unsrtnat.bst'))
-assert(filecmp.cmp('output1/goose-article.cls', 'test1/goose-article.cls'))
+run("texplain {0:s} test1".format(os.path.join(dirname, 'input1', 'example.tex')))
 
-assert(filecmp.cmp('input1/figures/Sequential.pdf', 'test1/figure_1.pdf'))
-assert(filecmp.cmp('input1/figures/Diverging.pdf', 'test1/figure_2.pdf'))
-assert(filecmp.cmp('input1/apalike.bst', 'test1/apalike.bst'))
-assert(filecmp.cmp('input1/unsrtnat.bst', 'test1/unsrtnat.bst'))
-assert(filecmp.cmp('input1/goose-article.cls', 'test1/goose-article.cls'))
+assert(filecmp.cmp(
+    os.path.join(dirname, 'output1', 'example.tex'),
+    os.path.join('test1', 'example.tex'), shallow = False))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'output1', 'library.bib'),
+    os.path.join('test1', 'library.bib'), shallow = False))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'output1', 'figure_1.pdf'),
+    os.path.join('test1', 'figure_1.pdf')))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'output1', 'figure_2.pdf'),
+    os.path.join('test1', 'figure_2.pdf')))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'output1', 'apalike.bst'),
+    os.path.join('test1', 'apalike.bst')))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'output1', 'unsrtnat.bst'),
+    os.path.join('test1', 'unsrtnat.bst')))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'output1', 'goose-article.cls'),
+    os.path.join('test1', 'goose-article.cls')))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'input1', 'figures/Sequential.pdf'),
+    os.path.join('test1', 'figure_1.pdf')))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'input1', 'figures/Diverging.pdf'),
+    os.path.join('test1', 'figure_2.pdf')))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'input1', 'apalike.bst'),
+    os.path.join('test1', 'apalike.bst')))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'input1', 'unsrtnat.bst'),
+    os.path.join('test1', 'unsrtnat.bst')))
+
+assert(filecmp.cmp(
+    os.path.join(dirname, 'input1', 'goose-article.cls'),
+    os.path.join('test1', 'goose-article.cls')))
