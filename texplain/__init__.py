@@ -265,7 +265,7 @@ Main function (see command-line help)
         okey, ofile = bibfiles[0]
 
         nkey = 'library'
-        nfile = ofile.replace(okey, nkey)
+        nfile = ofile.replace(os.path.normpath(okey), nkey)
 
         bib = bib_select(
             open(os.path.join(old.dirname, ofile), 'r').read(),

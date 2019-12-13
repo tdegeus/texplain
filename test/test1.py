@@ -27,7 +27,7 @@ lines1 = a.splitlines()
 lines2 = b.splitlines()
 
 for line in difflib.unified_diff(lines1, lines2, fromfile='file1', tofile='file2', lineterm=''):
-    print line
+    print(line)
 
 print('---')
 
@@ -35,7 +35,7 @@ lines1 = a.strip().splitlines()
 lines2 = b.strip().splitlines()
 
 for line in difflib.unified_diff(lines1, lines2, fromfile='file1', tofile='file2', lineterm=''):
-    print line
+    print(line)
 
 print('---')
 
