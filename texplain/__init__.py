@@ -247,7 +247,7 @@ Main function (see command-line help)
 
         for i, (okey, ofile) in enumerate(includegraphics):
             nkey = 'figure_{0:d}'.format(i + 1)
-            new_includegraphics += [(nkey, ofile.replace(okey, nkey))]
+            new_includegraphics += [(nkey, ofile.replace(os.path.normpath(okey), nkey))]
 
         for (okey, ofile), (nkey, nfile) in zip(includegraphics, new_includegraphics):
             new.rename_float(
