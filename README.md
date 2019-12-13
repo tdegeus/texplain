@@ -1,18 +1,67 @@
+[![Travis](https://travis-ci.com/tdegeus/texplain.svg?branch=master)](https://travis-ci.com/tdegeus/texplain)
+[![Build status](https://ci.appveyor.com/api/projects/status/jro7k8cm82v82q03?svg=true)](https://ci.appveyor.com/project/tdegeus/texplain)
+
 # texplain
 
-Copy the TeX-file and only those figure-files and references that are included in it to a separate folder. This is particularly useful to create a clean version to submit to a journal.
+Create a directory with a TeX-file and only its dependencies (those figure-files and references that are actually included). This is particularly useful to create a clean version to submit to a journal.
 
-## Usage
+# Contents
+
+<!-- MarkdownTOC -->
+
+- [Disclaimer](#disclaimer)
+- [Getting texplain](#getting-texplain)
+    - [Using conda](#using-conda)
+    - [Using PyPi](#using-pypi)
+    - [From source](#from-source)
+- [Usage](#usage)
+
+<!-- /MarkdownTOC -->
+
+# Disclaimer
+
+This library is free to use under the [MIT license](https://github.com/tdegeus/texplain/blob/master/LICENSE). Any additions are very much appreciated, in terms of suggested functionality, code, documentation, testimonials, word-of-mouth advertisement, etc. Bug reports or feature requests can be filed on [GitHub](https://github.com/tdegeus/texplain). As always, the code comes with no guarantee. None of the developers can be held responsible for possible mistakes.
+
+Download: [.zip file](https://github.com/tdegeus/texplain/zipball/master) | [.tar.gz file](https://github.com/tdegeus/texplain/tarball/master).
+
+(c - [MIT](https://github.com/tdegeus/texplain/blob/master/LICENSE)) T.W.J. de Geus (Tom) | tom@geus.me | www.geus.me | [github.com/tdegeus/texplain](https://github.com/tdegeus/texplain)
+
+# Getting texplain
+
+## Using conda
+
+```bash
+conda install -c conda-forge texplain
+```
+
+## Using PyPi
+
+```bash
+python -m pip install texplain
+```
+
+## From source
+
+```bash
+# Download texplain
+git checkout https://github.com/tdegeus/texplain.git
+cd texplain
+
+# Install
+python -m pip install .
+```
+
+# Usage
 
 Basic usage:
 
-```bash
+```none
 texplain <input.tex> <output-directory>
 ```
 
 To get more information use
 
-```bash
+```none
 texplain --help
 ```
 
@@ -20,25 +69,14 @@ which prints
 
 ```none
 texplain
-  Create a clean output directory with only included files/citations.
-
-  This script provides the option to copy figures to the same folder as the main TeX-file
-  (--flatten-figures). If that option is used the file-names are modified as follows:
-
-      example/path/to/figure -> example_path_to_figure
-
-  Similar for `--flatting-scripts`.
+    Create a clean output directory with only included files/citations.
 
 Usage:
-  texplain [options] <input.tex> <output-directory>
+    texplain [options] <input.tex> <output-directory>
 
 Options:
-      --clean             Cleans output directory.
-      --copy-bbl          Copy existing bbl-files.
-      --flatten-figures   Copy figures to the same folder as the main TeX-file.
-      --flatten-scripts   Same as `flatten-figures` for scripts (in "\\lstinputlisting{...}").
-      --version           Show version.
-  -h, --help              Show help.
+        --version   Show version.
+    -h, --help      Show help.
 
 (c - MIT) T.W.J. de Geus | tom@geus.me | www.geus.me | github.com/tdegeus/texplain
 ```
