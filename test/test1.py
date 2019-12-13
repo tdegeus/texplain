@@ -16,16 +16,36 @@ dirname = os.path.dirname(os.path.realpath(__file__))
 
 run("texplain {0:s} test1".format(os.path.join(dirname, 'input1', 'example.tex')))
 
-print(open(os.path.join(dirname, 'output1', 'example.tex'), 'r').read())
-print(open(os.path.join('test1', 'example.tex'), 'r').read())
+a = open(os.path.join(dirname, 'output1', 'example.tex'), 'r').read()
+b = open(os.path.join('test1', 'example.tex'), 'r').read()
+
+import difflib
+
+print('---')
+
+lines1 = a.splitlines()
+lines2 = b.splitlines()
+
+for line in difflib.unified_diff(lines1, lines2, fromfile='file1', tofile='file2', lineterm=''):
+    print line
+
+print('---')
+
+lines1 = a.strip().splitlines()
+lines2 = b.strip().splitlines()
+
+for line in difflib.unified_diff(lines1, lines2, fromfile='file1', tofile='file2', lineterm=''):
+    print line
+
+print('---')
 
 assert(filecmp.cmp(
     os.path.join(dirname, 'output1', 'example.tex'),
-    os.path.join('test1', 'example.tex'), shallow = False))
+    os.path.join('test1', 'example.tex')))
 
 assert(filecmp.cmp(
     os.path.join(dirname, 'output1', 'library.bib'),
-    os.path.join('test1', 'library.bib'), shallow = False))
+    os.path.join('test1', 'library.bib')))
 
 assert(filecmp.cmp(
     os.path.join(dirname, 'output1', 'figure_1.pdf'),
