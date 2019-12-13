@@ -39,6 +39,6 @@ install:
   - python -m pip install .
 
 build_script:
-  - texplain test/input1/example.tex
+  - texplain test/input1/example.tex out
   - python test/test1.py
 
