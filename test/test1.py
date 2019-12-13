@@ -16,6 +16,9 @@ dirname = os.path.dirname(os.path.realpath(__file__))
 
 run("texplain {0:s} test1".format(os.path.join(dirname, 'input1', 'example.tex')))
 
+print(os.path.join(dirname, 'output1', 'example.tex'))
+print(os.path.join('test1', 'example.tex'))
+
 assert(filecmp.cmp(
     os.path.join(dirname, 'output1', 'example.tex'),
     os.path.join('test1', 'example.tex'), shallow = False))

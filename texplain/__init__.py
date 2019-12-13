@@ -229,9 +229,6 @@ Main function (see command-line help)
     bibkeys = old.read_citation_keys()
     config_files = old.read_config()
 
-    print(old.dirname)
-    print(new.dirname)
-
     # Copy configuration files
 
     for ofile in config_files:
@@ -254,10 +251,6 @@ Main function (see command-line help)
                 okey,
                 nkey,
                 r'\includegraphics')
-            print(okey, nkey)
-            print(os.path.join(old.dirname, ofile),
-                  os.path.join(new.dirname, nfile))
-            print(new.tex)
             copyfile(
                 os.path.join(old.dirname, ofile),
                 os.path.join(new.dirname, nfile))
