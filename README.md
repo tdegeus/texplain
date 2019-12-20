@@ -1,5 +1,6 @@
 [![Travis](https://travis-ci.com/tdegeus/texplain.svg?branch=master)](https://travis-ci.com/tdegeus/texplain)
 [![Build status](https://ci.appveyor.com/api/projects/status/jro7k8cm82v82q03?svg=true)](https://ci.appveyor.com/project/tdegeus/texplain)
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/texplain.svg)](https://anaconda.org/conda-forge/texplain)
 
 # texplain
 
