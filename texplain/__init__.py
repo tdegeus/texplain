@@ -11,7 +11,7 @@ Options:
 (c - MIT) T.W.J. de Geus | tom@geus.me | www.geus.me | github.com/tdegeus/texplain
 '''
 
-# ==================================================================================================
+__version__ = '0.3.1'
 
 import os
 import re
@@ -24,13 +24,9 @@ from copy import deepcopy
 from shutil import copyfile
 from shutil import rmtree
 
-__version__ = '0.3.1'
-
-# ==================================================================================================
 
 class TeX:
 
-    # ----------------------------------------------------------------------------------------------
 
     def __init__(self, filename):
 
@@ -47,7 +43,6 @@ class TeX:
         if has_input or has_include:
             raise IOError(r'TeX-files with \input{...} or \include{...} not yet supported')
 
-    # ----------------------------------------------------------------------------------------------
 
     def read_float(self, cmd = r'\includegraphics'):
         r'''
@@ -103,7 +98,6 @@ reconstruct their file-names.
 
         return out
 
-    # ----------------------------------------------------------------------------------------------
 
     def rename_float(self, old, new, cmd = r'\includegraphics'):
         r'''
@@ -133,7 +127,6 @@ Rename a key of a 'float' command (e.g. "\includegraphics{...}", "\bibliography{
 
         self.tex = cmd.join(text)
 
-    # ----------------------------------------------------------------------------------------------
 
     def read_citation_keys(self):
         r'''
@@ -145,7 +138,7 @@ Note that the output is unique, in the order or appearance.
         def extract(string):
             try:
                 return list(re.split(
-                    '([pt])?(\[.*\]\[.*\])?(\{[a-zA-Z0-9\,\-\ \_]*\})',
+                    r'([pt])?(\[.*\]\[.*\])?(\{[a-zA-Z0-9\,\-\ \_]*\})',
                     string)[3][1: -1].split(','))
             except:
                 if len(string) >= 100:
@@ -160,7 +153,6 @@ Note that the output is unique, in the order or appearance.
 
         return cite
 
-    # ----------------------------------------------------------------------------------------------
 
     def find_by_extension(self, ext):
         r'''
@@ -170,7 +162,6 @@ Find all files with a certain extensions in the directory of the TeX-file.
         filenames = os.listdir(self.dirname)
         return [i for i in filenames if os.path.splitext(i)[1] == ext]
 
-    # ----------------------------------------------------------------------------------------------
 
     def read_config(self):
         r'''
@@ -186,7 +177,6 @@ if the files are actually used or not.
 
         return out
 
-# ==================================================================================================
 
 def bib_select(text, keys):
     r'''
@@ -210,14 +200,12 @@ Limit a BibTeX file to a list of keys.
 
     return '\n@'+'\n@'.join(bib)
 
-# ==================================================================================================
 
 def Error(message):
 
     print(message)
     sys.exit(1)
 
-# ==================================================================================================
 
 def main():
     r'''
