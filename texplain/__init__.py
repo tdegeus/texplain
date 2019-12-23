@@ -11,7 +11,7 @@ Options:
 (c - MIT) T.W.J. de Geus | tom@geus.me | www.geus.me | github.com/tdegeus/texplain
 '''
 
-__version__ = '0.3.1'
+__version__ = '0.3.2'
 
 import os
 import re
@@ -195,10 +195,28 @@ Limit a BibTeX file to a list of keys.
     The (reduced) BibTeX file, as string.
     '''
 
-    bib = list(filter(None, text.split('@')))[1:]
-    bib = [i for i in bib if re.split(r'(.*\{)(.*)(,\n.*)', i)[2] in keys]
+    text = '\n' + text
 
-    return '\n@'+'\n@'.join(bib)
+    bib = list(filter(None, text.split('@')))[1:]
+
+    out = []
+
+    for i in bib:
+        if re.match(r'(string\{)(.*)', i):
+            continue
+        if re.match(r'(Comment\ )(.*)', i, re.IGNORECASE):
+            continue
+        if re.match(r'(comment\{)(.*)', i, re.IGNORECASE):
+            continue
+        if re.split(r'(.*\{)(.*)(,\n.*)', i)[2] in keys:
+            out += [i]
+
+    out = '\n@' + '\n@'.join(out)
+
+    while '\n\n\n' in out:
+        out = out.replace('\n\n\n', '\n\n')
+
+    return out
 
 
 def Error(message):
@@ -247,7 +265,11 @@ Main function (see command-line help)
 
         for i, (okey, ofile) in enumerate(includegraphics):
             nkey = 'figure_{0:d}'.format(i + 1)
-            new_includegraphics += [(nkey, ofile.replace(os.path.normpath(okey), nkey))]
+            ext = os.path.splitext(ofile)[1]
+            nfile = ofile.replace(os.path.normpath(okey), nkey)
+            if len(os.path.splitext(nfile)[1]) == 0:
+                nfile += ext
+            new_includegraphics += [(nkey, nfile)]
 
         for (okey, ofile), (nkey, nfile) in zip(includegraphics, new_includegraphics):
             new.rename_float(
