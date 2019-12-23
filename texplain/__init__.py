@@ -211,7 +211,12 @@ Limit a BibTeX file to a list of keys.
         if re.split(r'(.*\{)(.*)(,\n.*)', i)[2] in keys:
             out += [i]
 
-    return '\n@'+'\n@'.join(out)
+    out = '\n@' + '\n@'.join(out)
+
+    while '\n\n\n' in out:
+        out = out.replace('\n\n\n', '\n\n')
+
+    return out
 
 
 def Error(message):
