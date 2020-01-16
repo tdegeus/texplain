@@ -17,8 +17,8 @@ dirname = os.path.dirname(os.path.realpath(__file__))
 run("texplain {0:s} test1".format(os.path.join(dirname, 'input1', 'example.tex')))
 
 assert(
-    open(os.path.join(dirname, 'output1', 'example.tex'), 'r').read().strip().splitlines() ==
-    open(os.path.join('test1', 'example.tex'), 'r').read().strip().splitlines())
+    open(os.path.join(dirname, 'output1', 'main.tex'), 'r').read().strip().splitlines() ==
+    open(os.path.join('test1', 'main.tex'), 'r').read().strip().splitlines())
 
 assert(
     open(os.path.join(dirname, 'output1', 'library.bib'), 'r').read().strip().splitlines() ==
