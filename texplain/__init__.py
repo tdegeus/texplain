@@ -11,7 +11,7 @@ Options:
 (c - MIT) T.W.J. de Geus | tom@geus.me | www.geus.me | github.com/tdegeus/texplain
 '''
 
-__version__ = '0.3.2'
+__version__ = '0.3.3'
 
 import os
 import re
@@ -36,6 +36,9 @@ class TeX:
         self.tex = open(filename, 'r').read()
         self.dirname = os.path.dirname(filename)
         self.filename = os.path.split(filename)[1]
+
+        if len(self.dirname) == 0:
+            self.dirname = '.'
 
         has_input = re.search(r'(.*)(\\input\{)(.*)(\})', self.tex, re.MULTILINE)
         has_include = re.search(r'(.*)(\\include\{)(.*)(\})', self.tex, re.MULTILINE)
@@ -305,4 +308,9 @@ Main function (see command-line help)
 
     # Write modified TeX file
 
-    open(os.path.join(new.dirname, new.filename), 'w').write(new.tex)
+    output = os.path.join(new.dirname, 'main.tex')
+
+    if os.path.isfile(output):
+        output = os.path.join(new.dirname, new.filename)
+
+    open(output, 'w').write(new.tex)
