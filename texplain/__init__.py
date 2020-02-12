@@ -27,7 +27,6 @@ from shutil import rmtree
 
 class TeX:
 
-
     def __init__(self, filename):
 
         if not os.path.isfile(filename):
@@ -46,8 +45,7 @@ class TeX:
         if has_input or has_include:
             raise IOError(r'TeX-files with \input{...} or \include{...} not yet supported')
 
-
-    def read_float(self, cmd = r'\includegraphics'):
+    def read_float(self, cmd=r'\includegraphics'):
         r'''
 Extract the keys of 'float' commands (e.g. "\includegraphics{...}", "\bibliography{...}") and
 reconstruct their file-names.
@@ -101,8 +99,7 @@ reconstruct their file-names.
 
         return out
 
-
-    def rename_float(self, old, new, cmd = r'\includegraphics'):
+    def rename_float(self, old, new, cmd=r'\includegraphics'):
         r'''
 Rename a key of a 'float' command (e.g. "\includegraphics{...}", "\bibliography{...}").
 
@@ -130,7 +127,6 @@ Rename a key of a 'float' command (e.g. "\includegraphics{...}", "\bibliography{
 
         self.tex = cmd.join(text)
 
-
     def read_citation_keys(self):
         r'''
 Read the citation keys in the TeX file (those keys in "\cite{...}", "\citet{...}", ...).
@@ -148,14 +144,12 @@ Note that the output is unique, in the order or appearance.
                     string = string[:100]
                 raise IOError('Error in interpreting\n {0:s} ...'.format(string))
 
-
         # read all keys in "cite", "citet", "citep" commands
         cite = [extract(i) for i in self.tex.split(r'\cite')[1:]]
         cite = list(set([item for sublist in cite for item in sublist]))
-        cite = [i.replace(' ','') for i in cite]
+        cite = [i.replace(' ', '') for i in cite]
 
         return cite
-
 
     def find_by_extension(self, ext):
         r'''
@@ -164,7 +158,6 @@ Find all files with a certain extensions in the directory of the TeX-file.
 
         filenames = os.listdir(self.dirname)
         return [i for i in filenames if os.path.splitext(i)[1] == ext]
-
 
     def read_config(self):
         r'''
