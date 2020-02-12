@@ -2,15 +2,11 @@ import subprocess
 import os
 import filecmp
 
-# support function
-# ----------------
 
 def run(cmd):
-    out = list(filter(None, subprocess.check_output(cmd,shell=True).decode('utf-8').split('\n')))
+    out = list(filter(None, subprocess.check_output(cmd, shell=True).decode('utf-8').split('\n')))
     return [i.rstrip() for i in out]
 
-# run test
-# --------
 
 dirname = os.path.dirname(os.path.realpath(__file__))
 
