@@ -233,7 +233,8 @@ Main function (see command-line help)
         Error('"{0:s}" does not exist'.format(args['<input.tex>']))
 
     if os.path.isdir(newdir):
-        Error('"{0:s}" exists, please provide a new directory'.format(newdir))
+        if not os.listdir(newdir):
+            Error('"{0:s}" exists, please provide a new directory'.format(newdir))
 
     os.makedirs(newdir)
 
