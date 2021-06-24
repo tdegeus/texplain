@@ -137,7 +137,7 @@ Note that the output is unique, in the order or appearance.
         def extract(string):
             try:
                 return list(re.split(
-                    r'([pt])?(\[.*\]\[.*\])?(\{[a-zA-Z0-9\,\-\ \_]*\})',
+                    r'([pt])?(\[.*\]\[.*\])?(\{[a-zA-Z0-9\.\,\-\ \_]*\})',
                     string)[3][1: -1].split(','))
             except:
                 if len(string) >= 100:
