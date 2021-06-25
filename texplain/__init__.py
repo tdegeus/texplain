@@ -215,13 +215,7 @@ Limit a BibTeX file to a list of keys.
     return out
 
 
-def Error(message):
-
-    print(message)
-    sys.exit(1)
-
-
-def main():
+def from_commandline():
     r'''
 Main function (see command-line help)
     '''
@@ -230,13 +224,13 @@ Main function (see command-line help)
     newdir = args['<output-directory>']
 
     if not os.path.isfile(args['<input.tex>']):
-        Error('"{0:s}" does not exist'.format(args['<input.tex>']))
+        raise IOError('"{0:s}" does not exist'.format(args['<input.tex>']))
 
     if os.path.isdir(newdir):
-        if not os.listdir(newdir):
-            Error('"{0:s}" exists, please provide a new directory'.format(newdir))
-
-    os.makedirs(newdir)
+        if os.listdir(newdir):
+            raise IOError('"{0:s}" is not empty, please provide a new or empty directory'.format(newdir))
+    else:
+        os.makedirs(newdir)
 
     old = TeX(args['<input.tex>'])
     new = deepcopy(old)
@@ -282,7 +276,7 @@ Main function (see command-line help)
     if len(bibfiles) > 0:
 
         if len(bibfiles) > 1:
-            Error('texplain is only implemented for one BibTeX file')
+            raise IOError('texplain is only implemented for one BibTeX file')
 
         okey, ofile = bibfiles[0]
 
@@ -308,3 +302,16 @@ Main function (see command-line help)
         output = os.path.join(new.dirname, new.filename)
 
     open(output, 'w').write(new.tex)
+
+
+def main():
+
+    try:
+
+        from_commandline()
+
+    except Exception as e:
+
+        print(e)
+        return 1
+
