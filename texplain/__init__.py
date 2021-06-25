@@ -11,7 +11,7 @@ Options:
 (c - MIT) T.W.J. de Geus | tom@geus.me | www.geus.me | github.com/tdegeus/texplain
 '''
 
-__version__ = '0.3.3'
+__version__ = '0.3.4'
 
 import os
 import re
