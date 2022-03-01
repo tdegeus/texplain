@@ -1,66 +1,59 @@
 import filecmp
 import os
+import shutil
 import subprocess
+import unittest
+
+basedir = os.path.dirname(os.path.realpath(__file__))
+tmpdir = os.path.join(basedir, "test1")
 
 
-def run(cmd):
-    out = list(filter(None, subprocess.check_output(cmd, shell=True).decode("utf-8").split("\n")))
-    return [i.rstrip() for i in out]
+def readlines(filepath):
+    with open(filepath) as file:
+        return file.read().strip().splitlines()
 
 
-dirname = os.path.dirname(os.path.realpath(__file__))
+class MyTests(unittest.TestCase):
+    """
+    Tests
+    """
 
-run("texplain {:s} test1".format(os.path.join(dirname, "input1", "example.tex")))
+    @classmethod
+    def tearDownClass(self):
 
-assert (
-    open(os.path.join(dirname, "output1", "main.tex")).read().strip().splitlines()
-    == open(os.path.join("test1", "main.tex")).read().strip().splitlines()
-)
+        shutil.rmtree(tmpdir)
 
-assert (
-    open(os.path.join(dirname, "output1", "library.bib")).read().strip().splitlines()
-    == open(os.path.join("test1", "library.bib")).read().strip().splitlines()
-)
+    def test_basic(self):
 
-assert filecmp.cmp(
-    os.path.join(dirname, "output1", "figure_1.pdf"), os.path.join("test1", "figure_1.pdf")
-)
+        subprocess.run(["texplain", os.path.join(basedir, "input1", "example.tex"), tmpdir])
 
-assert filecmp.cmp(
-    os.path.join(dirname, "output1", "figure_2.pdf"), os.path.join("test1", "figure_2.pdf")
-)
+        for name in ["main.tex", "library.bib"]:
+            self.assertEqual(
+                readlines(os.path.join(basedir, "output1", name)),
+                readlines(os.path.join(tmpdir, name)),
+            )
 
-assert filecmp.cmp(
-    os.path.join(dirname, "output1", "apalike.bst"), os.path.join("test1", "apalike.bst")
-)
+        files = ["figure_1.pdf", "figure_2.pdf", "apalike.bst", "unsrtnat.bst", "goose-article.cls"]
 
-assert filecmp.cmp(
-    os.path.join(dirname, "output1", "unsrtnat.bst"), os.path.join("test1", "unsrtnat.bst")
-)
+        for name in files:
+            self.assertTrue(
+                filecmp.cmp(os.path.join(basedir, "output1", name), os.path.join(tmpdir, name))
+            )
 
-assert filecmp.cmp(
-    os.path.join(dirname, "output1", "goose-article.cls"),
-    os.path.join("test1", "goose-article.cls"),
-)
+        renamed = {
+            "Sequential.pdf": "figure_1.pdf",
+            "Diverging.pdf": "figure_2.pdf",
+        }
 
-assert filecmp.cmp(
-    os.path.join(dirname, "input1", "figures", "Sequential.pdf"),
-    os.path.join("test1", "figure_1.pdf"),
-)
+        for key in renamed:
+            self.assertTrue(
+                filecmp.cmp(
+                    os.path.join(basedir, "input1", "figures", key),
+                    os.path.join(tmpdir, renamed[key]),
+                )
+            )
 
-assert filecmp.cmp(
-    os.path.join(dirname, "input1", "figures", "Diverging.pdf"),
-    os.path.join("test1", "figure_2.pdf"),
-)
 
-assert filecmp.cmp(
-    os.path.join(dirname, "input1", "apalike.bst"), os.path.join("test1", "apalike.bst")
-)
+if __name__ == "__main__":
 
-assert filecmp.cmp(
-    os.path.join(dirname, "input1", "unsrtnat.bst"), os.path.join("test1", "unsrtnat.bst")
-)
-
-assert filecmp.cmp(
-    os.path.join(dirname, "input1", "goose-article.cls"), os.path.join("test1", "goose-article.cls")
-)
+    unittest.main()
