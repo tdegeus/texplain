@@ -16,6 +16,7 @@ __version__ = "0.3.4"
 import os
 import re
 import docopt
+import numpy as np
 
 from copy import deepcopy
 
@@ -55,8 +56,6 @@ class TeX:
 
             A list ``[('key', 'filename'), (...), ...]`` in order of appearance.
         """
-
-        import numpy as np
 
         # mimic the LaTeX behaviour where an extension is automatically added to a
         # file-name without any extension
