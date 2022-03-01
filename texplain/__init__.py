@@ -24,12 +24,18 @@ from shutil import copyfile
 
 
 class TeX:
-    def __init__(self, filename):
+    """
+    Simple TeX file manipulations.
+    """
+
+    def __init__(self, filename: str):
 
         if not os.path.isfile(filename):
             raise OSError(f'"{filename:s}" does not exist')
 
-        self.tex = open(filename).read()
+        with open(filename) as file:
+            self.tex = file.read()
+
         self.dirname = os.path.dirname(filename)
         self.filename = os.path.split(filename)[1]
 
@@ -40,21 +46,17 @@ class TeX:
         has_include = re.search(r"(.*)(\\include\{)(.*)(\})", self.tex, re.MULTILINE)
 
         if has_input or has_include:
-            raise OSError(r"TeX-files with \input{...} or \include{...} not yet supported")
+            raise OSError(r"TeX files with \input{...} or \include{...} not yet supported")
 
-    def read_float(self, cmd=r"\includegraphics"):
+    def read_float(self, cmd: str = r"\includegraphics") -> list[tuple[str]]:
         r"""
-        Extract the keys of 'float' commands (e.g. "\includegraphics{...}", "\bibliography{...}")
-        and reconstruct their file-names.
+        Extract the keys of 'float' commands
+        (e.g. ``\includegraphics{...}``, ``\bibliography{...}``)
+        and reconstruct their filenames.
+        This operation is read-only.
 
-        :options:
-
-            **cmd** ([``r'\includegraphics'``] | ``<str>``)
-                The command to look for.
-
-        :returns:
-
-            A list ``[('key', 'filename'), (...), ...]`` in order of appearance.
+        :param cmd: The command to look for.
+        :return: A list ``[('key', 'filename')]`` in order of appearance.
         """
 
         # mimic the LaTeX behaviour where an extension is automatically added to a
@@ -94,19 +96,15 @@ class TeX:
 
         return out
 
-    def rename_float(self, old, new, cmd=r"\includegraphics"):
+    def rename_float(self, old: str, new: str, cmd: str = r"\includegraphics"):
         r"""
-        Rename a key of a 'float' command (e.g. "\includegraphics{...}", "\bibliography{...}").
+        Rename a key of a 'float' command
+        (e.g. ``\includegraphics{...}``, ``\bibliography{...}``).
+        This changes the TeX file.
 
-        :arguments:
-
-            **old, new** (``<str>``)
-                The old and the new key.
-
-        :options:
-
-            **cmd** ([``r'\includegraphics'``] | ``<str>``)
-                The command to look for.
+        :param old: Old key.
+        :param new: New key.
+        :param cmd: The command to look for.
         """
 
         text = self.tex.split(cmd)
@@ -122,10 +120,12 @@ class TeX:
 
         self.tex = cmd.join(text)
 
-    def read_citation_keys(self):
+    def read_citation_keys(self) -> list[str]:
         r"""
-        Read the citation keys in the TeX file (those keys in "\cite{...}", "\citet{...}", ...).
-        Note that the output is unique, in the order or appearance.
+        Read the citation keys in the TeX file
+        (keys in ``\cite{...}``, ``\citet{...}``, ``\citep{...}```).
+
+        :return: Unique list of keys in the order or appearance.
         """
 
         # extract keys from "cite"
@@ -145,18 +145,26 @@ class TeX:
 
         return cite
 
-    def find_by_extension(self, ext):
+    def find_by_extension(self, ext: str) -> list[str]:
         r"""
-        Find all files with a certain extensions in the directory of the TeX-file.
+        Find all files with a certain extensions in the directory of the TeX file.
+
+        :param ext: File extension.
+        :return: List of filenames.
         """
 
         filenames = os.listdir(self.dirname)
         return [i for i in filenames if os.path.splitext(i)[1] == ext]
 
-    def read_config(self):
+    def read_config(self) -> list[str]:
         r"""
-        Read configuration files in the directory of the TeX-file.
-        A possible extension would be to look if the files are actually used or not.
+        Read configuration files in the directory of the TeX file.
+
+        :return: List of filenames.
+
+        .. todo::
+
+            Check if the files are actually used or not.
         """
 
         ext = [".sty", ".cls", ".bst"]
@@ -168,21 +176,13 @@ class TeX:
         return out
 
 
-def bib_select(text, keys):
+def bib_select(text: str, keys: list[str]) -> str:
     r"""
     Limit a BibTeX file to a list of keys.
 
-    :arguments:
-
-        **test** (``<str>``)
-            The BibTeX file, opened and read.
-
-        **keys** (``<list<str>>``)
-            The list of keys to select.
-
-    :returns:
-
-        The (reduced) BibTeX file, as string.
+    :param test: The BibTeX file as string.
+    :param keys: The list of keys to select.
+    :return: The (reduced) BibTeX file, as string.
     """
 
     text = "\n" + text
