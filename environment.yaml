@@ -1,8 +1,10 @@
 channels:
 - conda-forge
 dependencies:
-- setuptools_scm
-- python
-- docopt
 - click
+- docopt
 - numpy
+- python
+- setuptools_scm
+- sphinx
+- sphinx_rtd_theme
