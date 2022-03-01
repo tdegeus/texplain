@@ -1,14 +1,9 @@
-import re
-
 from setuptools import find_packages
 from setuptools import setup
 
-filepath = "texplain/__init__.py"
-__version__ = re.findall(r"__version__ = \'(.*)\'", open(filepath).read())[0]
-
 setup(
     name="texplain",
-    version=__version__,
+    version="0.3.4",
     license="MIT",
     author="Tom de Geus",
     author_email="tom@geus.me",
