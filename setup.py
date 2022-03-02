@@ -15,6 +15,6 @@ setup(
     packages=find_packages(),
     use_scm_version={"write_to": f"{project_name}/_version.py"},
     setup_requires=["setuptools_scm"],
-    install_requires=["docopt", "click", "numpy"],
-    entry_points={"console_scripts": [f"texplain = {project_name}:main"]},
+    install_requires=["click", "numpy"],
+    entry_points={"console_scripts": [f"texplain = {project_name}:texplain_catch"]},
 )

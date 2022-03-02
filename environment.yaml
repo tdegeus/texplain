@@ -2,7 +2,6 @@ channels:
 - conda-forge
 dependencies:
 - click
-- docopt
 - numpy
 - python
 - setuptools_scm

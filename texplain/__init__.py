@@ -1,24 +1,13 @@
-"""texplain
-    Create a clean output directory with only included files/citations.
-
-Usage:
-    texplain [options] <input.tex> <output-directory>
-
-Options:
-        --version   Show version.
-    -h, --help      Show help.
-
-(c - MIT) T.W.J. de Geus | tom@geus.me | www.geus.me | github.com/tdegeus/texplain
-"""
-
+import argparse
+import inspect
 import os
 import re
-import docopt
-import numpy as np
-
+import sys
+import textwrap
 from copy import deepcopy
-
 from shutil import copyfile
+
+import numpy as np
 
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
@@ -210,26 +199,43 @@ def bib_select(text: str, keys: list[str]) -> str:
     return out
 
 
-def from_commandline():
+def texplain(cli_args=None):
     r"""
-    Main function (see command-line help)
+    Create a clean output directory with only included files/citations.
     """
 
-    args = docopt.docopt(__doc__, version=version)
-    newdir = args["<output-directory>"]
+    class MyFmt(
+        argparse.RawDescriptionHelpFormatter,
+        argparse.ArgumentDefaultsHelpFormatter,
+        argparse.MetavarTypeHelpFormatter,
+    ):
+        pass
 
-    if not os.path.isfile(args["<input.tex>"]):
-        raise OSError('"{:s}" does not exist'.format(args["<input.tex>"]))
+    funcname = inspect.getframeinfo(inspect.currentframe()).function
+    doc = textwrap.dedent(inspect.getdoc(globals()[funcname]))
+    parser = argparse.ArgumentParser(formatter_class=MyFmt, description=doc)
 
-    if os.path.isdir(newdir):
-        if os.listdir(newdir):
-            raise OSError(f'"{newdir:s}" is not empty, please provide a new or empty directory')
+    parser.add_argument("-v", "--version", action="version", version=version)
+    parser.add_argument("input", type=str, help="TeX file")
+    parser.add_argument("outdir", type=str, help="Output directory")
+
+    if cli_args is None:
+        args = parser.parse_args(sys.argv[1:])
     else:
-        os.makedirs(newdir)
+        args = parser.parse_args([str(arg) for arg in cli_args])
 
-    old = TeX(args["<input.tex>"])
+    if not os.path.isfile(args.input):
+        raise OSError(f'"{args.input:s}" does not exist')
+
+    if os.path.isdir(args.outdir):
+        if os.listdir(args.outdir):
+            raise OSError(f'"{args.outdir:s}" is not empty, provide a new or empty directory')
+    else:
+        os.makedirs(args.outdir)
+
+    old = TeX(args.input)
     new = deepcopy(old)
-    new.dirname = newdir
+    new.dirname = args.outdir
 
     includegraphics = old.read_float(r"\includegraphics")
     bibfiles = old.read_float(r"\bibliography")
@@ -287,13 +293,9 @@ def from_commandline():
     open(output, "w").write(new.tex)
 
 
-def main():
-
+def texplain_catch():
     try:
-
-        from_commandline()
-
+        texplain()
     except Exception as e:
-
         print(e)
         return 1
