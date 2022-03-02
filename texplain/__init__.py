@@ -11,8 +11,6 @@ Options:
 (c - MIT) T.W.J. de Geus | tom@geus.me | www.geus.me | github.com/tdegeus/texplain
 """
 
-__version__ = "0.3.4"
-
 import os
 import re
 import docopt
@@ -21,6 +19,9 @@ import numpy as np
 from copy import deepcopy
 
 from shutil import copyfile
+
+from ._version import version  # noqa: F401
+from ._version import version_tuple  # noqa: F401
 
 
 class TeX:
@@ -214,7 +215,7 @@ def from_commandline():
     Main function (see command-line help)
     """
 
-    args = docopt.docopt(__doc__, version=__version__)
+    args = docopt.docopt(__doc__, version=version)
     newdir = args["<output-directory>"]
 
     if not os.path.isfile(args["<input.tex>"]):
