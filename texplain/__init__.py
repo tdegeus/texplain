@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import textwrap
+import numpy as np
 from copy import deepcopy
 from shutil import copyfile
 
@@ -12,25 +13,61 @@ import numpy as np
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
 
+def _findenv(text):
+    """
+    Find the (most probable) current environment by looking backward.
+
+    :param text: Text to consider.
+    :return: Environment ("section", "chapter", "figure", "table", "equation", ...)
+    """
+
+    env = []
+    pos = []
+    patterns = [
+        re.compile(r"(\\begin{)([^}]*)(})"),
+        re.compile(r"(\\)(section)({)([^}]*)(})"),
+        re.compile(r"(\\)(chapter)({)([^}]*)(})"),
+    ]
+
+    for pattern in patterns:
+        env += [re.sub(pattern, r"\2", i[0]) for i in re.finditer(pattern, text)]
+        pos += [i.span(0)[0] for i in re.finditer(pattern, text)]
+
+    return env[np.argmax(pos)]
+
 
 class TeX:
     """
     Simple TeX file manipulations.
+
+    :param read_from_file: Read from file.
+    :param text: Supply as text.
     """
 
-    def __init__(self, filename: str):
+    def __init__(self, read_from_file: str = None, text: str = None):
 
-        if not os.path.isfile(filename):
-            raise OSError(f'"{filename:s}" does not exist')
+        if read_from_file is not None:
 
-        with open(filename) as file:
-            self.tex = file.read()
+            if not os.path.isfile(read_from_file):
+                raise OSError(f'"{read_from_file:s}" does not exist')
 
-        self.dirname = os.path.dirname(filename)
-        self.filename = os.path.split(filename)[1]
+            self.dirname = os.path.dirname(read_from_file)
+            self.filename = os.path.split(read_from_file)[1]
 
-        if len(self.dirname) == 0:
-            self.dirname = "."
+            if len(self.dirname) == 0:
+                self.dirname = "."
+
+        else:
+
+            self.dirname = None
+            self.filename = None
+
+        if text is not None:
+            self.tex = text
+        else:
+            assert read_from_file is not None
+            with open(read_from_file) as file:
+                self.tex = file.read()
 
         has_input = re.search(r"(.*)(\\input\{)(.*)(\})", self.tex, re.MULTILINE)
         has_include = re.search(r"(.*)(\\include\{)(.*)(\})", self.tex, re.MULTILINE)
@@ -48,6 +85,8 @@ class TeX:
         :param cmd: The command to look for.
         :return: A list ``[('key', 'filename')]`` in order of appearance.
         """
+
+        assert self.dirname is not None
 
         # mimic the LaTeX behaviour where an extension is automatically added to a
         # file-name without any extension
@@ -142,7 +181,7 @@ class TeX:
         :param ext: File extension.
         :return: List of filenames.
         """
-
+        assert self.dirname is not None
         filenames = os.listdir(self.dirname)
         return [i for i in filenames if os.path.splitext(i)[1] == ext]
 
@@ -164,6 +203,66 @@ class TeX:
             out += self.find_by_extension(e)
 
         return out
+
+    def change_label(self, old_label: str, new_label: str):
+        r"""
+        Change label: adapt ``\label{...}`` and ``\ref{...}``(-like) commands.
+
+        :param old_label: Old label.
+        :param new_label: New label.
+        """
+
+        old = re.escape(old_label)
+        new = re.escape(new_label)
+
+        self.tex = re.sub(
+            r"(\\label{)(" + old + ")(})",
+            r"\1" + new + r"\3",
+            self.tex,
+            re.MULTILINE
+        )
+
+        self.tex = re.sub(
+            r"(\\)(\w*)(ref\*?{)(" + old + ")(})",
+            r"\1\2\3" + new + r"\5",
+            self.tex,
+            re.MULTILINE
+        )
+
+
+    def format_label(self):
+        """
+        Format all labels as:
+        *   ``sec:...``: Section labels.
+        *   ``ch:...``: Chapter labels.
+        *   ``fig:...``: Figure labels.
+        *   ``tab:...``: Table labels.
+        *   ``eq:...``: Math labels.
+        """
+
+        iden = dict(
+            section = "sec",
+            chapter = "ch",
+            figure = "fig",
+            table = "tab",
+            equation = "eq",
+            align = "eq",
+            eqnarray = "eq",
+        )
+
+        labels = []
+
+        for i in re.findall(r"(.*)(\\label{)([^}]*)(})(.*)", self.tex, re.MULTILINE):
+            labels.append(i[2])
+
+        for label in labels:
+            pre, post = self.tex.split(f"\\label{{{label}}}")
+            key = iden[_findenv(pre)]
+            if not re.match(key + ":.*", label, re.IGNORECASE):
+                self.change_label(label, f"{key}:{label}")
+            elif not re.match(key + ":.*", label):
+                info = re.split(re.compile(f"({key}:)(.*)", re.IGNORECASE), label)[2]
+                self.change_label(label, f"{key}:{info}")
 
 
 def bib_select(text: str, keys: list[str]) -> str:
