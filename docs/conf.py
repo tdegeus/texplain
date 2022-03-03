@@ -6,7 +6,7 @@ author = "Tom de Geus"
 
 # General configuration
 
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.autosummary", "sphinx.ext.todo"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.autosummary", "sphinx.ext.todo", "sphinxarg.ext"]
 
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 

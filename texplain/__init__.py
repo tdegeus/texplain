@@ -1,10 +1,7 @@
 import argparse
-import inspect
 import os
 import re
 import sys
-import textwrap
-import numpy as np
 from copy import deepcopy
 from shutil import copyfile
 
@@ -206,7 +203,7 @@ class TeX:
 
     def change_label(self, old_label: str, new_label: str):
         r"""
-        Change label: adapt ``\label{...}`` and ``\ref{...}``(-like) commands.
+        Change label in ``\label{...}`` and ``\ref{...}`` (-like) commands.
 
         :param old_label: Old label.
         :param new_label: New label.
@@ -216,19 +213,12 @@ class TeX:
         new = re.escape(new_label)
 
         self.tex = re.sub(
-            r"(\\label{)(" + old + ")(})",
-            r"\1" + new + r"\3",
-            self.tex,
-            re.MULTILINE
+            r"(\\label{)(" + old + ")(})", r"\1" + new + r"\3", self.tex, re.MULTILINE
         )
 
         self.tex = re.sub(
-            r"(\\)(\w*)(ref\*?{)(" + old + ")(})",
-            r"\1\2\3" + new + r"\5",
-            self.tex,
-            re.MULTILINE
+            r"(\\)(\w*)(ref\*?{)(" + old + ")(})", r"\1\2\3" + new + r"\5", self.tex, re.MULTILINE
         )
-
 
     def format_label(self):
         """
@@ -241,13 +231,13 @@ class TeX:
         """
 
         iden = dict(
-            section = "sec",
-            chapter = "ch",
-            figure = "fig",
-            table = "tab",
-            equation = "eq",
-            align = "eq",
-            eqnarray = "eq",
+            section="sec",
+            chapter="ch",
+            figure="fig",
+            table="tab",
+            equation="eq",
+            align="eq",
+            eqnarray="eq",
         )
 
         labels = []
@@ -298,30 +288,26 @@ def bib_select(text: str, keys: list[str]) -> str:
     return out
 
 
-def texplain(cli_args=None):
-    r"""
-    Create a clean output directory with only included files/citations.
+def _texplain_parser():
+    """
+    Return parser for :py:func:`texplain`.
     """
 
-    class MyFmt(
-        argparse.RawDescriptionHelpFormatter,
-        argparse.ArgumentDefaultsHelpFormatter,
-        argparse.MetavarTypeHelpFormatter,
-    ):
-        pass
-
-    funcname = inspect.getframeinfo(inspect.currentframe()).function
-    doc = textwrap.dedent(inspect.getdoc(globals()[funcname]))
-    parser = argparse.ArgumentParser(formatter_class=MyFmt, description=doc)
-
+    desc = "Create a clean output directory with only included files/citations."
+    parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("input", type=str, help="TeX file")
     parser.add_argument("outdir", type=str, help="Output directory")
+    return parser
 
-    if cli_args is None:
-        args = parser.parse_args(sys.argv[1:])
-    else:
-        args = parser.parse_args([str(arg) for arg in cli_args])
+
+def texplain(args: list[str]):
+    """
+    Command-line tool to copy to clean output directory, see ``--help``.
+    """
+
+    parser = _texplain_parser()
+    args = parser.parse_args(args)
 
     if not os.path.isfile(args.input):
         raise OSError(f'"{args.input:s}" does not exist')
@@ -392,9 +378,9 @@ def texplain(cli_args=None):
     open(output, "w").write(new.tex)
 
 
-def texplain_catch():
+def _texplain_catch():
     try:
-        texplain()
+        texplain(sys.argv[1:])
     except Exception as e:
         print(e)
         return 1
