@@ -1,4 +1,5 @@
 import argparse
+import itertools
 import os
 import re
 import sys
@@ -9,6 +10,7 @@ import numpy as np
 
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
+
 
 def _findenv(text):
     """
@@ -201,6 +203,15 @@ class TeX:
 
         return out
 
+    def remove_commentlines(self):
+        """
+        Remove lines that are entirely a comment.
+        """
+
+        tmp = self.tex.split("\n")
+        tmp = list(itertools.filterfalse(re.compile(r"^\s*%.*$").match, tmp))
+        self.tex = "\n".join(tmp)
+
     def change_label(self, old_label: str, new_label: str):
         r"""
         Change label in ``\label{...}`` and ``\ref{...}`` (-like) commands.
@@ -212,6 +223,8 @@ class TeX:
         old = re.escape(old_label)
         new = re.escape(new_label)
 
+        # single labels
+
         self.tex = re.sub(
             r"(\\label{)(" + old + ")(})", r"\1" + new + r"\3", self.tex, re.MULTILINE
         )
@@ -220,7 +233,37 @@ class TeX:
             r"(\\)(\w*)(ref\*?{)(" + old + ")(})", r"\1\2\3" + new + r"\5", self.tex, re.MULTILINE
         )
 
-    def format_label(self):
+        # grouped labels
+
+        self.tex = re.sub(
+            r"(\\cref\*?{)(" + old + ")(,[^}]*})", r"\1" + new + r"\3", self.tex, re.MULTILINE
+        )
+
+        self.tex = re.sub(
+            r"(\\cref\*?{[^}]*,)(" + old + ")(})", r"\1" + new + r"\3", self.tex, re.MULTILINE
+        )
+
+        self.tex = re.sub(
+            r"(\\cref\*?{[^}]*,)(" + old + ")(})", r"\1" + new + r"\3", self.tex, re.MULTILINE
+        )
+
+        self.tex = re.sub(
+            r"(\\cref\*?{[^}]*,)(" + old + ")(,[^}]*})", r"\1" + new + r"\3", self.tex, re.MULTILINE
+        )
+
+    def labels(self) -> list[str]:
+        """
+        Return list of labels (in order of appearance).
+        """
+
+        labels = []
+
+        for i in re.findall(r"(.*)(\\label{)([^}]*)(})(.*)", self.tex, re.MULTILINE):
+            labels.append(i[2])
+
+        return labels
+
+    def format_labels(self):
         """
         Format all labels as:
         *   ``sec:...``: Section labels.
@@ -240,12 +283,7 @@ class TeX:
             eqnarray="eq",
         )
 
-        labels = []
-
-        for i in re.findall(r"(.*)(\\label{)([^}]*)(})(.*)", self.tex, re.MULTILINE):
-            labels.append(i[2])
-
-        for label in labels:
+        for label in self.labels():
             pre, post = self.tex.split(f"\\label{{{label}}}")
             key = iden[_findenv(pre)]
             if not re.match(key + ":.*", label, re.IGNORECASE):
@@ -253,6 +291,50 @@ class TeX:
             elif not re.match(key + ":.*", label):
                 info = re.split(re.compile(f"({key}:)(.*)", re.IGNORECASE), label)[2]
                 self.change_label(label, f"{key}:{info}")
+
+    def use_cleveref(self):
+        """
+        Replace ``Eq.~\\eqref{...}``, ``Fig.~\ref{...}``, etc. for ``\\cref{...}``.
+        """
+
+        for key in ["Figure", "Fig.", "Table", "Tab.", "Chapter", "Ch.", "Section", "Sec."]:
+            self.tex = re.sub(
+                r"(" + key + r"~?\s?\\ref)(\*?{)([^}]*})",
+                r"\\cref\2\3",
+                self.tex,
+                re.MULTILINE,
+                re.IGNORECASE,
+            )
+
+        for key in ["Equation", "Eq."]:
+            self.tex = re.sub(
+                r"(" + key + r"~?\s?\\ref)(\*?{)([^}]*})",
+                r"\\cref\2\3",
+                self.tex,
+                re.MULTILINE,
+                re.IGNORECASE,
+            )
+            self.tex = re.sub(
+                r"(" + key + r"~?\s?\\eqref)(\*?{)([^}]*})",
+                r"\\cref\2\3",
+                self.tex,
+                re.MULTILINE,
+                re.IGNORECASE,
+            )
+            self.tex = re.sub(
+                r"(" + key + r"~?\s?\(\\ref)(\*?{)([^}]*})(\))",
+                r"\\cref\2\3",
+                self.tex,
+                re.MULTILINE,
+                re.IGNORECASE,
+            )
+            self.tex = re.sub(
+                r"(" + key + r"~?\s?\[\\ref)(\*?{)([^}]*})(\])",
+                r"\\cref\2\3",
+                self.tex,
+                re.MULTILINE,
+                re.IGNORECASE,
+            )
 
 
 def bib_select(text: str, keys: list[str]) -> str:
