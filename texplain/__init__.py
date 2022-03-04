@@ -225,7 +225,7 @@ class TeX:
         """
 
         old = re.escape(old_label)
-        new = re.escape(new_label)
+        new = new_label
 
         # single labels
 
