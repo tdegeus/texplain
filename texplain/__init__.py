@@ -32,6 +32,10 @@ def _findenv(text):
         env += [re.sub(pattern, r"\2", i[0]) for i in re.finditer(pattern, text)]
         pos += [i.span(0)[0] for i in re.finditer(pattern, text)]
 
+    for i, e in enumerate(env):
+        if e in ["centering"]:
+            pos[i] = -1
+
     return env[np.argmax(pos)]
 
 
@@ -273,15 +277,22 @@ class TeX:
         *   ``eq:...``: Math labels.
         """
 
-        iden = dict(
-            section="sec",
-            chapter="ch",
-            figure="fig",
-            table="tab",
-            equation="eq",
-            align="eq",
-            eqnarray="eq",
-        )
+        iden = {
+            "section": "sec",
+            "section*": "sec",
+            "chapter": "ch",
+            "chapter*": "ch",
+            "figure": "fig",
+            "figure*": "fig",
+            "table": "tab",
+            "table*": "tab",
+            "equation": "eq",
+            "equation*": "eq",
+            "align": "eq",
+            "align*": "eq",
+            "eqnarray": "eq",
+            "eqnarray*": "eq",
+        }
 
         for label in self.labels():
             pre, post = self.tex.split(f"\\label{{{label}}}")
