@@ -32,6 +32,10 @@ as shown in Eq.~\eqref{EQ:PS}.
 \end{figure}
 
 see \cref{dep:a,FiG:dep,FIG:dep:b}
+see below \cref{my-other-section}
+
+\section{Another sections}
+\label{my-other-section}
         """
 
         formatted = r"""
@@ -56,14 +60,18 @@ as shown in Eq.~\eqref{eq:PS}.
 \end{figure}
 
 see \cref{fig:dep:a,fig:dep,fig:dep:b}
+see below \cref{sec:my-other-section}
+
+\section{Another sections}
+\label{sec:my-other-section}
         """
 
         tex = texplain.TeX(text=text)
-        self.assertEqual(tex.labels(), ["foo", "EQ:PS", "dep:a", "FIG:dep:b", "FiG:dep"])
+        self.assertEqual(tex.labels(), ["foo", "EQ:PS", "dep:a", "FIG:dep:b", "FiG:dep", "my-other-section"])
 
         tex.format_labels()
         self.assertEqual(formatted, tex.tex)
-        self.assertEqual(tex.labels(), ["sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep"])
+        self.assertEqual(tex.labels(), ["sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep", "sec:my-other-section"])
 
     def test_remove_commentlines(self):
 
