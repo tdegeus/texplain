@@ -6,4 +6,5 @@ dependencies:
 - python
 - setuptools_scm
 - sphinx
+- sphinx-argparse
 - sphinx_rtd_theme
