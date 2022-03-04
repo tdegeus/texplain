@@ -16,10 +16,10 @@ class MyTests(unittest.TestCase):
 
 Some test here
 \begin{align}
-    \label{EQ:PS}
+    \label{EQ-PS}
     P(S) &\sim S^{-\tau}
 \end{align}
-as shown in Eq.~\eqref{EQ:PS}.
+as shown in Eq.~\eqref{EQ-PS}.
 
 \begin{figure}[htp]
     \subfloat{\label{dep:a}}
@@ -67,11 +67,16 @@ see below \cref{sec:my-other-section}
         """
 
         tex = texplain.TeX(text=text)
-        self.assertEqual(tex.labels(), ["foo", "EQ:PS", "dep:a", "FIG:dep:b", "FiG:dep", "my-other-section"])
+        self.assertEqual(
+            tex.labels(), ["foo", "EQ-PS", "dep:a", "FIG:dep:b", "FiG:dep", "my-other-section"]
+        )
 
         tex.format_labels()
+        self.assertEqual(
+            tex.labels(),
+            ["sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep", "sec:my-other-section"],
+        )
         self.assertEqual(formatted, tex.tex)
-        self.assertEqual(tex.labels(), ["sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep", "sec:my-other-section"])
 
     def test_remove_commentlines(self):
 

@@ -297,11 +297,17 @@ class TeX:
         for label in self.labels():
             pre, post = self.tex.split(f"\\label{{{label}}}")
             key = iden[_findenv(pre)]
-            if not re.match(key + ":.*", label, re.IGNORECASE):
-                self.change_label(label, f"{key}:{label}")
-            elif not re.match(key + ":.*", label):
+            if re.match(f"({key}:)(.*)", label, re.IGNORECASE):
                 info = re.split(re.compile(f"({key}:)(.*)", re.IGNORECASE), label)[2]
                 self.change_label(label, f"{key}:{info}")
+            elif re.match(f"({key})(-)(.*)", label, re.IGNORECASE):
+                info = re.split(re.compile(f"({key})(-)(.*)", re.IGNORECASE), label)[3]
+                self.change_label(label, f"{key}:{info}")
+            elif re.match(f"({key})(_)(.*)", label, re.IGNORECASE):
+                info = re.split(re.compile(f"({key})(_)(.*)", re.IGNORECASE), label)[3]
+                self.change_label(label, f"{key}:{info}")
+            elif not re.match(key + ":.*", label, re.IGNORECASE):
+                self.change_label(label, f"{key}:{label}")
 
     def use_cleveref(self):
         """
