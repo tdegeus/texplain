@@ -42,6 +42,7 @@ jobs:
     - name: Run tests
       working-directory: tests
       run: |
+        python main.py
         python test1.py
 
     - name: Build docs
