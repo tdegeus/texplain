@@ -379,13 +379,13 @@ def _texcleanup_parser():
     parser = argparse.ArgumentParser(description=h)
 
     h = 'Optionally add "fig:" etc to labels'
-    parser.add_argument("--format-labels", action="store_store", help=h)
+    parser.add_argument("--format-labels", action="store_true", help=h)
 
     h = "Remove lines that have only comments"
-    parser.add_argument("--remove-commentlines", action="store_store", help=h)
+    parser.add_argument("--remove-commentlines", action="store_true", help=h)
 
     h = r'Change "Fig.~\ref{...}" etc. to "\cref{...}"'
-    parser.add_argument("--use-cleveref", action="store_store", help=h)
+    parser.add_argument("--use-cleveref", action="store_true", help=h)
 
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("files", nargs="*", type=str, help="TeX file")
