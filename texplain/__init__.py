@@ -370,6 +370,63 @@ def bib_select(text: str, keys: list[str]) -> str:
     return out
 
 
+def _texcleanup_parser():
+    """
+    Return parser for :py:func:`texcleanup`.
+    """
+
+    h = "Apply some simple clean-up rules."
+    parser = argparse.ArgumentParser(description=h)
+
+    h = 'Optionally add "fig:" etc to labels'
+    parser.add_argument("--format-labels", action="store_store", help=h)
+
+    h = "Remove lines that have only comments"
+    parser.add_argument("--remove-commentlines", action="store_store", help=h)
+
+    h = r'Change "Fig.~\ref{...}" etc. to "\cref{...}"'
+    parser.add_argument("--use-cleveref", action="store_store", help=h)
+
+    parser.add_argument("-v", "--version", action="version", version=version)
+    parser.add_argument("files", nargs="*", type=str, help="TeX file")
+
+    return parser
+
+
+def texcleanup(args: list[str]):
+    """
+    Command-line tool to copy to clean output directory, see ``--help``.
+    """
+
+    parser = _texcleanup_parser()
+    args = parser.parse_args(args)
+    assert all([os.path.isfile(file) for file in args.files])
+
+    for file in args.files:
+
+        tex = TeX(file)
+
+        if args.remove_commentlines:
+            tex.remove_commentlines()
+
+        if args.format_labels:
+            tex.format_labels()
+
+        if args.use_cleveref:
+            tex.use_cleveref()
+
+        with open(file, "w") as file:
+            file.write(tex.tex)
+
+
+def _texcleanup_catch():
+    try:
+        texcleanup(sys.argv[1:])
+    except Exception as e:
+        print(e)
+        return 1
+
+
 def _texplain_parser():
     """
     Return parser for :py:func:`texplain`.
@@ -457,7 +514,8 @@ def texplain(args: list[str]):
     if os.path.isfile(output):
         output = os.path.join(new.dirname, new.filename)
 
-    open(output, "w").write(new.tex)
+    with open(output, "w") as file:
+        file.write(new.tex)
 
 
 def _texplain_catch():

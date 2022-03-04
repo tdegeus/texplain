@@ -16,5 +16,10 @@ setup(
     use_scm_version={"write_to": f"{project_name}/_version.py"},
     setup_requires=["setuptools_scm"],
     install_requires=["click", "numpy"],
-    entry_points={"console_scripts": [f"texplain = {project_name}:_texplain_catch"]},
+    entry_points={
+        "console_scripts": [
+            f"texplain = {project_name}:_texplain_catch",
+            f"texcleanup = {project_name}:_texcleanup_catch",
+        ]
+    },
 )
