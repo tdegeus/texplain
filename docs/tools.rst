@@ -11,7 +11,7 @@ texplain
     :prog: texplain
 
 texcleanup
---------
+----------
 
 .. argparse::
     :module: texcleanup
