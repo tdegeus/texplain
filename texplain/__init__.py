@@ -81,8 +81,6 @@ def find_matching(
     return ret
 
 
-
-
 # todo: loop though text rather than looping over all matches
 def find_first_matching(*args, **kwargs) -> tuple:
     r"""
@@ -106,7 +104,9 @@ def text_in_first_matching(text: str, *args, **kwargs) -> str:
     index = find_first_matching(text, *args, **kwargs)
 
     if index is not None:
-        return text[index[0] + 1: index[1]]
+        i = index[0] + 1
+        j = index[1]
+        return text[i:j]
 
     return None
 
@@ -181,23 +181,23 @@ class TeX:
 
         if len(index) == 1:
             index = list(index.items())[0]
-            self.preamble = text[:index[0]]
+            self.preamble = text[: index[0]]
             self.start = a
-            self.main = text[index[0] + len(a): index[1]]
-            self.postamble = text[index[1]:]
+            i = index[0] + len(a)
+            j = index[1]
+            self.main = text[i:j]
+            self.postamble = text[j:]
         else:
             self.preamble = ""
             self.start = ""
             self.main = text
             self.postamble = ""
 
-
     def get(self):
         """
         Return document.
         """
         return self.preamble + self.start + self.main + self.postamble
-
 
     def float_filenames(self, cmd: str = r"\includegraphics") -> list[tuple[str]]:
         r"""
@@ -373,7 +373,10 @@ class TeX:
         )
 
         self.main = re.sub(
-            r"(\\cref\*?{[^}]*,)(" + old + ")(,[^}]*})", r"\1" + new + r"\3", self.main, re.MULTILINE
+            r"(\\cref\*?{[^}]*,)(" + old + ")(,[^}]*})",
+            r"\1" + new + r"\3",
+            self.main,
+            re.MULTILINE,
         )
 
     def labels(self) -> list[str]:
@@ -466,7 +469,6 @@ class TeX:
 
         return {i: np.array(ret[i]) for i in ret if len(ret[i]) > 0}
 
-
     def environments(self) -> list[str]:
         r"""
         Return list with present environments (between \begin{...} ... \end{...}).
@@ -481,7 +483,6 @@ class TeX:
             ret += [self.main[i:j]]
 
         return list(set(ret))
-
 
     def format_labels(self):
         """
@@ -534,8 +535,8 @@ class TeX:
                 continue
 
             for h in headers:
-                start = headers[h][np.argmax(ilab > headers[h])]
-                if re.match(r"([\s\n%]*)(\\label{)", self.main[start + 1:]):
+                start = headers[h][np.argmax(ilab > headers[h])] + 1
+                if re.match(r"([\s\n%]*)(\\label{)", self.main[start:]):
                     self._reformat(label, iden[h])
                     stop = True
                     break
@@ -544,7 +545,6 @@ class TeX:
                 continue
 
             warnings.wargs(f'Unrecognised label "{label}"')
-
 
     def use_cleveref(self):
         """
