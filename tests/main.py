@@ -76,7 +76,7 @@ see below \cref{sec:my-other-section}
             tex.labels(),
             ["sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep", "sec:my-other-section"],
         )
-        self.assertEqual(formatted, tex.tex)
+        self.assertEqual(formatted, tex.get())
 
     def test_remove_commentlines(self):
 
@@ -94,7 +94,7 @@ final text.
 
         tex = texplain.TeX(text=text)
         tex.remove_commentlines()
-        self.assertEqual(formatted, tex.tex)
+        self.assertEqual(formatted, tex.get())
 
     def test_use_cleveref(self):
 
@@ -114,7 +114,7 @@ this most efficient.
 
         tex = texplain.TeX(text=text)
         tex.use_cleveref()
-        self.assertEqual(formatted, tex.tex)
+        self.assertEqual(formatted, tex.get())
 
 
 if __name__ == "__main__":
