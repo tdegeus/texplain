@@ -3,6 +3,7 @@ import itertools
 import os
 import re
 import sys
+import warnings
 from copy import deepcopy
 from shutil import copyfile
 
@@ -387,6 +388,101 @@ class TeX:
 
         return labels
 
+    def _reformat(self, label: str, key: str):
+        """
+        Reformat labels (and references) to f"{key}:{label}" (if needed).
+        Suppose that the target is "fig:foo", this function also converts
+        "FIG:foo", "fig-foo", "fig_foo", ...
+
+        :param label: The label (with or without ``key:``).
+        :param key: The 'keyword' to add/ensure.
+        """
+
+        if re.match(f"({key}:)(.*)", label, re.IGNORECASE):
+            info = re.split(re.compile(f"({key}:)(.*)", re.IGNORECASE), label)[2]
+            self.change_label(label, f"{key}:{info}")
+            return
+
+        if re.match(f"({key})(-)(.*)", label, re.IGNORECASE):
+            info = re.split(re.compile(f"({key})(-)(.*)", re.IGNORECASE), label)[3]
+            self.change_label(label, f"{key}:{info}")
+            return
+
+        if re.match(f"({key})(_)(.*)", label, re.IGNORECASE):
+            info = re.split(re.compile(f"({key})(_)(.*)", re.IGNORECASE), label)[3]
+            self.change_label(label, f"{key}:{info}")
+            return
+
+        if not re.match(key + ":.*", label, re.IGNORECASE):
+            self.change_label(label, f"{key}:{label}")
+            return
+
+    def _environment_index(self, envs: list[str], iden: dict) -> dict:
+        """
+        Get the start and end index of every occurrence of a list of environments.
+
+        :param envs: List of environments present in the main text.
+
+        :param iden:
+            Dictionary with identification "key" per environment.
+            E.g. ``{"figure": "fig", "figure*": "fig"}``.
+
+        :return:
+            Dictionary with an array per "key" with per line the start and end index
+            of each environment corresponding to that "key".
+        """
+
+        index = {}
+
+        for env in envs:
+            key = iden.get(env, "misc")
+            a = rf"\begin{{{env}}}"
+            b = rf"\end{{{env}}}"
+            i = find_matching(self.main, a, b, ignore_escaped=False)
+            index = index | {key: i}
+
+        for key in index:
+            index[key] = np.array(list(index[key].items()))
+
+        return index
+
+    def _header_index(self) -> dict:
+        """
+        Get the index of the closing "}" of all present headers.
+
+        :return:
+            A dictionary with for each present header a list with indices corresponding to the
+            closing "}" of different occurrences of the headers.
+        """
+
+        ret = {"section": [], "subsection": [], "subsubsection": [], "chapter": [], "paragraph": []}
+
+        for key in ret:
+            match = r"(\\)(" + key + r")({)([^}]*)(})"
+            for i in re.finditer(match, self.main):
+                index = find_matching(self.main, "{", "}", start=i.span(0)[0], first=1)
+                closing = list(index.items())[0][-1]
+                ret[key].append(closing)
+
+        return {i: np.array(ret[i]) for i in ret if len(ret[i]) > 0}
+
+
+    def environments(self) -> list[str]:
+        r"""
+        Return list with present environments (between \begin{...} ... \end{...}).
+        """
+
+        ret = []
+
+        for i in re.finditer(r"\\begin{.*}", self.main):
+            index = list(find_matching(self.main, "{", "}", start=i.span(0)[0], first=1).items())[0]
+            i = index[0] + 1
+            j = index[1]
+            ret += [self.main[i:j]]
+
+        return list(set(ret))
+
+
     def format_labels(self):
         """
         Format all labels as:
@@ -397,27 +493,15 @@ class TeX:
         *   ``eq:...``: Math labels.
         """
 
-        def _reformat(label, key):
-            """
-            Reformat to f"{key}:{label}" (if needed).
-            Suppose that the target is "fig:foo", this function also converts
-            "FIG:foo", "fig-foo", "fig_foo", ...
-            """
-            if re.match(f"({key}:)(.*)", label, re.IGNORECASE):
-                info = re.split(re.compile(f"({key}:)(.*)", re.IGNORECASE), label)[2]
-                self.change_label(label, f"{key}:{info}")
-            elif re.match(f"({key})(-)(.*)", label, re.IGNORECASE):
-                info = re.split(re.compile(f"({key})(-)(.*)", re.IGNORECASE), label)[3]
-                self.change_label(label, f"{key}:{info}")
-            elif re.match(f"({key})(_)(.*)", label, re.IGNORECASE):
-                info = re.split(re.compile(f"({key})(_)(.*)", re.IGNORECASE), label)[3]
-                self.change_label(label, f"{key}:{info}")
-            elif not re.match(key + ":.*", label, re.IGNORECASE):
-                self.change_label(label, f"{key}:{label}")
-
         iden = {
             "section": "sec",
             "section*": "sec",
+            "subsection": "sec",
+            "subsection*": "sec",
+            "subsubsection": "sec",
+            "subsubsection*": "sec",
+            "paragraph": "sec",
+            "paragraph*": "sec",
             "chapter": "ch",
             "chapter*": "ch",
             "figure": "fig",
@@ -432,73 +516,35 @@ class TeX:
             "eqnarray*": "eq",
         }
 
-        envs = []
-        for i in re.finditer(r"\\begin{.*}", self.main):
-            index = list(find_matching(self.main, "{", "}", start=i.span(0)[0], first=1).items())[0]
-            envs += [self.main[index[0]+1:index[1]]]
-
-        envs = list(set(envs))
-        index = {}
-
-        for env in envs:
-            key = iden.get(env, "misc")
-            i = find_matching(self.main, rf"\begin{{{env}}}", rf"\end{{{env}}}", ignore_escaped=False)
-            index = index | {key: i}
-
-        for key in index:
-            index[key] = np.array(list(index[key].items()))
-
-        headers = {"section": [], "chapter": []}
-        for h in headers:
-            for i in re.finditer(r"(\\)(" + h + r")({)([^}]*)(})", self.main):
-                headers[h].append(list(find_matching(self.main, "{", "}", start=i.span(0)[0], first=1).items())[0][-1])
-        for h in [i for i in headers]:
-            if len(headers[h]) > 0:
-                headers[h] = np.array(headers[h])[::-1]
-            else:
-                headers.pop(h)
+        envs = self._environment_index(self.environments(), iden)
+        headers = self._header_index()
 
         for label in self.labels():
-            i = self.main.index(rf"\label{{{label}}}")
-            e = False
-            for key in index:
-                c = np.logical_and(index[key][:, 0] < i, index[key][:, 1] > i)
+            ilab = self.main.index(rf"\label{{{label}}}")
+            stop = False
+
+            for key in envs:
+                c = np.logical_and(envs[key][:, 0] < ilab, envs[key][:, 1] > ilab)
                 if np.any(c):
-                    _reformat(label, key)
-                    e = True
+                    self._reformat(label, key)
+                    stop = True
                     break
-            if e:
+
+            if stop:
                 continue
 
             for h in headers:
-                # print()
-                start = headers[h][np.argmax(i > headers[h])]
-                print(label, h, self.main[start -10: start + 10], start, headers[h])
+                start = headers[h][np.argmax(ilab > headers[h])]
                 if re.match(r"([\s\n%]*)(\\label{)", self.main[start + 1:]):
-                    _reformat(label, iden[h])
-                    e = True
+                    self._reformat(label, iden[h])
+                    stop = True
                     break
 
-            if e:
+            if stop:
                 continue
 
+            warnings.wargs(f'Unrecognised label "{label}"')
 
-            # print(rf"(.*)(\\label{{{label}}})(.*)")
-            # print(re.match(r"(.*)(\\label\{)(.*)(\})(.*)", self.main))
-
-
-
-
-        # print(index)
-
-
-
-
-
-        # for label in self.labels():
-        #     pre, post = self.main.split(f"\\label{{{label}}}")
-        #     key = iden[_findenv(pre)]
-        #     _reformat(label, key)
 
     def use_cleveref(self):
         """
