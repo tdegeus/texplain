@@ -76,7 +76,7 @@ see below \cref{sec:my-other-section}
             tex.labels(),
             ["sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep", "sec:my-other-section"],
         )
-        self.assertEqual(formatted, tex.tex)
+        self.assertEqual(formatted, tex.get())
 
     def test_remove_commentlines(self):
 
@@ -94,7 +94,7 @@ final text.
 
         tex = texplain.TeX(text=text)
         tex.remove_commentlines()
-        self.assertEqual(formatted, tex.tex)
+        self.assertEqual(formatted, tex.get())
 
     def test_use_cleveref(self):
 
@@ -114,7 +114,45 @@ this most efficient.
 
         tex = texplain.TeX(text=text)
         tex.use_cleveref()
-        self.assertEqual(formatted, tex.tex)
+        self.assertEqual(formatted, tex.get())
+
+    def test_replace_command_simple(self):
+
+        source = r"This is a \TG{I would replace this} text."
+        expect = r"This is a  text."
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[1]", "")
+        self.assertEqual(expect, tex.get())
+
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}", "")
+        self.assertEqual(expect, tex.get())
+
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"\TG", "")
+        self.assertEqual(expect, tex.get())
+
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}", "{}")
+        self.assertEqual(expect, tex.get())
+
+        source = r"This is a \TG{text}{foo}{test}."
+        expect = r"This is a test."
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[3]", "#3")
+        self.assertEqual(expect, tex.get())
+
+        source = r"This is a \TG{text}{foo}{test}."
+        expect = r"This is a test."
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[3]", "{#3}")
+        self.assertEqual(expect, tex.get())
+
+        source = r"This is a \TG{text}{test}."
+        expect = r"This is a \mycomment{text}{test}."
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[2]", r"\mycomment{#1}{#2}")
+        self.assertEqual(expect, tex.get())
 
 
 if __name__ == "__main__":

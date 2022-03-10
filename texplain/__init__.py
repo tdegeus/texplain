@@ -3,6 +3,8 @@ import itertools
 import os
 import re
 import sys
+import textwrap
+import warnings
 from copy import deepcopy
 from shutil import copyfile
 
@@ -10,6 +12,61 @@ import numpy as np
 
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
+
+
+def find_matching(
+    text: str,
+    opening: str,
+    closing: str,
+    ignore_escaped: bool = True,
+) -> dict:
+    r"""
+    Find matching 'brackets'.
+
+    :param text: The string to consider.
+    :param opening: The opening bracket (e.g. "(", "[", "{").
+    :param closing: The closing bracket (e.g. ")", "]", "}").
+    :param ignore_escaped: Ignore escaped bracket (e.g. "\(", "\[", "\{", "\)", "\]", "\}").
+    :return: Dictionary with ``{index_opening: index_closing}``
+    """
+
+    a = []
+    b = []
+
+    o = re.escape(opening)
+    c = re.escape(closing)
+
+    if ignore_escaped:
+        o = r"(?<!\\)" + o
+        c = r"(?<!\\)" + c
+
+    for i in re.finditer(o, text):
+        a.append(i.span()[0])
+
+    for i in re.finditer(c, text):
+        b.append(-1 * i.span()[0])
+
+    if len(a) != len(b):
+        raise OSError(f"No matching {opening}...{closing} found")
+
+    brackets = sorted(a + b, key=lambda i: abs(i))
+
+    ret = {}
+    stack = []
+
+    for i in brackets:
+        if i > 0:
+            stack.append(i)
+        else:
+            if len(stack) == 0:
+                raise IndexError(f"No closing {closing} at: {i:d}")
+            j = stack.pop()
+            ret[j] = -1 * i
+
+    if len(stack) > 0:
+        raise IndexError(f"No opening {opening} at {stack.pop():d}")
+
+    return ret
 
 
 def _findenv(text):
@@ -65,20 +122,44 @@ class TeX:
             self.dirname = None
             self.filename = None
 
-        if text is not None:
-            self.tex = text
-        else:
+        if text is None:
             assert read_from_file is not None
             with open(read_from_file) as file:
-                self.tex = file.read()
+                text = file.read()
 
-        has_input = re.search(r"(.*)(\\input\{)(.*)(\})", self.tex, re.MULTILINE)
-        has_include = re.search(r"(.*)(\\include\{)(.*)(\})", self.tex, re.MULTILINE)
+        has_input = re.search(r"(.*)(\\input\{)(.*)(\})", text, re.MULTILINE)
+        has_include = re.search(r"(.*)(\\include\{)(.*)(\})", text, re.MULTILINE)
 
         if has_input or has_include:
             raise OSError(r"TeX files with \input{...} or \include{...} not yet supported")
 
-    def read_float(self, cmd: str = r"\includegraphics") -> list[tuple[str]]:
+        a = r"\begin{document}"
+        b = r"\end{document}"
+        index = find_matching(text, a, b, ignore_escaped=False)
+
+        if len(index) == 1:
+            index = list(index.items())[0]
+            self.preamble = text[: index[0]]
+            self.start = a
+            i = index[0] + len(a)
+            j = index[1]
+            self.main = text[i:j]
+            self.postamble = text[j:]
+        else:
+            self.preamble = ""
+            self.start = ""
+            self.main = text
+            self.postamble = ""
+
+        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
+
+    def get(self):
+        """
+        Return document.
+        """
+        return self.preamble + self.start + self.main + self.postamble
+
+    def float_filenames(self, cmd: str = r"\includegraphics") -> list[tuple[str]]:
         r"""
         Extract the keys of 'float' commands
         (e.g. ``\includegraphics{...}``, ``\bibliography{...}``)
@@ -115,7 +196,7 @@ class TeX:
         # - "\includegraphics" accepts "\includegraphics[...]{...}"
         # - "\bibliography" rejects "\bibliographystyle{...}"
         include = []
-        for i in self.tex.split(cmd)[1:]:
+        for i in self.main.split(cmd)[1:]:
             if i[0] in ["[", "{"]:
                 include += [i.split("{")[1].split("}")[0]]
 
@@ -139,7 +220,7 @@ class TeX:
         :param cmd: The command to look for.
         """
 
-        text = self.tex.split(cmd)
+        text = self.main.split(cmd)
 
         for i in range(1, len(text)):
             pre, key = text[i].split("{", 1)
@@ -150,9 +231,9 @@ class TeX:
                 continue
             text[i] = pre + "{" + new + "}" + post
 
-        self.tex = cmd.join(text)
+        self.main = cmd.join(text)
 
-    def read_citation_keys(self) -> list[str]:
+    def citation_keys(self) -> list[str]:
         r"""
         Read the citation keys in the TeX file
         (keys in ``\cite{...}``, ``\citet{...}``, ``\citep{...}```).
@@ -171,7 +252,7 @@ class TeX:
                 raise OSError(f"Error in interpreting\n {string:s} ...")
 
         # read all keys in "cite", "citet", "citep" commands
-        cite = [extract(i) for i in self.tex.split(r"\cite")[1:]]
+        cite = [extract(i) for i in self.main.split(r"\cite")[1:]]
         cite = list({item for sublist in cite for item in sublist})
         cite = [i.replace(" ", "") for i in cite]
 
@@ -188,7 +269,7 @@ class TeX:
         filenames = os.listdir(self.dirname)
         return [i for i in filenames if os.path.splitext(i)[1] == ext]
 
-    def read_config(self) -> list[str]:
+    def config_files(self) -> list[str]:
         r"""
         Read configuration files in the directory of the TeX file.
 
@@ -212,9 +293,98 @@ class TeX:
         Remove lines that are entirely a comment.
         """
 
-        tmp = self.tex.split("\n")
+        tmp = self.main.split("\n")
         tmp = list(itertools.filterfalse(re.compile(r"^\s*%.*$").match, tmp))
-        self.tex = "\n".join(tmp)
+        self.main = "\n".join(tmp)
+
+    def remove_comments(self):
+        """
+        Remove comments form the main text.
+        """
+
+        self.main = re.sub(r"([^%]*)(.*)(\n)", r"\1\3", self.main)
+
+    def replace_command(self, cmd: str, replace: str):
+        r"""
+        Replace command. For example:
+
+        *   Remove the command::
+
+                replace_command(r"{\TG}[1]", "")
+
+                    >>> This is a \TG{I would replace this} text.
+                    <<< This is a  text.
+
+        *   Select a part of the command::
+
+                replace_command(r"{\TG}[2]", "#1")
+
+                    >>> This is a \TG{text}{test}.
+                    <<< This is a test.
+
+        *   Change the command::
+
+                replace_command(r"{\TG}[2]", "\mycomment{#1}{#2}")
+
+                    >>> This is a \TG{text}{test}.
+                    <<< This is a \mycomment{text}{test}.
+
+        :param cmd:
+            The command's definition. Given ``\newcommand{cmd}[args]{def}`` you should specify
+            ``{cmd}[args]``, or ``{cmd}`` (or even ``cmd``) which defaults to ``{cmd}[1]``
+
+        :param replace:
+            The ``def`` part (curly braces around are optional). As in LaTeX replacement is
+            done on ``#1``, ``#2``, ...
+        """
+
+        if not re.match("{.*}", cmd):
+            cmd = "{" + cmd + "}"
+        if cmd[-1] != "]":
+            cmd = cmd + "[1]"
+        if not re.match("{.*}", replace):
+            replace = "{" + replace + "}"
+
+        scmd = re.split(r"({)(\\\w*)(})(\[)([0-9]*)(\])", cmd)
+        sreplace = re.split(r"({)(.*)(})", replace)
+
+        if len(scmd) != 8:
+            raise OSError(f'Unknown cmd = "{cmd}"')
+
+        if len(sreplace) != 5:
+            raise OSError(f'Unknown replace = "{replace}"')
+
+        cmd = scmd[2]
+        n = len(cmd)
+        nargs = int(scmd[5])
+        replace = sreplace[2]
+
+        opening_index = sorted(i for i in self.curly_braces)
+        opening_order = {index: i for i, index in enumerate(opening_index)}
+
+        for match in re.finditer(re.escape(cmd) + "{", self.main):
+            opening = match.span(0)[0] + n
+            parts = []
+            for j in range(nargs):
+                closing = self.curly_braces[opening]
+                i = opening + 1
+                parts += [self.main[i:closing]]
+                if j == nargs - 1:
+                    break
+                b = opening_order[opening]
+                opening = opening_index[b + 1]
+
+            out = replace
+            while True:
+                m = re.search("#[0-9]*", out)
+                if not m:
+                    break
+                i = int(m[0][1:])
+                a, b = m.span(0)
+                out = out[:a] + parts[i - 1] + out[b:]
+
+            i = closing + 1
+            self.main = self.main[: match.span(0)[0]] + out + self.main[i:]
 
     def change_label(self, old_label: str, new_label: str):
         r"""
@@ -229,30 +399,33 @@ class TeX:
 
         # single labels
 
-        self.tex = re.sub(
-            r"(\\label{)(" + old + ")(})", r"\1" + new + r"\3", self.tex, re.MULTILINE
+        self.main = re.sub(
+            r"(\\label{)(" + old + ")(})", r"\1" + new + r"\3", self.main, re.MULTILINE
         )
 
-        self.tex = re.sub(
-            r"(\\)(\w*)(ref\*?{)(" + old + ")(})", r"\1\2\3" + new + r"\5", self.tex, re.MULTILINE
+        self.main = re.sub(
+            r"(\\)(\w*)(ref\*?{)(" + old + ")(})", r"\1\2\3" + new + r"\5", self.main, re.MULTILINE
         )
 
         # grouped labels
 
-        self.tex = re.sub(
-            r"(\\cref\*?{)(" + old + ")(,[^}]*})", r"\1" + new + r"\3", self.tex, re.MULTILINE
+        self.main = re.sub(
+            r"(\\cref\*?{)(" + old + ")(,[^}]*})", r"\1" + new + r"\3", self.main, re.MULTILINE
         )
 
-        self.tex = re.sub(
-            r"(\\cref\*?{[^}]*,)(" + old + ")(})", r"\1" + new + r"\3", self.tex, re.MULTILINE
+        self.main = re.sub(
+            r"(\\cref\*?{[^}]*,)(" + old + ")(})", r"\1" + new + r"\3", self.main, re.MULTILINE
         )
 
-        self.tex = re.sub(
-            r"(\\cref\*?{[^}]*,)(" + old + ")(})", r"\1" + new + r"\3", self.tex, re.MULTILINE
+        self.main = re.sub(
+            r"(\\cref\*?{[^}]*,)(" + old + ")(})", r"\1" + new + r"\3", self.main, re.MULTILINE
         )
 
-        self.tex = re.sub(
-            r"(\\cref\*?{[^}]*,)(" + old + ")(,[^}]*})", r"\1" + new + r"\3", self.tex, re.MULTILINE
+        self.main = re.sub(
+            r"(\\cref\*?{[^}]*,)(" + old + ")(,[^}]*})",
+            r"\1" + new + r"\3",
+            self.main,
+            re.MULTILINE,
         )
 
     def labels(self) -> list[str]:
@@ -262,10 +435,102 @@ class TeX:
 
         labels = []
 
-        for i in re.findall(r"(.*)(\\label{)([^}]*)(})(.*)", self.tex, re.MULTILINE):
+        for i in re.findall(r"(.*)(\\label{)([^}]*)(})(.*)", self.main, re.MULTILINE):
             labels.append(i[2])
 
         return labels
+
+    def _reformat(self, label: str, key: str):
+        """
+        Reformat labels (and references) to f"{key}:{label}" (if needed).
+        Suppose that the target is "fig:foo", this function also converts
+        "FIG:foo", "fig-foo", "fig_foo", ...
+
+        :param label: The label (with or without ``key:``).
+        :param key: The 'keyword' to add/ensure.
+        """
+
+        if re.match(f"({key}:)(.*)", label, re.IGNORECASE):
+            info = re.split(re.compile(f"({key}:)(.*)", re.IGNORECASE), label)[2]
+            self.change_label(label, f"{key}:{info}")
+            return
+
+        if re.match(f"({key})(-)(.*)", label, re.IGNORECASE):
+            info = re.split(re.compile(f"({key})(-)(.*)", re.IGNORECASE), label)[3]
+            self.change_label(label, f"{key}:{info}")
+            return
+
+        if re.match(f"({key})(_)(.*)", label, re.IGNORECASE):
+            info = re.split(re.compile(f"({key})(_)(.*)", re.IGNORECASE), label)[3]
+            self.change_label(label, f"{key}:{info}")
+            return
+
+        if not re.match(key + ":.*", label, re.IGNORECASE):
+            self.change_label(label, f"{key}:{label}")
+            return
+
+    def _environment_index(self, envs: list[str], iden: dict) -> dict:
+        """
+        Get the start and end index of every occurrence of a list of environments.
+
+        :param envs: List of environments present in the main text.
+
+        :param iden:
+            Dictionary with identification "key" per environment.
+            E.g. ``{"figure": "fig", "figure*": "fig"}``.
+
+        :return:
+            Dictionary with an array per "key" with per line the start and end index
+            of each environment corresponding to that "key".
+        """
+
+        index = {}
+
+        for env in envs:
+            key = iden.get(env, "misc")
+            a = rf"\begin{{{env}}}"
+            b = rf"\end{{{env}}}"
+            i = find_matching(self.main, a, b, ignore_escaped=False)
+            index = index | {key: i}
+
+        for key in index:
+            index[key] = np.array(list(index[key].items()))
+
+        return index
+
+    def _header_index(self) -> dict:
+        """
+        Get the index of the closing "}" of all present headers.
+
+        :return:
+            A dictionary with for each present header a list with indices corresponding to the
+            closing "}" of different occurrences of the headers.
+        """
+
+        ret = {"section": [], "subsection": [], "subsubsection": [], "chapter": [], "paragraph": []}
+
+        for key in ret:
+            match = r"(\\)(" + key + r")({)([^}]*)(})"
+            for i in re.finditer(match, self.main):
+                opening = i.span(0)[0] + 1 + len(key)
+                ret[key].append(self.curly_braces[opening])
+
+        return {i: np.array(ret[i]) for i in ret if len(ret[i]) > 0}
+
+    def environments(self) -> list[str]:
+        r"""
+        Return list with present environments (between \begin{...} ... \end{...}).
+        """
+
+        ret = []
+
+        for i in re.finditer(r"\\begin{.*}", self.main):
+            opening = i.span(0)[0] + 6
+            closing = self.curly_braces[opening]
+            i = opening + 1
+            ret += [self.main[i:closing]]
+
+        return list(set(ret))
 
     def format_labels(self):
         """
@@ -280,6 +545,12 @@ class TeX:
         iden = {
             "section": "sec",
             "section*": "sec",
+            "subsection": "sec",
+            "subsection*": "sec",
+            "subsubsection": "sec",
+            "subsubsection*": "sec",
+            "paragraph": "sec",
+            "paragraph*": "sec",
             "chapter": "ch",
             "chapter*": "ch",
             "figure": "fig",
@@ -294,20 +565,34 @@ class TeX:
             "eqnarray*": "eq",
         }
 
+        envs = self._environment_index(self.environments(), iden)
+        headers = self._header_index()
+
         for label in self.labels():
-            pre, post = self.tex.split(f"\\label{{{label}}}")
-            key = iden[_findenv(pre)]
-            if re.match(f"({key}:)(.*)", label, re.IGNORECASE):
-                info = re.split(re.compile(f"({key}:)(.*)", re.IGNORECASE), label)[2]
-                self.change_label(label, f"{key}:{info}")
-            elif re.match(f"({key})(-)(.*)", label, re.IGNORECASE):
-                info = re.split(re.compile(f"({key})(-)(.*)", re.IGNORECASE), label)[3]
-                self.change_label(label, f"{key}:{info}")
-            elif re.match(f"({key})(_)(.*)", label, re.IGNORECASE):
-                info = re.split(re.compile(f"({key})(_)(.*)", re.IGNORECASE), label)[3]
-                self.change_label(label, f"{key}:{info}")
-            elif not re.match(key + ":.*", label, re.IGNORECASE):
-                self.change_label(label, f"{key}:{label}")
+            ilab = self.main.index(rf"\label{{{label}}}")
+            stop = False
+
+            for key in envs:
+                c = np.logical_and(envs[key][:, 0] < ilab, envs[key][:, 1] > ilab)
+                if np.any(c):
+                    self._reformat(label, key)
+                    stop = True
+                    break
+
+            if stop:
+                continue
+
+            for h in headers:
+                start = headers[h][np.argmax(ilab > headers[h])] + 1
+                if re.match(r"([\s\n%]*)(\\label{)", self.main[start:]):
+                    self._reformat(label, iden[h])
+                    stop = True
+                    break
+
+            if stop:
+                continue
+
+            warnings.wargs(f'Unrecognised label "{label}"')
 
     def use_cleveref(self):
         """
@@ -315,40 +600,40 @@ class TeX:
         """
 
         for key in ["Figure", "Fig.", "Table", "Tab.", "Chapter", "Ch.", "Section", "Sec."]:
-            self.tex = re.sub(
+            self.main = re.sub(
                 r"(" + key + r"~?\s?\\ref)(\*?{)([^}]*})",
                 r"\\cref\2\3",
-                self.tex,
+                self.main,
                 re.MULTILINE,
                 re.IGNORECASE,
             )
 
         for key in ["Equation", "Eq."]:
-            self.tex = re.sub(
+            self.main = re.sub(
                 r"(" + key + r"~?\s?\\ref)(\*?{)([^}]*})",
                 r"\\cref\2\3",
-                self.tex,
+                self.main,
                 re.MULTILINE,
                 re.IGNORECASE,
             )
-            self.tex = re.sub(
+            self.main = re.sub(
                 r"(" + key + r"~?\s?\\eqref)(\*?{)([^}]*})",
                 r"\\cref\2\3",
-                self.tex,
+                self.main,
                 re.MULTILINE,
                 re.IGNORECASE,
             )
-            self.tex = re.sub(
+            self.main = re.sub(
                 r"(" + key + r"~?\s?\(\\ref)(\*?{)([^}]*})(\))",
                 r"\\cref\2\3",
-                self.tex,
+                self.main,
                 re.MULTILINE,
                 re.IGNORECASE,
             )
-            self.tex = re.sub(
+            self.main = re.sub(
                 r"(" + key + r"~?\s?\[\\ref)(\*?{)([^}]*})(\])",
                 r"\\cref\2\3",
-                self.tex,
+                self.main,
                 re.MULTILINE,
                 re.IGNORECASE,
             )
@@ -392,20 +677,49 @@ def _texcleanup_parser():
     Return parser for :py:func:`texcleanup`.
     """
 
-    h = "Apply some simple clean-up rules."
-    parser = argparse.ArgumentParser(description=h)
+    h = textwrap.dedent(
+        r"""Apply some simple clean-up rules.
+        Most of the options are fully self explanatory. A word it need about "--replace-command":
+        It can replace a command by another command, or simply 'remove' it, keeping just a sequence
+        of arguments. This option is very much like a LaTeX command, but applied to the source.
+        For example::
 
-    h = 'Optionally add "fig:" etc to labels'
-    parser.add_argument("--format-labels", action="store_true", help=h)
+            --replace-command r"{\TG}[2]" "#1"
+
+        Applied a change as follows::
+
+            >>> This is a \TG{text}{test}.
+            <<< This is a test.
+
+        Note that the number of arguments, e.g. [2], defaults to one if not specified.
+        """
+    )
+    parser = argparse.ArgumentParser(description=h)
 
     h = "Remove lines that have only comments"
     parser.add_argument("--remove-commentlines", action="store_true", help=h)
+
+    h = "Remove all comments"
+    parser.add_argument("--remove-comments", action="store_true", help=h)
+
+    h = "Replace command (see above)"
+    parser.add_argument(
+        "--replace-command", type=str, nargs=2, action="append", metavar=("cmd", "def"), help=h
+    )
+
+    h = "Change label"
+    parser.add_argument(
+        "--change-label", type=str, nargs=2, action="append", metavar=("old", "new"), help=h
+    )
+
+    h = 'Add "fig:", "eq:", "tab:", "sec:", "ch:" to labels'
+    parser.add_argument("--format-labels", action="store_true", help=h)
 
     h = r'Change "Fig.~\ref{...}" etc. to "\cref{...}"'
     parser.add_argument("--use-cleveref", action="store_true", help=h)
 
     parser.add_argument("-v", "--version", action="version", version=version)
-    parser.add_argument("files", nargs="*", type=str, help="TeX file")
+    parser.add_argument("files", nargs="+", type=str, help="TeX file")
 
     return parser
 
@@ -423,8 +737,19 @@ def texcleanup(args: list[str]):
 
         tex = TeX(file)
 
-        if args.remove_commentlines:
+        if args.remove_commentlines or args.remove_comments:
             tex.remove_commentlines()
+
+        if args.remove_comments:
+            tex.remove_commentlines()
+
+        if args.replace_command:
+            for i in args.replace_command:
+                tex.replace_command(*i)
+
+        if args.change_label:
+            for i in args.change_label:
+                tex.change_label(*i)
 
         if args.format_labels:
             tex.format_labels()
@@ -433,7 +758,7 @@ def texcleanup(args: list[str]):
             tex.use_cleveref()
 
         with open(file, "w") as file:
-            file.write(tex.tex)
+            file.write(tex.get())
 
 
 def _texcleanup_catch():
@@ -478,10 +803,10 @@ def texplain(args: list[str]):
     new = deepcopy(old)
     new.dirname = args.outdir
 
-    includegraphics = old.read_float(r"\includegraphics")
-    bibfiles = old.read_float(r"\bibliography")
-    bibkeys = old.read_citation_keys()
-    config_files = old.read_config()
+    includegraphics = old.float_filenames(r"\includegraphics")
+    bibfiles = old.float_filenames(r"\bibliography")
+    bibkeys = old.citation_keys()
+    config_files = old.config_files()
 
     # Copy configuration files
 
@@ -532,7 +857,7 @@ def texplain(args: list[str]):
         output = os.path.join(new.dirname, new.filename)
 
     with open(output, "w") as file:
-        file.write(new.tex)
+        file.write(new.get())
 
 
 def _texplain_catch():
@@ -541,3 +866,7 @@ def _texplain_catch():
     except Exception as e:
         print(e)
         return 1
+
+
+if __name__ == "__main__":
+    pass
