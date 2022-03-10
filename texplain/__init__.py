@@ -3,8 +3,8 @@ import itertools
 import os
 import re
 import sys
-import warnings
 import textwrap
+import warnings
 from copy import deepcopy
 from shutil import copyfile
 
@@ -677,22 +677,23 @@ def _texcleanup_parser():
     Return parser for :py:func:`texcleanup`.
     """
 
-    h = textwrap.dedent(r"""Apply some simple clean-up rules.
+    h = textwrap.dedent(
+        r"""Apply some simple clean-up rules.
+        Most of the options are fully self explanatory. A word it need about "--replace-command":
+        It can replace a command by another command, or simply 'remove' it, keeping just a sequence
+        of arguments. This option is very much like a LaTeX command, but applied to the source.
+        For example::
 
-    Most of the options are fully self explanatory. A word it need about "--replace-command":
-    It can replace a command by another command, or simply 'remove' it, keeping just a sequence
-    of arguments. This option is very much like a LaTeX command, but directly applied to the source.
-    For example::
+            --replace-command r"{\TG}[2]" "#1"
 
-        --replace-command r"{\TG}[2]" "#1"
+        Applied a change as follows::
 
-    Applied a change as follows::
+            >>> This is a \TG{text}{test}.
+            <<< This is a test.
 
-        >>> This is a \TG{text}{test}.
-        <<< This is a test.
-
-    Note that the number of arguments, e.g. [2], defaults to one if not specified.
-    """)
+        Note that the number of arguments, e.g. [2], defaults to one if not specified.
+        """
+    )
     parser = argparse.ArgumentParser(description=h)
 
     h = "Remove lines that have only comments"
