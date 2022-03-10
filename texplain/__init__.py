@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import warnings
+import textwrap
 from copy import deepcopy
 from shutil import copyfile
 
@@ -374,8 +375,13 @@ class TeX:
                 opening = opening_index[b + 1]
 
             out = replace
-            for i, p in enumerate(parts):
-                out = out.replace(f"#{i + 1:d}", p)
+            while True:
+                m = re.search("#[0-9]*", out)
+                if not m:
+                    break
+                i = int(m[0][1:])
+                a, b = m.span(0)
+                out = out[:a] + parts[i - 1] + out[b:]
 
             i = closing + 1
             self.main = self.main[: match.span(0)[0]] + out + self.main[i:]
@@ -671,20 +677,44 @@ def _texcleanup_parser():
     Return parser for :py:func:`texcleanup`.
     """
 
-    h = "Apply some simple clean-up rules."
-    parser = argparse.ArgumentParser(description=h)
+    h = textwrap.dedent(r"""Apply some simple clean-up rules.
 
-    h = 'Optionally add "fig:" etc to labels'
-    parser.add_argument("--format-labels", action="store_true", help=h)
+    Most of the options are fully self explanatory. A word it need about "--replace-command":
+    It can replace a command by another command, or simply 'remove' it, keeping just a sequence
+    of arguments. This option is very much like a LaTeX command, but directly applied to the source.
+    For example::
+
+        --replace-command r"{\TG}[2]" "#1"
+
+    Applied a change as follows::
+
+        >>> This is a \TG{text}{test}.
+        <<< This is a test.
+
+    Note that the number of arguments, e.g. [2], defaults to one if not specified.
+    """)
+    parser = argparse.ArgumentParser(description=h)
 
     h = "Remove lines that have only comments"
     parser.add_argument("--remove-commentlines", action="store_true", help=h)
+
+    h = "Remove all comments"
+    parser.add_argument("--remove-comments", action="store_true", help=h)
+
+    h = "Replace command (see above)"
+    parser.add_argument("--replace-command", type=str, nargs=2, action="append", help=h)
+
+    h = "Change label"
+    parser.add_argument("--change-label", type=str, nargs=2, action="append", help=h)
+
+    h = 'Add "fig:", "eq:", "tab:", "sec:", "ch:" to labels'
+    parser.add_argument("--format-labels", action="store_true", help=h)
 
     h = r'Change "Fig.~\ref{...}" etc. to "\cref{...}"'
     parser.add_argument("--use-cleveref", action="store_true", help=h)
 
     parser.add_argument("-v", "--version", action="version", version=version)
-    parser.add_argument("files", nargs="*", type=str, help="TeX file")
+    parser.add_argument("files", nargs="+", type=str, help="TeX file")
 
     return parser
 
@@ -702,8 +732,19 @@ def texcleanup(args: list[str]):
 
         tex = TeX(file)
 
-        if args.remove_commentlines:
+        if args.remove_commentlines or args.remove_comments:
             tex.remove_commentlines()
+
+        if args.remove_comments:
+            tex.remove_commentlines()
+
+        if args.replace_command:
+            for i in args.replace_command:
+                tex.replace_command(*i)
+
+        if args.change_label:
+            for i in args.change_label:
+                tex.change_label(*i)
 
         if args.format_labels:
             tex.format_labels()

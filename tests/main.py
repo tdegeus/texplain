@@ -124,10 +124,28 @@ this most efficient.
         tex.replace_command(r"{\TG}[1]", "")
         self.assertEqual(expect, tex.get())
 
-        source = r"This is a \TG{text}{test}."
-        expect = r"This is a text."
         tex = texplain.TeX(text=source)
-        tex.replace_command(r"{\TG}[2]", "#1")
+        tex.replace_command(r"{\TG}", "")
+        self.assertEqual(expect, tex.get())
+
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"\TG", "")
+        self.assertEqual(expect, tex.get())
+
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}", "{}")
+        self.assertEqual(expect, tex.get())
+
+        source = r"This is a \TG{text}{foo}{test}."
+        expect = r"This is a test."
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[3]", "#3")
+        self.assertEqual(expect, tex.get())
+
+        source = r"This is a \TG{text}{foo}{test}."
+        expect = r"This is a test."
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[3]", "{#3}")
         self.assertEqual(expect, tex.get())
 
         source = r"This is a \TG{text}{test}."
