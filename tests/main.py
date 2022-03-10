@@ -116,6 +116,26 @@ this most efficient.
         tex.use_cleveref()
         self.assertEqual(formatted, tex.get())
 
+    def test_replace_command_simple(self):
+
+        source = r"This is a \TG{I would replace this} text."
+        expect = r"This is a  text."
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[1]", "")
+        self.assertEqual(expect, tex.get())
+
+        source = r"This is a \TG{text}{test}."
+        expect = r"This is a text."
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[2]", "#1")
+        self.assertEqual(expect, tex.get())
+
+        source = r"This is a \TG{text}{test}."
+        expect = r"This is a \mycomment{text}{test}."
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[2]", r"\mycomment{#1}{#2}")
+        self.assertEqual(expect, tex.get())
+
 
 if __name__ == "__main__":
 

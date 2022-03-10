@@ -12,14 +12,11 @@ import numpy as np
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
 
-
 def find_matching(
     text: str,
     opening: str,
     closing: str,
     ignore_escaped: bool = True,
-    first: int = None,
-    start: int = None,
 ) -> dict:
     r"""
     Find matching 'brackets'.
@@ -28,8 +25,6 @@ def find_matching(
     :param opening: The opening bracket (e.g. "(", "[", "{").
     :param closing: The closing bracket (e.g. ")", "]", "}").
     :param ignore_escaped: Ignore escaped bracket (e.g. "\(", "\[", "\{", "\)", "\]", "\}").
-    :param first: Return matches for the ``first`` opening 'brackets'.
-    :param start: Index in ``text`` to start searching.
     :return: Dictionary with ``{index_opening: index_closing}``
     """
 
@@ -54,61 +49,22 @@ def find_matching(
 
     brackets = sorted(a + b, key=lambda i: abs(i))
 
-    if start is not None:
-        brackets = [i for i in brackets if abs(i) > start]
-
     ret = {}
     stack = []
-    iopen = []
 
     for i in brackets:
         if i > 0:
             stack.append(i)
-            iopen.append(i)
         else:
             if len(stack) == 0:
                 raise IndexError(f"No closing {closing} at: {i:d}")
             j = stack.pop()
             ret[j] = -1 * i
-            if first is not None:
-                if len(iopen) >= first:
-                    if j == iopen[first - 1]:
-                        return ret
 
     if len(stack) > 0:
         raise IndexError(f"No opening {opening} at {stack.pop():d}")
 
     return ret
-
-
-# todo: loop though text rather than looping over all matches
-def find_first_matching(*args, **kwargs) -> tuple:
-    r"""
-    Wrapper around :py:func:`find_matching` returning only one match.
-
-    :return: Tuple ``(index_opening, index_closing)``
-    """
-    index = find_matching(*args, **kwargs)
-
-    for i in index:
-        return (i, index[i])
-
-    return None
-
-
-# todo: loop though text rather than looping over all matches
-def text_in_first_matching(text: str, *args, **kwargs) -> str:
-    """
-    Get the text inside the first matching 'bracket', see :py:func:`find_first_matching`.
-    """
-    index = find_first_matching(text, *args, **kwargs)
-
-    if index is not None:
-        i = index[0] + 1
-        j = index[1]
-        return text[i:j]
-
-    return None
 
 
 def _findenv(text):
@@ -192,6 +148,8 @@ class TeX:
             self.start = ""
             self.main = text
             self.postamble = ""
+
+        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
     def get(self):
         """
@@ -337,6 +295,90 @@ class TeX:
         tmp = list(itertools.filterfalse(re.compile(r"^\s*%.*$").match, tmp))
         self.main = "\n".join(tmp)
 
+    def remove_comments(self):
+        """
+        Remove comments form the main text.
+        """
+
+        self.main = re.sub(r"([^%]*)(.*)(\n)", r"\1\3", self.main)
+
+    def replace_command(self, cmd: str, replace: str):
+        r"""
+        Replace command. For example:
+
+        *   Remove the command::
+
+                replace_command(r"{\TG}[1]", "")
+
+                    >>> This is a \TG{I would replace this} text.
+                    <<< This is a  text.
+
+        *   Select a part of the command::
+
+                replace_command(r"{\TG}[2]", "#1")
+
+                    >>> This is a \TG{text}{test}.
+                    <<< This is a test.
+
+        *   Change the command::
+
+                replace_command(r"{\TG}[2]", "\mycomment{#1}{#2}")
+
+                    >>> This is a \TG{text}{test}.
+                    <<< This is a \mycomment{text}{test}.
+
+        :param cmd:
+            The command's definition. Given ``\newcommand{cmd}[args]{def}`` you should specify
+            ``{cmd}[args]``, or ``{cmd}`` (or even ``cmd``) which defaults to ``{cmd}[1]``
+
+        :param replace:
+            The ``def`` part (curly braces around are optional). As in LaTeX replacement is
+            done on ``#1``, ``#2``, ...
+        """
+
+        if not re.match("{.*}", cmd):
+            cmd = "{" + cmd + "}"
+        if cmd[-1] != "]":
+            cmd = cmd + "[1]"
+        if not re.match("{.*}", replace):
+            replace = "{" + replace + "}"
+
+        scmd = re.split(r"({)(\\\w*)(})(\[)([0-9]*)(\])", cmd)
+        sreplace = re.split(r"({)(.*)(})", replace)
+
+        if len(scmd) != 8:
+            raise OSError(f'Unknown cmd = "{cmd}"')
+
+        if len(sreplace) != 5:
+            raise OSError(f'Unknown replace = "{replace}"')
+
+        cmd = scmd[2]
+        n = len(cmd)
+        nargs = int(scmd[5])
+        replace = sreplace[2]
+
+        opening_index = sorted([i for i in self.curly_braces])
+        opening_order = {index: i for i, index in enumerate(opening_index)}
+
+        for match in re.finditer(re.escape(cmd) + "{", self.main):
+            opening = match.span(0)[0] + n
+            parts = []
+            for j in range(nargs):
+                closing = self.curly_braces[opening]
+                i = opening + 1
+                parts += [self.main[i:closing]]
+                if j == nargs - 1:
+                    break
+                b = opening_order[opening]
+                opening = opening_index[b + 1]
+
+            out = replace
+            for i, p in enumerate(parts):
+                out = out.replace(f"#{i + 1:d}", p)
+
+            self.main = self.main[:match.span(0)[0]] + out + self.main[closing + 1:]
+
+
     def change_label(self, old_label: str, new_label: str):
         r"""
         Change label in ``\label{...}`` and ``\ref{...}`` (-like) commands.
@@ -463,9 +505,8 @@ class TeX:
         for key in ret:
             match = r"(\\)(" + key + r")({)([^}]*)(})"
             for i in re.finditer(match, self.main):
-                index = find_matching(self.main, "{", "}", start=i.span(0)[0], first=1)
-                closing = list(index.items())[0][-1]
-                ret[key].append(closing)
+                opening = i.span(0)[0] + 1 + len(key)
+                ret[key].append(self.curly_braces[opening])
 
         return {i: np.array(ret[i]) for i in ret if len(ret[i]) > 0}
 
@@ -477,10 +518,10 @@ class TeX:
         ret = []
 
         for i in re.finditer(r"\\begin{.*}", self.main):
-            index = list(find_matching(self.main, "{", "}", start=i.span(0)[0], first=1).items())[0]
-            i = index[0] + 1
-            j = index[1]
-            ret += [self.main[i:j]]
+            opening = i.span(0)[0] + 6
+            closing = self.curly_braces[opening]
+            i = opening + 1
+            ret += [self.main[i: closing]]
 
         return list(set(ret))
 
@@ -778,3 +819,7 @@ def _texplain_catch():
     except Exception as e:
         print(e)
         return 1
+
+
+if __name__ == "__main__":
+    pass
