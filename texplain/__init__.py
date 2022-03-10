@@ -12,6 +12,7 @@ import numpy as np
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
 
+
 def find_matching(
     text: str,
     opening: str,
@@ -357,7 +358,7 @@ class TeX:
         nargs = int(scmd[5])
         replace = sreplace[2]
 
-        opening_index = sorted([i for i in self.curly_braces])
+        opening_index = sorted(i for i in self.curly_braces)
         opening_order = {index: i for i, index in enumerate(opening_index)}
 
         for match in re.finditer(re.escape(cmd) + "{", self.main):
@@ -376,8 +377,8 @@ class TeX:
             for i, p in enumerate(parts):
                 out = out.replace(f"#{i + 1:d}", p)
 
-            self.main = self.main[:match.span(0)[0]] + out + self.main[closing + 1:]
-
+            i = closing + 1
+            self.main = self.main[: match.span(0)[0]] + out + self.main[i:]
 
     def change_label(self, old_label: str, new_label: str):
         r"""
@@ -521,7 +522,7 @@ class TeX:
             opening = i.span(0)[0] + 6
             closing = self.curly_braces[opening]
             i = opening + 1
-            ret += [self.main[i: closing]]
+            ret += [self.main[i:closing]]
 
         return list(set(ret))
 
