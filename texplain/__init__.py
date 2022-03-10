@@ -703,10 +703,14 @@ def _texcleanup_parser():
     parser.add_argument("--remove-comments", action="store_true", help=h)
 
     h = "Replace command (see above)"
-    parser.add_argument("--replace-command", type=str, nargs=2, action="append", help=h)
+    parser.add_argument(
+        "--replace-command", type=str, nargs=2, action="append", metavar=("cmd", "def"), help=h
+    )
 
     h = "Change label"
-    parser.add_argument("--change-label", type=str, nargs=2, action="append", help=h)
+    parser.add_argument(
+        "--change-label", type=str, nargs=2, action="append", metavar=("old", "new"), help=h
+    )
 
     h = 'Add "fig:", "eq:", "tab:", "sec:", "ch:" to labels'
     parser.add_argument("--format-labels", action="store_true", help=h)
