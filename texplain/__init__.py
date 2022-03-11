@@ -69,33 +69,6 @@ def find_matching(
     return ret
 
 
-def _findenv(text):
-    """
-    Find the (most probable) current environment by looking backward.
-
-    :param text: Text to consider.
-    :return: Environment ("section", "chapter", "figure", "table", "equation", ...)
-    """
-
-    env = []
-    pos = []
-    patterns = [
-        re.compile(r"(\\begin{)([^}]*)(})"),
-        re.compile(r"(\\)(section)({)([^}]*)(})"),
-        re.compile(r"(\\)(chapter)({)([^}]*)(})"),
-    ]
-
-    for pattern in patterns:
-        env += [re.sub(pattern, r"\2", i[0]) for i in re.finditer(pattern, text)]
-        pos += [i.span(0)[0] for i in re.finditer(pattern, text)]
-
-    for i, e in enumerate(env):
-        if e in ["centering"]:
-            pos[i] = -1
-
-    return env[np.argmax(pos)]
-
-
 class TeX:
     """
     Simple TeX file manipulations.
