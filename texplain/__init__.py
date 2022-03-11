@@ -451,22 +451,18 @@ class TeX:
 
         if re.match(f"({key}:)(.*)", label, re.IGNORECASE):
             info = re.split(re.compile(f"({key}:)(.*)", re.IGNORECASE), label)[2]
-            self.change_label(label, f"{key}:{info}")
-            return
+            return f"{key}:{info}"
 
         if re.match(f"({key})(-)(.*)", label, re.IGNORECASE):
             info = re.split(re.compile(f"({key})(-)(.*)", re.IGNORECASE), label)[3]
-            self.change_label(label, f"{key}:{info}")
-            return
+            return f"{key}:{info}"
 
         if re.match(f"({key})(_)(.*)", label, re.IGNORECASE):
             info = re.split(re.compile(f"({key})(_)(.*)", re.IGNORECASE), label)[3]
-            self.change_label(label, f"{key}:{info}")
-            return
+            return f"{key}:{info}"
 
         if not re.match(key + ":.*", label, re.IGNORECASE):
-            self.change_label(label, f"{key}:{label}")
-            return
+            return f"{key}:{label}"
 
     def _environment_index(self, envs: list[str], iden: dict) -> dict:
         """
@@ -570,17 +566,19 @@ class TeX:
         }
 
         environments = self.environments()
+        change = {}
+        envs = self._environment_index(environments, iden)
+        headers = self._header_index()
 
         for label in self.labels():
-            envs = self._environment_index(environments, iden)
-            headers = self._header_index()
+
             ilab = self.main.index(rf"\label{{{label}}}")
             stop = False
 
             for key in envs:
                 c = np.logical_and(envs[key][:, 0] < ilab, envs[key][:, 1] > ilab)
                 if np.any(c):
-                    self._reformat(label, key)
+                    change[label] = self._reformat(label, key)
                     stop = True
                     break
 
@@ -592,7 +590,7 @@ class TeX:
                 i = test.size - 1 if np.all(test) else np.argmin(test)
                 start = headers[h][i] + 1
                 if re.match(r"([\s\n%]*)(\\label{)", self.main[start:]):
-                    self._reformat(label, iden[h])
+                    change[label] = self._reformat(label, iden[h])
                     stop = True
                     break
 
@@ -600,6 +598,9 @@ class TeX:
                 continue
 
             warnings.warn(f'Unrecognised label "{label}"')
+
+        for label in change:
+            self.change_label(label, change[label])
 
     def use_cleveref(self):
         """
