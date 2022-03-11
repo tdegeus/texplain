@@ -232,6 +232,7 @@ class TeX:
             text[i] = pre + "{" + new + "}" + post
 
         self.main = cmd.join(text)
+        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
     def citation_keys(self) -> list[str]:
         r"""
@@ -296,6 +297,7 @@ class TeX:
         tmp = self.main.split("\n")
         tmp = list(itertools.filterfalse(re.compile(r"^\s*%.*$").match, tmp))
         self.main = "\n".join(tmp)
+        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
     def remove_comments(self):
         """
@@ -303,6 +305,7 @@ class TeX:
         """
 
         self.main = re.sub(r"([^%]*)(.*)(\n)", r"\1\3", self.main)
+        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
     def replace_command(self, cmd: str, replace: str):
         r"""
@@ -362,7 +365,10 @@ class TeX:
         opening_index = sorted(i for i in self.curly_braces)
         opening_order = {index: i for i, index in enumerate(opening_index)}
 
-        for match in re.finditer(re.escape(cmd) + "{", self.main):
+        while True:
+            match = re.search(re.escape(cmd) + "{", self.main)
+            if not match:
+                break
             opening = match.span(0)[0] + n
             parts = []
             for j in range(nargs):
@@ -385,6 +391,7 @@ class TeX:
 
             i = closing + 1
             self.main = self.main[: match.span(0)[0]] + out + self.main[i:]
+            self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
     def change_label(self, old_label: str, new_label: str):
         r"""
@@ -427,6 +434,7 @@ class TeX:
             self.main,
             re.MULTILINE,
         )
+        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
     def labels(self) -> list[str]:
         """
@@ -491,7 +499,10 @@ class TeX:
             a = rf"\begin{{{env}}}"
             b = rf"\end{{{env}}}"
             i = find_matching(self.main, a, b, ignore_escaped=False)
-            index = index | {key: i}
+            if key not in index:
+                index[key] = i
+            else:
+                index[key] = index[key] | i
 
         for key in index:
             index[key] = np.array(list(index[key].items()))
@@ -565,10 +576,11 @@ class TeX:
             "eqnarray*": "eq",
         }
 
-        envs = self._environment_index(self.environments(), iden)
-        headers = self._header_index()
+        environments = self.environments()
 
         for label in self.labels():
+            envs = self._environment_index(environments, iden)
+            headers = self._header_index()
             ilab = self.main.index(rf"\label{{{label}}}")
             stop = False
 
@@ -583,7 +595,9 @@ class TeX:
                 continue
 
             for h in headers:
-                start = headers[h][np.argmax(ilab > headers[h])] + 1
+                test = ilab > headers[h]
+                i = test.size - 1 if np.all(test) else np.argmin(test)
+                start = headers[h][i] + 1
                 if re.match(r"([\s\n%]*)(\\label{)", self.main[start:]):
                     self._reformat(label, iden[h])
                     stop = True
@@ -592,7 +606,7 @@ class TeX:
             if stop:
                 continue
 
-            warnings.wargs(f'Unrecognised label "{label}"')
+            warnings.warn(f'Unrecognised label "{label}"')
 
     def use_cleveref(self):
         """
@@ -637,6 +651,8 @@ class TeX:
                 re.MULTILINE,
                 re.IGNORECASE,
             )
+
+        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
 
 def bib_select(text: str, keys: list[str]) -> str:
