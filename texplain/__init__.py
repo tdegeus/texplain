@@ -124,8 +124,6 @@ class TeX:
             self.main = text
             self.postamble = ""
 
-        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
-
     def get(self):
         """
         Return document.
@@ -205,7 +203,6 @@ class TeX:
             text[i] = pre + "{" + new + "}" + post
 
         self.main = cmd.join(text)
-        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
     def citation_keys(self) -> list[str]:
         r"""
@@ -270,7 +267,6 @@ class TeX:
         tmp = self.main.split("\n")
         tmp = list(itertools.filterfalse(re.compile(r"^\s*%.*$").match, tmp))
         self.main = "\n".join(tmp)
-        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
     def remove_comments(self):
         """
@@ -278,7 +274,60 @@ class TeX:
         """
 
         self.main = re.sub(r"([^%]*)(.*)(\n)", r"\1\3", self.main)
-        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
+
+    def _replace_command_impl(self, cmd: str, nargs: int, replace: str):
+        """
+        Implementation of command replacement.
+        The replacement is recursive: if commands are nested this first replaces the outer
+        command and then continues to replace the inner command.
+        """
+
+        if not re.search(re.escape(cmd) + "{", self.main):
+            return
+
+        n = len(cmd)
+        curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
+        closing = sorted(curly_braces[i] for i in curly_braces)
+        opening = np.array(sorted(i for i in curly_braces))
+        next_opening = {}
+        for i in closing:
+            j = np.argmax(opening > i)
+            next_opening[i] = opening[j]
+
+        last = 0
+        ret = ""
+
+        for match in re.finditer(re.escape(cmd) + "{", self.main):
+            opening = match.span(0)[0] + n
+            if opening < last:
+                continue
+
+            parts = []
+            for j in range(nargs):
+                closing = curly_braces[opening]
+                i = opening + 1
+                parts += [self.main[i:closing]]
+                if j == nargs - 1:
+                    break
+                opening = next_opening[closing]
+
+            out = replace
+            while True:
+                m = re.search("#[0-9]*", out)
+                if not m:
+                    break
+                i = int(m[0][1:])
+                a, b = m.span(0)
+                out = out[:a] + parts[i - 1] + out[b:]
+
+            ret = ret + self.main[last: match.span(0)[0]] + out
+            last = closing + 1
+
+        self.main = ret + self.main[last:]
+
+        if re.search(re.escape(cmd) + "{", self.main):
+            return _replace_command_impl(cmd, nargs, replace)
+
 
     def replace_command(self, cmd: str, replace: str):
         r"""
@@ -331,40 +380,10 @@ class TeX:
             raise OSError(f'Unknown replace = "{replace}"')
 
         cmd = scmd[2]
-        n = len(cmd)
-        nargs = int(scmd[5])
         replace = sreplace[2]
+        nargs = int(scmd[5])
 
-        opening_index = sorted(i for i in self.curly_braces)
-        opening_order = {index: i for i, index in enumerate(opening_index)}
-
-        while True:
-            match = re.search(re.escape(cmd) + "{", self.main)
-            if not match:
-                break
-            opening = match.span(0)[0] + n
-            parts = []
-            for j in range(nargs):
-                closing = self.curly_braces[opening]
-                i = opening + 1
-                parts += [self.main[i:closing]]
-                if j == nargs - 1:
-                    break
-                b = opening_order[opening]
-                opening = opening_index[b + 1]
-
-            out = replace
-            while True:
-                m = re.search("#[0-9]*", out)
-                if not m:
-                    break
-                i = int(m[0][1:])
-                a, b = m.span(0)
-                out = out[:a] + parts[i - 1] + out[b:]
-
-            i = closing + 1
-            self.main = self.main[: match.span(0)[0]] + out + self.main[i:]
-            self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
+        self._replace_command_impl(cmd, nargs, replace)
 
     def change_label(self, old_label: str, new_label: str):
         r"""
@@ -407,7 +426,6 @@ class TeX:
             self.main,
             re.MULTILINE,
         )
-        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
     def labels(self) -> list[str]:
         """
@@ -492,12 +510,13 @@ class TeX:
         """
 
         ret = {"section": [], "subsection": [], "subsubsection": [], "chapter": [], "paragraph": []}
+        curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
         for key in ret:
             match = r"(\\)(" + key + r")({)([^}]*)(})"
             for i in re.finditer(match, self.main):
                 opening = i.span(0)[0] + 1 + len(key)
-                ret[key].append(self.curly_braces[opening])
+                ret[key].append(curly_braces[opening])
 
         return {i: np.array(ret[i]) for i in ret if len(ret[i]) > 0}
 
@@ -507,10 +526,11 @@ class TeX:
         """
 
         ret = []
+        curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
         for i in re.finditer(r"\\begin{.*}", self.main):
             opening = i.span(0)[0] + 6
-            closing = self.curly_braces[opening]
+            closing = curly_braces[opening]
             i = opening + 1
             ret += [self.main[i:closing]]
 
@@ -624,8 +644,6 @@ class TeX:
                 re.MULTILINE,
                 re.IGNORECASE,
             )
-
-        self.curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
 
 
 def bib_select(text: str, keys: list[str]) -> str:
