@@ -168,6 +168,20 @@ this most efficient.
         tex.replace_command(r"{\TG}[2]", r"\mycomment{#1}{#2}")
         self.assertEqual(expect, tex.get())
 
+    def test_replace_command_recursive(self):
+
+        source = r"This is a \TG{I would replace this\TG{reasons...}} text. \TG{And this too}Foo"
+        expect = r"This is a  text. Foo"
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[1]", "")
+        self.assertEqual(expect, tex.get())
+
+        source = r"This is a \TG{Foo\TG{my}{Bar}}{Bar} text. \TG{And this too}{Bar}"
+        expect = r"This is a Bar text. Bar"
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[2]", "#2")
+        self.assertEqual(expect, tex.get())
+
 
 if __name__ == "__main__":
 
