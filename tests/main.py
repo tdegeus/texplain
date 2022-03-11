@@ -182,6 +182,18 @@ this most efficient.
         tex.replace_command(r"{\TG}[2]", "#2")
         self.assertEqual(expect, tex.get())
 
+        source = r"This is a \TG{Foo}{\TG{my}{Bar}} text. \TG{And this too}{Bar}"
+        expect = r"This is a Bar text. Bar"
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[2]", "#2")
+        self.assertEqual(expect, tex.get())
+
+        source = r"This is a \TG{Foo}{\TG{my}{Bar}} text. \TG{And this too}{Bar}"
+        expect = r"This is a \AB{\AB{Bar}{my}}{Foo} text. \AB{Bar}{And this too}"
+        tex = texplain.TeX(text=source)
+        tex.replace_command(r"{\TG}[2]", r"\AB{#2}{#1}")
+        self.assertEqual(expect, tex.get())
+
 
 if __name__ == "__main__":
 

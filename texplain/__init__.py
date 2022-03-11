@@ -320,14 +320,14 @@ class TeX:
                 a, b = m.span(0)
                 out = out[:a] + parts[i - 1] + out[b:]
 
-            ret = ret + self.main[last: match.span(0)[0]] + out
+            j = match.span(0)[0]
+            ret = ret + self.main[last:j] + out
             last = closing + 1
 
         self.main = ret + self.main[last:]
 
         if re.search(re.escape(cmd) + "{", self.main):
-            return _replace_command_impl(cmd, nargs, replace)
-
+            return self._replace_command_impl(cmd, nargs, replace)
 
     def replace_command(self, cmd: str, replace: str):
         r"""
@@ -392,6 +392,9 @@ class TeX:
         :param old_label: Old label.
         :param new_label: New label.
         """
+
+        if old_label == new_label:
+            return
 
         old = re.escape(old_label)
         new = new_label
