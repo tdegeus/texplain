@@ -32,10 +32,17 @@ as shown in Eq.~\eqref{EQ-PS}.
 \end{figure}
 
 see \cref{dep:a,FiG:dep,FIG:dep:b}
-see below \cref{my-other-section}
+see below \cref{my-o-sec}
 
 \section{Another sections}
-\label{my-other-section}
+\label{my-o-sec}
+
+Foo
+
+\section{Measurement of \texorpdfstring{$\ell_c$}{l\_c}}
+\label{sec-lc}
+
+Bar
         """
 
         formatted = r"""
@@ -60,21 +67,28 @@ as shown in Eq.~\eqref{eq:PS}.
 \end{figure}
 
 see \cref{fig:dep:a,fig:dep,fig:dep:b}
-see below \cref{sec:my-other-section}
+see below \cref{sec:my-o-sec}
 
 \section{Another sections}
-\label{sec:my-other-section}
+\label{sec:my-o-sec}
+
+Foo
+
+\section{Measurement of \texorpdfstring{$\ell_c$}{l\_c}}
+\label{sec:lc}
+
+Bar
         """
 
         tex = texplain.TeX(text=text)
         self.assertEqual(
-            tex.labels(), ["foo", "EQ-PS", "dep:a", "FIG:dep:b", "FiG:dep", "my-other-section"]
+            tex.labels(), ["foo", "EQ-PS", "dep:a", "FIG:dep:b", "FiG:dep", "my-o-sec", "sec-lc"]
         )
 
         tex.format_labels()
         self.assertEqual(
             tex.labels(),
-            ["sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep", "sec:my-other-section"],
+            ["sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep", "sec:my-o-sec", "sec:lc"],
         )
         self.assertEqual(formatted, tex.get())
 
