@@ -210,15 +210,15 @@ this most efficient.
 
     def test_remove_comments_external(self):
 
-        source = """
-Overall, our approach explains why excitations become less extended, with a higher energy and displacement scale upon cooling.%, where $\omega_c$ cannot be readily observed.
+        source = r"""
+Overall, our approach explains why excitations.%, where $\omega_c$ cannot be readily observed.
 %
-%Our analysis explains why string-like rearrangements are observed to relax liquids only at low temperatures,
+%Our analysis explains why string-like rearrangements are,
 %as otherwise excitations display too small displacements to probe the granularity of the material.
         """
 
         expect = """
-Overall, our approach explains why excitations become less extended, with a higher energy and displacement scale upon cooling.
+Overall, our approach explains why excitations.
         """
 
         tex = texplain.TeX(text=source)

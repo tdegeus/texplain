@@ -755,7 +755,7 @@ def texcleanup(args: list[str]):
             tex.remove_commentlines()
 
         if args.remove_comments:
-            tex.remove_commentlines()
+            tex.remove_comments()
 
         if args.replace_command:
             for i in args.replace_command:
