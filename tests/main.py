@@ -194,6 +194,38 @@ this most efficient.
         tex.replace_command(r"{\TG}[2]", r"\AB{#2}{#1}")
         self.assertEqual(expect, tex.get())
 
+    def test_remove_comments(self):
+
+        source = r"This is a %, text with comments"
+        expect = r"This is a "
+        tex = texplain.TeX(text=source)
+        tex.remove_comments()
+        self.assertEqual(expect, tex.get())
+
+        source = "This is a %, text with comments\nAnd some more"
+        expect = "This is a \nAnd some more"
+        tex = texplain.TeX(text=source)
+        tex.remove_comments()
+        self.assertEqual(expect, tex.get())
+
+    def test_remove_comments_external(self):
+
+        source = """
+Overall, our approach explains why excitations become less extended, with a higher energy and displacement scale upon cooling.%, where $\omega_c$ cannot be readily observed.
+%
+%Our analysis explains why string-like rearrangements are observed to relax liquids only at low temperatures,
+%as otherwise excitations display too small displacements to probe the granularity of the material.
+        """
+
+        expect = """
+Overall, our approach explains why excitations become less extended, with a higher energy and displacement scale upon cooling.
+        """
+
+        tex = texplain.TeX(text=source)
+        tex.remove_commentlines()
+        tex.remove_comments()
+        self.assertEqual(expect, tex.get())
+
 
 if __name__ == "__main__":
 

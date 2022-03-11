@@ -273,7 +273,10 @@ class TeX:
         Remove comments form the main text.
         """
 
-        self.main = re.sub(r"([^%]*)(.*)(\n)", r"\1\3", self.main)
+        tmp = self.main.split("\n")
+        for i in range(len(tmp)):
+            tmp[i] = re.sub(r"([^%]*)(%)(.*)$", r"\1", tmp[i])
+        self.main = "\n".join(tmp)
 
     def _replace_command_impl(self, cmd: str, nargs: int, replace: str):
         """
