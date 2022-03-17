@@ -124,11 +124,19 @@ class TeX:
             self.main = text
             self.postamble = ""
 
+        self.original = text
+
     def get(self):
         """
         Return document.
         """
         return self.preamble + self.start + self.main + self.postamble
+
+    def changed(self):
+        """
+        Check if the document has changed.
+        """
+        return self.original != self.get()
 
     def float_filenames(self, cmd: str = r"\includegraphics") -> list[tuple[str]]:
         r"""
@@ -771,8 +779,9 @@ def texcleanup(args: list[str]):
         if args.use_cleveref:
             tex.use_cleveref()
 
-        with open(file, "w") as file:
-            file.write(tex.get())
+        if tex.changed():
+            with open(file, "w") as file:
+                file.write(tex.get())
 
 
 def _texcleanup_catch():
