@@ -171,6 +171,10 @@ class TeX:
 
             raise OSError(f"Cannot find {name:s}")
 
+        tmp = self.main
+        self.remove_commentlines()
+        self.remove_comments()
+
         # read the contents of the command
         # - "\includegraphics" accepts "\includegraphics[...]{...}"
         # - "\bibliography" rejects "\bibliographystyle{...}"
@@ -178,6 +182,8 @@ class TeX:
         for i in self.main.split(cmd)[1:]:
             if i[0] in ["[", "{"]:
                 include += [i.split("{")[1].split("}")[0]]
+
+        self.main = tmp
 
         # extract the filename
         out = [(i, filename(self.dirname, i)) for i in include]
@@ -797,6 +803,7 @@ def _texplain_parser():
 
     desc = "Create a clean output directory with only included files/citations."
     parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument("-c", "--keep-comments", action="store_true", help="Keep comments")
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("input", type=str, help="TeX file")
     parser.add_argument("outdir", type=str, help="Output directory")
@@ -823,6 +830,10 @@ def texplain(args: list[str]):
     old = TeX(args.input)
     new = deepcopy(old)
     new.dirname = args.outdir
+
+    if not args.keep_comments:
+        new.remove_commentlines()
+        new.remove_comments()
 
     includegraphics = old.float_filenames(r"\includegraphics")
     bibfiles = old.float_filenames(r"\bibliography")
