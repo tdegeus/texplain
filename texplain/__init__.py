@@ -220,22 +220,15 @@ class TeX:
         :return: Unique list of keys in the order or appearance.
         """
 
-        # extract keys from "cite"
-        def extract(string):
-            try:
-                match = r"([pt])?(\[.*\]\[.*\])?(\{[a-zA-Z0-9\.\,\-\ \_]*\})"
-                return list(re.split(match, string)[3][1:-1].split(","))
-            except IndexError:
-                if len(string) >= 100:
-                    string = string[:100]
-                raise OSError(f"Error in interpreting\n {string:s} ...")
+        curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
+        cite = []
 
-        # read all keys in "cite", "citet", "citep" commands
-        cite = [extract(i) for i in self.main.split(r"\cite")[1:]]
-        cite = list({item for sublist in cite for item in sublist})
-        cite = [i.replace(" ", "") for i in cite]
+        for i in re.finditer(r"(\\cite)([pt])?(\[.*\]\[.*\])?(\{)", self.main):
+            o = i.span()[1]
+            c = curly_braces[o - 1]
+            cite += list(filter(None, self.main[o:c].replace("\n", " ").split(",")))
 
-        return cite
+        return [i.replace(" ", "") for i in cite]
 
     def find_by_extension(self, ext: str) -> list[str]:
         r"""
