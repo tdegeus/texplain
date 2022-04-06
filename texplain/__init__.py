@@ -396,16 +396,21 @@ class TeX:
 
         self._replace_command_impl(cmd, nargs, replace)
 
-    def change_label(self, old_label: str, new_label: str):
+    def change_label(self, old_label: str, new_label: str, overwrite: bool = False):
         r"""
         Change label in ``\label{...}`` and ``\ref{...}`` (-like) commands.
 
         :param old_label: Old label.
         :param new_label: New label.
+        :param overwrite: Overwrite existing labels.
         """
 
         if old_label == new_label:
             return
+
+        if not overwrite:
+            if new_label in self.labels():
+                raise OSError(f'Label "{new_label:s}" already exists')
 
         old = re.escape(old_label)
         new = new_label
