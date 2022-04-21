@@ -14,6 +14,6 @@ texcleanup
 ----------
 
 .. argparse::
-    :module: texcleanup
+    :module: texplain
     :func: _texcleanup_parser
     :prog: texcleanup

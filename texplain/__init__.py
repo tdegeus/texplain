@@ -622,7 +622,17 @@ class TeX:
 
     def use_cleveref(self):
         """
-        Replace ``Eq.~\\eqref{...}``, ``Fig.~\ref{...}``, etc. for ``\\cref{...}``.
+        Replace::
+
+            Eq.~\\eqref{...}
+            Fig.~\\ref{...}
+            ...
+
+        By::
+
+            \\cref{...}
+
+        everywhere.
         """
 
         for key in ["Figure", "Fig.", "Table", "Tab.", "Chapter", "Ch.", "Section", "Sec."]:
