@@ -282,7 +282,7 @@ class TeX:
 
         tmp = self.main.split("\n")
         for i in range(len(tmp)):
-            tmp[i] = re.sub(r"([^%]*)(%)(.*)$", r"\1", tmp[i])
+            tmp[i] = re.sub(r"([^%]*)(?<!\\)(%)(.*)$", r"\1", tmp[i])
         self.main = "\n".join(tmp)
 
     def _replace_command_impl(self, cmd: str, nargs: int, replace: str):

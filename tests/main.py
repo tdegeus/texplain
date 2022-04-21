@@ -208,6 +208,12 @@ this most efficient.
         tex.remove_comments()
         self.assertEqual(expect, tex.get())
 
+        source = r"Here, 10 \% of water was removed % after cheating"
+        expect = r"Here, 10 \% of water was removed "
+        tex = texplain.TeX(text=source)
+        tex.remove_comments()
+        self.assertEqual(expect, tex.get())
+
     def test_remove_comments_external(self):
 
         source = r"""
