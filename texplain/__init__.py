@@ -605,7 +605,7 @@ class TeX:
 
             for h in headers:
                 test = ilab > headers[h]
-                i = test.size - 1 if np.all(test) else np.argmin(test)
+                i = test.size - 1 if np.all(test) else np.argmin(test) - 1
                 start = headers[h][i] + 1
                 if re.match(r"([\s\n%]*)(\\label{)", self.main[start:]):
                     change[label] = self._reformat(label, iden[h])
