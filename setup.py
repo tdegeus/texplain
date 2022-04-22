@@ -1,7 +1,12 @@
+from pathlib import Path
+
 from setuptools import find_packages
 from setuptools import setup
 
 project_name = "texplain"
+
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 setup(
     name=project_name,
@@ -9,7 +14,8 @@ setup(
     author="Tom de Geus",
     author_email="tom@geus.me",
     description="Create directory with TeX-file and only dependencies.",
-    long_description="Create directory with TeX-file and only dependencies.",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     keywords="LaTeX",
     url=f"https://github.com/tdegeus/{project_name:s}",
     packages=find_packages(),
