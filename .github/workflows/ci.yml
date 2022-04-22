@@ -40,10 +40,7 @@ jobs:
       run: python -m pip install .
 
     - name: Run tests
-      working-directory: tests
-      run: |
-        python main.py
-        python test1.py
+      run: python -m unittest discover tests -v
 
     - name: Build docs
       working-directory: docs
