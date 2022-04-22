@@ -11,6 +11,9 @@ class MyTests(unittest.TestCase):
     def test_labels(self):
 
         text = r"""
+\chapter{My chapter}
+\label{main}
+
 \section{My header}
 \label{foo}
 
@@ -46,6 +49,9 @@ Bar
         """
 
         formatted = r"""
+\chapter{My chapter}
+\label{ch:main}
+
 \section{My header}
 \label{sec:foo}
 
@@ -82,13 +88,13 @@ Bar
 
         tex = texplain.TeX(text=text)
         self.assertEqual(
-            tex.labels(), ["foo", "EQ-PS", "dep:a", "FIG:dep:b", "FiG:dep", "my-o-sec", "sec-lc"]
+            tex.labels(), ["main", "foo", "EQ-PS", "dep:a", "FIG:dep:b", "FiG:dep", "my-o-sec", "sec-lc"]
         )
 
         tex.format_labels()
         self.assertEqual(
             tex.labels(),
-            ["sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep", "sec:my-o-sec", "sec:lc"],
+            ["ch:main", "sec:foo", "eq:PS", "fig:dep:a", "fig:dep:b", "fig:dep", "sec:my-o-sec", "sec:lc"],
         )
         self.assertEqual(formatted, tex.get())
 
