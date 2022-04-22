@@ -3,7 +3,20 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Conda Version](https://img.shields.io/conda/vn/conda-forge/texplain.svg)](https://anaconda.org/conda-forge/texplain)
 
-# texplain
+**Documentation: [https://texplain.readthedocs.io](texplain.readthedocs.io)**
+
+<!-- MarkdownTOC -->
+
+- [Overview](#overview)
+- [Disclaimer](#disclaimer)
+- [Getting texplain](#getting-texplain)
+    - [Using conda](#using-conda)
+    - [Using PyPi](#using-pypi)
+    - [From source](#from-source)
+
+<!-- /MarkdownTOC -->
+
+# Overview
 
 Clean-up TeX files.
 From the command-line you can use:
@@ -17,18 +30,6 @@ From the command-line you can use:
     This is particularly useful to create a clean version to submit to a journal.
 
 **Documentation: [https://texplain.readthedocs.io](texplain.readthedocs.io)**
-
-# Contents
-
-<!-- MarkdownTOC -->
-
-- [Disclaimer](#disclaimer)
-- [Getting texplain](#getting-texplain)
-    - [Using conda](#using-conda)
-    - [Using PyPi](#using-pypi)
-    - [From source](#from-source)
-
-<!-- /MarkdownTOC -->
 
 # Disclaimer
 
