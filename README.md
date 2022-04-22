@@ -7,14 +7,16 @@
 
 Clean-up TeX files.
 From the command-line you can use:
+
 *   `texcleanup`:
-    Run several common fixes, such as ensuring nicely formatting labels.
+    Run several common fixes, such as ensuring nicely formatted labels.
+
 *   `texplain`:
     Create a directory with a TeX-file and only its dependencies
     (those figure-files and references that are actually included).
     This is particularly useful to create a clean version to submit to a journal.
 
-**Documentation: [https://texplain.readthedocs.org](texplain.readthedocs.org)**
+**Documentation: [https://texplain.readthedocs.io](texplain.readthedocs.io)**
 
 # Contents
 
