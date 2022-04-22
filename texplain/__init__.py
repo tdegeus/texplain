@@ -715,7 +715,7 @@ def _texcleanup_parser():
 
     h = textwrap.dedent(
         r"""Apply some simple clean-up rules.
-        Most of the options are fully self explanatory. A word it need about "--replace-command":
+        Most of the options are fully self explanatory. A word it need about ``--replace-command``:
         It can replace a command by another command, or simply 'remove' it, keeping just a sequence
         of arguments. This option is very much like a LaTeX command, but applied to the source.
         For example::
@@ -727,31 +727,31 @@ def _texcleanup_parser():
             >>> This is a \TG{text}{test}.
             <<< This is a test.
 
-        Note that the number of arguments, e.g. [2], defaults to one if not specified.
+        Note that the number of arguments, ``[2]`` above, defaults to ``1``.
         """
     )
     parser = argparse.ArgumentParser(description=h)
 
-    h = "Remove lines that have only comments"
+    h = "Remove lines that have only comments."
     parser.add_argument("--remove-commentlines", action="store_true", help=h)
 
-    h = "Remove all comments"
+    h = "Remove all comments."
     parser.add_argument("--remove-comments", action="store_true", help=h)
 
-    h = "Replace command (see above)"
+    h = "Replace command (see above)."
     parser.add_argument(
         "--replace-command", type=str, nargs=2, action="append", metavar=("cmd", "def"), help=h
     )
 
-    h = "Change label"
+    h = "Rename a specific label."
     parser.add_argument(
         "--change-label", type=str, nargs=2, action="append", metavar=("old", "new"), help=h
     )
 
-    h = 'Add "fig:", "eq:", "tab:", "sec:", "ch:" to labels'
+    h = 'Automatically "fig:", "eq:", "tab:", "sec:", "ch:" to labels (if needed).'
     parser.add_argument("--format-labels", action="store_true", help=h)
 
-    h = r'Change "Fig.~\ref{...}" etc. to "\cref{...}"'
+    h = r'Change "Fig.~\ref{...}" etc. to "\\cref{...}".'
     parser.add_argument("--use-cleveref", action="store_true", help=h)
 
     parser.add_argument("-v", "--version", action="version", version=version)
