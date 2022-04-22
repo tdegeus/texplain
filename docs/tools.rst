@@ -3,7 +3,7 @@ Command-line tools
 ******************
 
 texplain
---------
+========
 
 .. argparse::
     :module: texplain
@@ -11,7 +11,7 @@ texplain
     :prog: texplain
 
 texcleanup
-----------
+==========
 
 .. argparse::
     :module: texplain
