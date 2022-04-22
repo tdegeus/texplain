@@ -605,6 +605,8 @@ class TeX:
 
             for h in headers:
                 test = ilab > headers[h]
+                if not np.any(test):
+                    continue
                 i = test.size - 1 if np.all(test) else np.argmin(test) - 1
                 start = headers[h][i] + 1
                 if re.match(r"([\s\n%]*)(\\label{)", self.main[start:]):
