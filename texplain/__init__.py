@@ -713,46 +713,70 @@ def _texcleanup_parser():
     Return parser for :py:func:`texcleanup`.
     """
 
-    h = textwrap.dedent(
-        r"""Apply some simple clean-up rules.
-        Most of the options are fully self explanatory. A word it need about ``--replace-command``:
-        It can replace a command by another command, or simply 'remove' it, keeping just a sequence
-        of arguments. This option is very much like a LaTeX command, but applied to the source.
-        For example::
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawTextHelpFormatter,
+        description=textwrap.dedent(
+            """\
+            Apply some simple clean-up rules.
+            Most of the options are fully self explanatory, except for:
 
-            --replace-command r"{\TG}[2]" "#1"
+            --replace-command
+                It can replace a command by another command, or simply 'remove' it,
+                keeping just a sequence of arguments.
+                This option is very much like a LaTeX command, but applied to the source.
+                For example::
 
-        Applied a change as follows::
+                    --replace-command r"{\\TG}[2]" "#1"
 
-            >>> This is a \TG{text}{test}.
-            <<< This is a test.
+                Applied a change as follows::
 
-        Note that the number of arguments, ``[2]`` above, defaults to ``1``.
-        """
+                    >>> This is a \\TG{text}{test}.
+                    <<< This is a test.
+
+                Note that the number of arguments, ``[2]`` above, defaults to ``1``.
+            """
+        ),
     )
-    parser = argparse.ArgumentParser(description=h)
 
-    h = "Remove lines that have only comments."
-    parser.add_argument("--remove-commentlines", action="store_true", help=h)
-
-    h = "Remove all comments."
-    parser.add_argument("--remove-comments", action="store_true", help=h)
-
-    h = "Replace command (see above)."
     parser.add_argument(
-        "--replace-command", type=str, nargs=2, action="append", metavar=("cmd", "def"), help=h
+        "--remove-commentlines",
+        action="store_true",
+        help="Remove all lines that have only comments (excluding preamble).",
     )
 
-    h = "Rename a specific label."
     parser.add_argument(
-        "--change-label", type=str, nargs=2, action="append", metavar=("old", "new"), help=h
+        "--remove-comments", action="store_true", help="Remove all comments (excluding preamble)."
     )
 
-    h = 'Automatically "fig:", "eq:", "tab:", "sec:", "ch:" to labels (if needed).'
-    parser.add_argument("--format-labels", action="store_true", help=h)
+    parser.add_argument(
+        "--replace-command",
+        type=str,
+        nargs=2,
+        action="append",
+        metavar=("cmd", "def"),
+        help="Replace command (see above).",
+    )
 
-    h = r'Change "Fig.~\ref{...}" etc. to "\\cref{...}".'
-    parser.add_argument("--use-cleveref", action="store_true", help=h)
+    parser.add_argument(
+        "--change-label",
+        type=str,
+        nargs=2,
+        action="append",
+        metavar=("old", "new"),
+        help="Rename a specific label.",
+    )
+
+    parser.add_argument(
+        "--format-labels",
+        action="store_true",
+        help='Automatically "fig:", "eq:", "tab:", "sec:", "ch:" to labels (if needed).',
+    )
+
+    parser.add_argument(
+        "--use-cleveref",
+        action="store_true",
+        help=r'Change "Fig.~\ref{...}" etc. to "\\cref{...}".',
+    )
 
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("files", nargs="+", type=str, help="TeX file")
