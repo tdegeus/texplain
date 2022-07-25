@@ -759,7 +759,7 @@ def _texcleanup_parser():
         "-C",
         "--remove-comments",
         action="store_true",
-        help="Remove all comments (excluding preamble)."
+        help="Remove all comments (excluding preamble).",
     )
 
     parser.add_argument(
