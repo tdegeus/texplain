@@ -8,7 +8,7 @@ class MyTests(unittest.TestCase):
     Tests
     """
 
-    def test_labels(self):
+    def test_format_labels(self):
 
         text = r"""
 \chapter{My chapter}
@@ -108,22 +108,141 @@ Bar
             ],
         )
 
-        tex.format_labels()
+        for i in range(3):
+            tex.format_labels()
+            self.assertEqual(
+                tex.labels(),
+                [
+                    "ch:main",
+                    "sec:foo",
+                    "sec:subfoo",
+                    "eq:PS",
+                    "fig:dep:a",
+                    "fig:dep:b",
+                    "fig:dep",
+                    "sec:my-o-sec",
+                    "sec:lc",
+                ],
+            )
+            self.assertEqual(formatted, tex.get())
+
+    def test_format_labels_prefix(self):
+
+        text = r"""
+\chapter{My chapter}
+\label{main}
+
+\section{My header}
+\label{foo}
+
+\subsection{Deeper down}
+\label{subfoo}
+
+Some test here
+\begin{align}
+    \label{EQ-PS}
+    P(S) &\sim S^{-\tau}
+\end{align}
+as shown in Eq.~\eqref{EQ-PS}.
+
+\begin{figure}[htp]
+    \subfloat{\label{dep:a}}
+    \subfloat{\label{FIG:dep:b}}
+    \caption{
+        \textbf{\protect\subref*{dep:a}.}
+        The rest.
+    }
+    \label{FiG:dep}
+\end{figure}
+
+see \cref{dep:a,FiG:dep,FIG:dep:b}
+see below \cref{my-o-sec}
+
+\section{Another sections}
+\label{my-o-sec}
+
+Foo
+
+\section{Measurement of \texorpdfstring{$\ell_c$}{l\_c}}
+\label{sec-lc}
+
+Bar
+        """
+
+        formatted = r"""
+\chapter{My chapter}
+\label{ch:SI:main}
+
+\section{My header}
+\label{sec:SI:foo}
+
+\subsection{Deeper down}
+\label{sec:SI:subfoo}
+
+Some test here
+\begin{align}
+    \label{eq:SI:PS}
+    P(S) &\sim S^{-\tau}
+\end{align}
+as shown in Eq.~\eqref{eq:SI:PS}.
+
+\begin{figure}[htp]
+    \subfloat{\label{fig:SI:dep:a}}
+    \subfloat{\label{fig:SI:dep:b}}
+    \caption{
+        \textbf{\protect\subref*{fig:SI:dep:a}.}
+        The rest.
+    }
+    \label{fig:SI:dep}
+\end{figure}
+
+see \cref{fig:SI:dep:a,fig:SI:dep,fig:SI:dep:b}
+see below \cref{sec:SI:my-o-sec}
+
+\section{Another sections}
+\label{sec:SI:my-o-sec}
+
+Foo
+
+\section{Measurement of \texorpdfstring{$\ell_c$}{l\_c}}
+\label{sec:SI:lc}
+
+Bar
+        """
+
+        tex = texplain.TeX(text=text)
         self.assertEqual(
             tex.labels(),
             [
-                "ch:main",
-                "sec:foo",
-                "sec:subfoo",
-                "eq:PS",
-                "fig:dep:a",
-                "fig:dep:b",
-                "fig:dep",
-                "sec:my-o-sec",
-                "sec:lc",
+                "main",
+                "foo",
+                "subfoo",
+                "EQ-PS",
+                "dep:a",
+                "FIG:dep:b",
+                "FiG:dep",
+                "my-o-sec",
+                "sec-lc",
             ],
         )
-        self.assertEqual(formatted, tex.get())
+
+        for i in range(3):
+            tex.format_labels(prefix="SI")
+            self.assertEqual(
+                tex.labels(),
+                [
+                    "ch:SI:main",
+                    "sec:SI:foo",
+                    "sec:SI:subfoo",
+                    "eq:SI:PS",
+                    "fig:SI:dep:a",
+                    "fig:SI:dep:b",
+                    "fig:SI:dep",
+                    "sec:SI:my-o-sec",
+                    "sec:SI:lc",
+                ],
+            )
+            self.assertEqual(formatted, tex.get())
 
     def test_remove_commentlines(self):
 
