@@ -13,7 +13,7 @@ For example:
 
     repos:
     - repo: https://github.com/tdegeus/texplain
-      rev: v0.5.5
+      rev: v0.5.6
       hooks:
       - id: texcleanup
         args: [--format-labels, --remove-commentlines, --use-cleveref]
