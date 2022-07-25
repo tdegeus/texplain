@@ -457,7 +457,7 @@ class TeX:
 
         return labels
 
-    def _reformat(self, label: str, key: str):
+    def _reformat(self, label: str, key: str, prefix: str = None):
         """
         Reformat labels (and references) to f"{key}:{label}" (if needed).
         Suppose that the target is "fig:foo", this function also converts
@@ -465,22 +465,28 @@ class TeX:
 
         :param label: The label (with or without ``key:``).
         :param key: The 'keyword' to add/ensure.
+        :param prefix: Add optional ``prefix`. E.g. ``key:prefix:...``.
         """
 
-        if re.match(f"({key}:)(.*)", label, re.IGNORECASE):
-            info = re.split(re.compile(f"({key}:)(.*)", re.IGNORECASE), label)[2]
-            return f"{key}:{info}"
+        ret = f"{key}"
 
-        if re.match(f"({key})(-)(.*)", label, re.IGNORECASE):
-            info = re.split(re.compile(f"({key})(-)(.*)", re.IGNORECASE), label)[3]
-            return f"{key}:{info}"
+        if prefix is not None:
 
-        if re.match(f"({key})(_)(.*)", label, re.IGNORECASE):
-            info = re.split(re.compile(f"({key})(_)(.*)", re.IGNORECASE), label)[3]
-            return f"{key}:{info}"
+            ret = f"{key}:{prefix}"
 
-        if not re.match(key + ":.*", label, re.IGNORECASE):
-            return f"{key}:{label}"
+            for sep in [":", "-", "_"]:
+                regex = re.compile(f"({key})({sep})({prefix})({sep})(.*)", re.IGNORECASE)
+                if re.match(regex, label):
+                    info = re.split(regex, label)[-2]
+                    return f"{ret}:{info}"
+
+        for sep in [":", "-", "_"]:
+            regex = re.compile(f"({key})({sep})(.*)", re.IGNORECASE)
+            if re.match(regex, label):
+                info = re.split(regex, label)[-2]
+                return f"{ret}:{info}"
+
+        return f"{ret}:{label}"
 
     def _environment_index(self, envs: list[str], iden: dict) -> dict:
         """
@@ -550,7 +556,7 @@ class TeX:
 
         return list(set(ret))
 
-    def format_labels(self):
+    def format_labels(self, prefix: str = None):
         """
         Format all labels as:
         *   ``sec:...``: Section labels.
@@ -558,6 +564,8 @@ class TeX:
         *   ``fig:...``: Figure labels.
         *   ``tab:...``: Table labels.
         *   ``eq:...``: Math labels.
+
+        :param prefix: Add optional ``prefix`. E.g. ``key:prefix:...``.
         """
 
         iden = {
@@ -596,7 +604,7 @@ class TeX:
             for key in envs:
                 c = np.logical_and(envs[key][:, 0] < ilab, envs[key][:, 1] > ilab)
                 if np.any(c):
-                    change[label] = self._reformat(label, key)
+                    change[label] = self._reformat(label, key, prefix=prefix)
                     stop = True
                     break
 
@@ -610,7 +618,7 @@ class TeX:
                 i = test.size - 1 if np.all(test) else np.argmin(test) - 1
                 start = headers[h][i] + 1
                 if re.match(r"([\s\n%]*)(\\label{)", self.main[start:]):
-                    change[label] = self._reformat(label, iden[h])
+                    change[label] = self._reformat(label, iden[h], prefix=prefix)
                     stop = True
                     break
 
@@ -728,7 +736,7 @@ def _texcleanup_parser():
                 This option is very much like a LaTeX command, but applied to the source.
                 For example::
 
-                    --replace-command r"{\\TG}[2]" "#1"
+                    --replace-command "{\\TG}[2]" "#1"
 
                 Applied a change as follows::
 
@@ -741,16 +749,21 @@ def _texcleanup_parser():
     )
 
     parser.add_argument(
+        "-c",
         "--remove-commentlines",
         action="store_true",
         help="Remove all lines that have only comments (excluding preamble).",
     )
 
     parser.add_argument(
-        "--remove-comments", action="store_true", help="Remove all comments (excluding preamble)."
+        "-C",
+        "--remove-comments",
+        action="store_true",
+        help="Remove all comments (excluding preamble)."
     )
 
     parser.add_argument(
+        "-r",
         "--replace-command",
         type=str,
         nargs=2,
@@ -760,6 +773,7 @@ def _texcleanup_parser():
     )
 
     parser.add_argument(
+        "-l",
         "--change-label",
         type=str,
         nargs=2,
@@ -769,12 +783,21 @@ def _texcleanup_parser():
     )
 
     parser.add_argument(
+        "-f",
         "--format-labels",
         action="store_true",
-        help='Automatically "fig:", "eq:", "tab:", "sec:", "ch:" to labels (if needed).',
+        help='Automatically prepend labels with "fig:", "eq:", "tab:", "sec:", "ch:" (if needed).',
     )
 
     parser.add_argument(
+        "-F",
+        "--prepend-format-labels",
+        type=str,
+        help='Automatically prepend labels with "fig:ARG", "eq:ARG", ...; see --format-labels.',
+    )
+
+    parser.add_argument(
+        "-s",
         "--use-cleveref",
         action="store_true",
         help=r'Change "Fig.~\ref{...}" etc. to "\\cref{...}".',
@@ -815,6 +838,9 @@ def texcleanup(args: list[str]):
 
         if args.format_labels:
             tex.format_labels()
+
+        if args.prepend_format_labels:
+            tex.format_labels(args.prepend_format_labels)
 
         if args.use_cleveref:
             tex.use_cleveref()
