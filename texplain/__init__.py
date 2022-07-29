@@ -9,9 +9,71 @@ from copy import deepcopy
 from shutil import copyfile
 
 import numpy as np
+from numpy.typing import NDArray
 
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
+
+def find_opening(
+    text: str,
+    opening: str,
+    ignore_escaped: bool = True,
+) -> list[int]:
+    """
+    Find opening 'bracket'.
+
+    :param text: The string to consider.
+    :param opening: The opening 'bracket' (e.g. "(", "[", "{", but also "%").
+    :param ignore_escaped: Ignore escaped 'bracket' (e.g. "\(", "\[", "\{", "\%").
+    :return: List of indices of opening 'brackets' (sorted by definition).
+    """
+
+    o = re.escape(opening)
+
+    if ignore_escaped:
+        o = r"(?<!\\)" + o
+
+    return [i.span()[0] for i in re.finditer(o, text)]
+
+
+def find_commented(text: str) -> list[list[int]]:
+    """
+    Find comments bits of text.
+    The output is such that one can find the comments text as follows::
+
+        for i, j in find_commented(text):
+            print(text[i + 1 : j]) # i is the index of "%"
+
+    :param text: The string to consider.
+    :return: List of of indices of the beginning and end of the comments.
+    """
+
+    comments = np.array(find_opening(text, "%", ignore_escaped=True))
+    newlines = np.array(find_opening(text, "\n", ignore_escaped=False) + [len(text)])
+
+    ret = []
+
+    for c in comments:
+        j = np.argmax(newlines > c)
+        ret.append([c, newlines[j]])
+        newlines = newlines[j + 1:]
+
+    return ret
+
+
+def is_commented(text: str) -> NDArray[bool]:
+    """
+    Return array that lists per character if it corresponds to commented text.
+
+    :param text: The string to consider.
+    :return: Array of booleans.
+    """
+
+    comments = find_commented(text)
+    ret = np.zeros(len(text), dtype=bool)
+    for i, j in comments:
+        ret[i:j] = True
+    return ret
 
 
 def find_matching(
@@ -19,6 +81,7 @@ def find_matching(
     opening: str,
     closing: str,
     ignore_escaped: bool = True,
+    ignore_commented: bool = False,
 ) -> dict:
     r"""
     Find matching 'brackets'.
@@ -27,6 +90,7 @@ def find_matching(
     :param opening: The opening bracket (e.g. "(", "[", "{").
     :param closing: The closing bracket (e.g. ")", "]", "}").
     :param ignore_escaped: Ignore escaped bracket (e.g. "\(", "\[", "\{", "\)", "\]", "\}").
+    :param ignore_commented: Ignore any text that is commented (e.g. "% ...").
     :return: Dictionary with ``{index_opening: index_closing}``
     """
 
@@ -46,8 +110,18 @@ def find_matching(
     for i in re.finditer(c, text):
         b.append(-1 * i.span()[0])
 
+    if len(a) == 0 and len(b) == 0:
+        return {}
+
+    if ignore_commented:
+        is_comment = is_commented(text)
+        a = np.array(a)
+        b = -np.array(b)
+        a = list(a[~is_comment[a]])
+        b = list(-b[~is_comment[b]])
+
     if len(a) != len(b):
-        raise OSError(f"No matching {opening}...{closing} found")
+        raise OSError(f"Unmatching {opening}...{closing} found")
 
     brackets = sorted(a + b, key=lambda i: abs(i))
 
@@ -67,6 +141,19 @@ def find_matching(
         raise IndexError(f"No opening {opening} at {stack.pop():d}")
 
     return ret
+
+
+def remove_comments(text: str) -> str:
+    """
+    Remove comments from a string.
+
+    :param text: The string to consider.
+    :return: The string without comments.
+    """
+    text = text.split("\n")
+    for i in range(len(text)):
+        text[i] = re.sub(r"([^%]*)(?<!\\)(%)(.*)$", r"\1", text[i])
+    return "\n".join(text)
 
 
 class TeX:
@@ -279,13 +366,9 @@ class TeX:
         """
         Remove comments form the main text.
         """
+        self.main = remove_comments(self.main)
 
-        tmp = self.main.split("\n")
-        for i in range(len(tmp)):
-            tmp[i] = re.sub(r"([^%]*)(?<!\\)(%)(.*)$", r"\1", tmp[i])
-        self.main = "\n".join(tmp)
-
-    def _replace_command_impl(self, cmd: str, nargs: int, replace: str):
+    def _replace_command_impl(self, cmd: str, nargs: int, replace: str, ignore_commented: bool):
         """
         Implementation of command replacement.
         The replacement is recursive: if commands are nested this first replaces the outer
@@ -296,7 +379,7 @@ class TeX:
             return
 
         n = len(cmd)
-        curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
+        curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True, ignore_commented=ignore_commented)
         closing = sorted(curly_braces[i] for i in curly_braces)
         opening = np.array(sorted(i for i in curly_braces))
         next_opening = {}
@@ -307,10 +390,24 @@ class TeX:
         last = 0
         ret = ""
 
+        if ignore_commented:
+            comments = np.array(find_commented(self.main))
+            if comments.size == 0:
+                ignore_commented = False
+
+        if ignore_commented:
+            comments_start = comments[:, 0]
+            comments_end = comments[:, 1]
+
         for match in re.finditer(re.escape(cmd) + "{", self.main):
             opening = match.span(0)[0] + n
+
             if opening < last:
                 continue
+
+            if ignore_commented:
+                if np.any(np.logical_and(opening >= comments_start, opening < comments_end)):
+                    continue
 
             parts = []
             for j in range(nargs):
@@ -336,10 +433,15 @@ class TeX:
 
         self.main = ret + self.main[last:]
 
-        if re.search(re.escape(cmd) + "{", self.main):
-            return self._replace_command_impl(cmd, nargs, replace)
+        if ignore_commented:
+            test = remove_comments(self.main)
+        else:
+            test = self.main
 
-    def replace_command(self, cmd: str, replace: str):
+        if re.search(re.escape(cmd) + "{", test):
+            return self._replace_command_impl(cmd, nargs, replace, ignore_commented)
+
+    def replace_command(self, cmd: str, replace: str, ignore_commented: bool = False):
         r"""
         Replace command. For example:
 
@@ -371,6 +473,9 @@ class TeX:
         :param replace:
             The ``def`` part (curly braces around are optional). As in LaTeX replacement is
             done on ``#1``, ``#2``, ...
+
+        :param ignore_commented:
+            If ``True`` the command is not replaced if it is commented out.
         """
 
         if not re.match("{.*}", cmd):
@@ -393,7 +498,7 @@ class TeX:
         replace = sreplace[2]
         nargs = int(scmd[5])
 
-        self._replace_command_impl(cmd, nargs, replace)
+        self._replace_command_impl(cmd, nargs, replace, ignore_commented=ignore_commented)
 
     def change_label(self, old_label: str, new_label: str, overwrite: bool = False):
         r"""
@@ -744,6 +849,7 @@ def _texcleanup_parser():
                     <<< This is a test.
 
                 Note that the number of arguments, ``[2]`` above, defaults to ``1``.
+                Finally, commented text is ignored.
             """
         ),
     )
@@ -830,7 +936,7 @@ def texcleanup(args: list[str]):
 
         if args.replace_command:
             for i in args.replace_command:
-                tex.replace_command(*i)
+                tex.replace_command(*i, ignore_commented=True)
 
         if args.change_label:
             for i in args.change_label:

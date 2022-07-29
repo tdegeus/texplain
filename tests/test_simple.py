@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 
 import texplain
 
@@ -7,6 +8,23 @@ class MyTests(unittest.TestCase):
     """
     Tests
     """
+
+    def test_find_commented(self):
+        """
+        Test the find_commented method
+        """
+        text = "0123456%89"
+        indices = texplain.find_commented(text)
+        self.assertEqual(indices, [[7, 10]])
+
+    def test_is_commented(self):
+        """
+        Test the is_commented method
+        """
+        text = "0123456%89"
+        expect = np.array([False, False, False, False, False, False, False, True, True, True])
+        log = texplain.is_commented(text)
+        self.assertTrue(np.all(log == expect))
 
     def test_format_labels(self):
 
@@ -382,6 +400,54 @@ Overall, our approach explains why excitations.
         tex = texplain.TeX(text=source)
         tex.remove_commentlines()
         tex.remove_comments()
+        self.assertEqual(expect, tex.get())
+
+    def test_remove_command_a(self):
+        """
+        Remove a command.
+        """
+
+        source = r"Foo \TG{bar.}"
+        expect = r"Foo bar."
+
+        tex = texplain.TeX(text=source)
+        tex.replace_command("{\TG}[1]", "#1")
+        self.assertEqual(expect, tex.get())
+
+    def test_remove_command_b(self):
+        """
+        Remove a command, including in commented text.
+        """
+
+        source = r"\TG{Foo} %\TG{bar}."
+        expect = r"Foo %bar."
+
+        tex = texplain.TeX(text=source)
+        tex.replace_command("{\TG}[1]", "#1")
+        self.assertEqual(expect, tex.get())
+
+    def test_remove_command_c(self):
+        """
+        Remove a command, with unmatching brackets in commented text.
+        """
+
+        source = r"Foo \TG{bar.}%Foo bar.}"
+        expect = r"Foo bar.%Foo bar.}"
+
+        tex = texplain.TeX(text=source)
+        tex.replace_command("{\TG}[1]", "#1", ignore_commented=True)
+        self.assertEqual(expect, tex.get())
+
+    def test_remove_command_d(self):
+        """
+        Remove a command, but leave those in commented text.
+        """
+
+        source = r"Foo \TG{bar.}%\TG{Foo bar.}"
+        expect = r"Foo bar.%\TG{Foo bar.}"
+
+        tex = texplain.TeX(text=source)
+        tex.replace_command("{\TG}[1]", "#1", ignore_commented=True)
         self.assertEqual(expect, tex.get())
 
 
