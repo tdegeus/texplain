@@ -14,12 +14,13 @@ from numpy.typing import NDArray
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
 
+
 def find_opening(
     text: str,
     opening: str,
     ignore_escaped: bool = True,
 ) -> list[int]:
-    """
+    r"""
     Find opening 'bracket'.
 
     :param text: The string to consider.
@@ -56,7 +57,7 @@ def find_commented(text: str) -> list[list[int]]:
     for c in comments:
         j = np.argmax(newlines > c)
         ret.append([c, newlines[j]])
-        newlines = newlines[j + 1:]
+        newlines = newlines[j + 1 :]  # noqa: E203
 
     return ret
 
@@ -379,7 +380,9 @@ class TeX:
             return
 
         n = len(cmd)
-        curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True, ignore_commented=ignore_commented)
+        curly_braces = find_matching(
+            self.main, "{", "}", ignore_escaped=True, ignore_commented=ignore_commented
+        )
         closing = sorted(curly_braces[i] for i in curly_braces)
         opening = np.array(sorted(i for i in curly_braces))
         next_opening = {}

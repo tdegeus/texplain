@@ -1,4 +1,5 @@
 import unittest
+
 import numpy as np
 
 import texplain
@@ -411,7 +412,7 @@ Overall, our approach explains why excitations.
         expect = r"Foo bar."
 
         tex = texplain.TeX(text=source)
-        tex.replace_command("{\TG}[1]", "#1")
+        tex.replace_command(r"{\TG}[1]", "#1")
         self.assertEqual(expect, tex.get())
 
     def test_remove_command_b(self):
@@ -423,7 +424,7 @@ Overall, our approach explains why excitations.
         expect = r"Foo %bar."
 
         tex = texplain.TeX(text=source)
-        tex.replace_command("{\TG}[1]", "#1")
+        tex.replace_command(r"{\TG}[1]", "#1")
         self.assertEqual(expect, tex.get())
 
     def test_remove_command_c(self):
@@ -435,7 +436,7 @@ Overall, our approach explains why excitations.
         expect = r"Foo bar.%Foo bar.}"
 
         tex = texplain.TeX(text=source)
-        tex.replace_command("{\TG}[1]", "#1", ignore_commented=True)
+        tex.replace_command(r"{\TG}[1]", "#1", ignore_commented=True)
         self.assertEqual(expect, tex.get())
 
     def test_remove_command_d(self):
@@ -447,7 +448,7 @@ Overall, our approach explains why excitations.
         expect = r"Foo bar.%\TG{Foo bar.}"
 
         tex = texplain.TeX(text=source)
-        tex.replace_command("{\TG}[1]", "#1", ignore_commented=True)
+        tex.replace_command(r"{\TG}[1]", "#1", ignore_commented=True)
         self.assertEqual(expect, tex.get())
 
 
