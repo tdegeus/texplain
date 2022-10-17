@@ -130,7 +130,7 @@ def find_matching(
     stack = []
 
     for i in brackets:
-        if i > 0:
+        if i >= 0:
             stack.append(i)
         else:
             if len(stack) == 0:
