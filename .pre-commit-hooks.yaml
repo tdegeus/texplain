@@ -5,11 +5,10 @@
   entry: texcleanup
   language: python
   types: [tex]
-- id: texcleanup-conda
-  name: texcleanup
-  description: Run texcleanup
+- id: texindent
+  name: texindent
+  description: Run texindent
   minimum_pre_commit_version: 2.1.0
-  entry: texcleanup
+  entry: texindent
   language: conda
-  additional_dependencies: [texcleanup]
   types: [tex]
