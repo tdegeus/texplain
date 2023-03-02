@@ -24,8 +24,8 @@ setup(
     install_requires=["click", "numpy"],
     entry_points={
         "console_scripts": [
-            f"texplain = {project_name}:_texplain_catch",
-            f"texcleanup = {project_name}:_texcleanup_catch",
+            f"texplain = {project_name}:_texplain_cli",
+            f"texcleanup = {project_name}:_texcleanup_cli",
         ]
     },
 )

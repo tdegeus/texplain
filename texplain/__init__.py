@@ -959,12 +959,8 @@ def texcleanup(args: list[str]):
                 file.write(tex.get())
 
 
-def _texcleanup_catch():
-    try:
-        texcleanup(sys.argv[1:])
-    except Exception as e:
-        print(e)
-        return 1
+def _texcleanup_cli():
+    texcleanup(sys.argv[1:])
 
 
 def _texplain_parser():
@@ -1063,12 +1059,8 @@ def texplain(args: list[str]):
         file.write(new.get())
 
 
-def _texplain_catch():
-    try:
-        texplain(sys.argv[1:])
-    except Exception as e:
-        print(e)
-        return 1
+def _texplain_cli():
+    texplain(sys.argv[1:])
 
 
 if __name__ == "__main__":
