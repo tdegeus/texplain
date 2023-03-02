@@ -1063,5 +1063,32 @@ def _texplain_cli():
     texplain(sys.argv[1:])
 
 
+def _texindent_parser():
+    """
+    Return parser for :py:func:`texindent`.
+    """
+
+    desc = "Wrapper around latexindent.pl."
+    parser = argparse.ArgumentParser(description=desc)
+
+    parser.add_argument("-v", "--version", action="version", version=version)
+    parser.add_argument("files", nargs="+", type=str, help="TeX file")
+
+    return parser
+
+
+def texindent(args: list[str]):
+    """
+    Wrapper around latexindent.pl, see ``--help``.
+    """
+
+    parser = _texindent_parser()
+    args = parser.parse_args(args)
+    assert all([os.path.isfile(file) for file in args.files])
+
+
+def _texindent_main():
+    texindent(sys.argv[1:])
+
 if __name__ == "__main__":
     pass

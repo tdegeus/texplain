@@ -1,0 +1,6 @@
+# filename is forced by pre-commit
+channels:
+- conda-forge
+dependencies:
+- texplain
+- latexindent.pl
