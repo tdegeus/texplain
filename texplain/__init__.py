@@ -161,38 +161,13 @@ class TeX:
     """
     Simple TeX file manipulations.
 
-    :param read_from_file: Read from file.
-    :param text: Supply as text.
+    :param text: LaTeX code.
     """
 
-    def __init__(self, read_from_file: str = None, text: str = None):
+    def __init__(self, text: str):
 
-        if read_from_file is not None:
-
-            if not os.path.isfile(read_from_file):
-                raise OSError(f'"{read_from_file:s}" does not exist')
-
-            self.dirname = os.path.dirname(read_from_file)
-            self.filename = os.path.split(read_from_file)[1]
-
-            if len(self.dirname) == 0:
-                self.dirname = "."
-
-        else:
-
-            self.dirname = None
-            self.filename = None
-
-        if text is None:
-            assert read_from_file is not None
-            with open(read_from_file) as file:
-                text = file.read()
-
-        has_input = re.search(r"(.*)(\\input\{)(.*)(\})", text, re.MULTILINE)
-        has_include = re.search(r"(.*)(\\include\{)(.*)(\})", text, re.MULTILINE)
-
-        if has_input or has_include:
-            raise OSError(r"TeX files with \input{...} or \include{...} not yet supported")
+        self.dirname = None
+        self.filename = None
 
         a = r"\begin{document}"
         b = r"\end{document}"
@@ -213,6 +188,27 @@ class TeX:
             self.postamble = ""
 
         self.original = text
+
+    @classmethod
+    def from_file(cls, filename: str):
+        """
+        Read from file.
+
+        :param filename: Path to the file to read.
+        """
+
+        file = pathlib.Path(filename)
+        ret = cls(file.read_text())
+        ret.dirname = file.parent
+        ret.filename = file.name
+
+        has_input = re.search(r"(.*)(\\input\{)(.*)(\})", cls.original, re.MULTILINE)
+        has_include = re.search(r"(.*)(\\include\{)(.*)(\})", cls.original, re.MULTILINE)
+
+        if has_input or has_include:
+            raise OSError(r"TeX files with \input{...} or \include{...} not supported")
+
+        return ret
 
     def get(self):
         """
@@ -929,7 +925,7 @@ def texcleanup(args: list[str]):
 
     for file in args.files:
 
-        tex = TeX(file)
+        tex = TeX.from_file(file)
 
         if args.remove_commentlines or args.remove_comments:
             tex.remove_commentlines()
@@ -994,7 +990,7 @@ def texplain(args: list[str]):
     else:
         os.makedirs(args.outdir)
 
-    old = TeX(args.input)
+    old = TeX.from_file(args.input)
     new = deepcopy(old)
     new.dirname = args.outdir
 
