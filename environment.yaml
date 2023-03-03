@@ -2,8 +2,10 @@ channels:
 - conda-forge
 dependencies:
 - click
+- latexindent.pl
 - numpy
 - python
+- pyyaml
 - setuptools_scm
 - sphinx
 - sphinx-argparse
