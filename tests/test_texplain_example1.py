@@ -20,11 +20,9 @@ class MyTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(self):
-
         shutil.rmtree(tmpdir)
 
     def test_basic(self):
-
         subprocess.run(["texplain", os.path.join(basedir, "input1", "example.tex"), tmpdir])
 
         for name in ["main.tex", "library.bib"]:
@@ -55,5 +53,4 @@ class MyTests(unittest.TestCase):
 
 
 if __name__ == "__main__":
-
     unittest.main()

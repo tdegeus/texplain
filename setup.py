@@ -26,7 +26,7 @@ setup(
         "console_scripts": [
             f"texplain = {project_name}:_texplain_cli",
             f"texcleanup = {project_name}:_texcleanup_cli",
-            f"texindent = {project_name}:_texindent_main",
+            f"texindent = {project_name}:_texindent_cli",
         ]
     },
 )

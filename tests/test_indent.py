@@ -1,7 +1,5 @@
 import unittest
 
-import numpy as np
-
 import texplain
 
 
@@ -12,25 +10,19 @@ class TestIndent(unittest.TestCase):
 
     def test_command_punctuation(self):
         """
-        Remove white space between command closing bracket and punctuation.
+        Keep exact indentation of command.
         """
 
         text = r"""
-A start\footnote{
-    This is a footnote
-}
-.
-A new sentence.
-        """
-
-        formatted = r"""
 A start\footnote{
     This is a footnote
 }.
 A new sentence.
         """
 
-        self.assertTrue(False)
+        config = texplain.texindent_default_config()
+        ret = texplain.texindent(text, config)
+        self.assertEqual(ret.strip(), text.strip())
 
         # -----
 
@@ -41,18 +33,24 @@ A start\footnote{
 a continued sentence.
         """
 
-        formatted = r"""
-A start\footnote{
-    This is a footnote
-}
-a continued sentence.
+        config = texplain.texindent_default_config()
+        ret = texplain.texindent(text, config)
+        self.assertEqual(ret.strip(), text.strip())
+
+        # -----
+
+        text = r"""
+\section{My section}
+\label{sec:a}
         """
 
-        self.assertTrue(False)
+        config = texplain.texindent_default_config()
+        ret = texplain.texindent(text, config)
+        self.assertEqual(ret.strip(), text.strip())
 
     def test_force_comment(self):
         """
-        Keep the comment where it is even if a formatting tool does not like it.
+        Keep comments exactly as they are.
         """
 
         text = r"""
@@ -68,55 +66,41 @@ that ends here.
 But this is not a comment.
         """
 
-        self.assertTrue(False)
+        config = texplain.texindent_default_config()
+        ret = texplain.texindent(text, config)
+        self.assertEqual(ret.strip(), formatted.strip())
 
-#     def test_envlabel_newline(self):
-#         """
-#         Put label on a new line.
-#         """
+    def test_label_equation(self):
+        """
+        Keep label where it is in an equation.
+        """
 
-#         text = r"""
-# \section{My section}\label{sec:a}
-#         """
+        text = r"""
+\begin{equation}
+    \label{eq:a}
+    a = b
+\end{equation}
+        """
 
-#         formatted = r"""
-# \section{My section}
-# \label{sec:a}
-#         """
+        config = texplain.texindent_default_config()
+        ret = texplain.texindent(text, config)
+        self.assertEqual(ret.strip(), text.strip())
 
-#         self.assertTrue(False)
+    def test_nested_command(self):
+        """
+        Do nothing against nested commands.
+        """
 
-#         # ----
+        text = r"""
+\begin{figure}
+    \subfloat{\label{fig:foo}}
+\end{figure}
+        """
 
-#         text = r"""
-# \begin{equation}
-#     \label{eq:a} a = b
-# \end{equation}
-#         """
+        config = texplain.texindent_default_config()
+        ret = texplain.texindent(text, config)
+        self.assertEqual(ret.strip(), text.strip())
 
-#         formatted = r"""
-# \begin{equation}
-#     \label{eq:a}
-#     a = b
-# \end{equation}
-#         """
-
-#         # ----
-
-#         text = r"""
-# \begin{figure}
-#     \subfloat{\label{fig:foo}}
-# \end{figure}
-#         """
-
-#         formatted = r"""
-# \begin{figure}
-#     \subfloat{\label{fig:foo}}
-# \end{figure}
-#         """
-
-#         self.assertTrue(False)
 
 if __name__ == "__main__":
-
     unittest.main()

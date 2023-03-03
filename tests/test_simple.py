@@ -28,7 +28,6 @@ class MyTests(unittest.TestCase):
         self.assertTrue(np.all(log == expect))
 
     def test_format_labels(self):
-
         text = r"""
 \chapter{My chapter}
 \label{main}
@@ -146,7 +145,6 @@ Bar
             self.assertEqual(formatted, tex.get())
 
     def test_format_labels_prefix(self):
-
         text = r"""
 \chapter{My chapter}
 \label{main}
@@ -264,7 +262,6 @@ Bar
             self.assertEqual(formatted, tex.get())
 
     def test_remove_commentlines(self):
-
         text = r"""
 This is my
 % actually I was working
@@ -282,7 +279,6 @@ final text.
         self.assertEqual(formatted, tex.get())
 
     def test_use_cleveref(self):
-
         text = r"""
 This is Sec.~\ref{sec:foo} what I would
 classically Eq.~\eqref{eq:bar} write,
@@ -302,7 +298,6 @@ this most efficient.
         self.assertEqual(formatted, tex.get())
 
     def test_replace_command_simple(self):
-
         source = r"This is a \TG{I would replace this} text."
         expect = r"This is a  text."
         tex = texplain.TeX(text=source)
@@ -340,7 +335,6 @@ this most efficient.
         self.assertEqual(expect, tex.get())
 
     def test_replace_command_recursive(self):
-
         source = r"This is a \TG{I would replace this\TG{reasons...}} text. \TG{And this too}Foo"
         expect = r"This is a  text. Foo"
         tex = texplain.TeX(text=source)
@@ -366,7 +360,6 @@ this most efficient.
         self.assertEqual(expect, tex.get())
 
     def test_remove_comments(self):
-
         source = r"This is a %, text with comments"
         expect = r"This is a "
         tex = texplain.TeX(text=source)
@@ -386,7 +379,6 @@ this most efficient.
         self.assertEqual(expect, tex.get())
 
     def test_remove_comments_external(self):
-
         source = r"""
 Overall, our approach explains why excitations.%, where $\omega_c$ cannot be readily observed.
 %
@@ -453,5 +445,4 @@ Overall, our approach explains why excitations.
 
 
 if __name__ == "__main__":
-
     unittest.main()

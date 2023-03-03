@@ -1,14 +1,22 @@
 import argparse
+import copy
+import enum
 import itertools
 import os
+import pathlib
 import re
+import subprocess
 import sys
+import tempfile
 import textwrap
 import warnings
+from collections.abc import Callable
 from copy import deepcopy
 from shutil import copyfile
 
 import numpy as np
+import yaml
+from numpy.typing import ArrayLike
 from numpy.typing import NDArray
 
 from ._version import version  # noqa: F401
@@ -83,6 +91,10 @@ def find_matching(
     closing: str,
     ignore_escaped: bool = True,
     ignore_commented: bool = False,
+    escape: bool = True,
+    opening_match: int = 0,
+    closing_match: int = 0,
+    return_array: bool = False,
 ) -> dict:
     r"""
     Find matching 'brackets'.
@@ -92,24 +104,23 @@ def find_matching(
     :param closing: The closing bracket (e.g. ")", "]", "}").
     :param ignore_escaped: Ignore escaped bracket (e.g. "\(", "\[", "\{", "\)", "\]", "\}").
     :param ignore_commented: Ignore any text that is commented (e.g. "% ...").
+    :param escape: If ``True``,  ``opening`` and ``closing`` are escaped.
+    :param opening_match: Select index of begin (``0``) or end (``1``) of opening bracket match.
+    :param closing_match: Select index of begin (``0``) or end (``1``) of closing bracket match.
+    :param return_array: If ``True``, return array of indices instead of dictionary.
     :return: Dictionary with ``{index_opening: index_closing}``
     """
 
-    a = []
-    b = []
-
-    o = re.escape(opening)
-    c = re.escape(closing)
+    if escape:
+        opening = re.escape(opening)
+        closing = re.escape(closing)
 
     if ignore_escaped:
-        o = r"(?<!\\)" + o
-        c = r"(?<!\\)" + c
+        opening = r"(?<!\\)" + opening
+        closing = r"(?<!\\)" + closing
 
-    for i in re.finditer(o, text):
-        a.append(i.span()[0])
-
-    for i in re.finditer(c, text):
-        b.append(-1 * i.span()[0])
+    a = [i.span()[opening_match] for i in re.finditer(opening, text)]
+    b = [-1 * i.span()[closing_match] for i in re.finditer(closing, text)]
 
     if len(a) == 0 and len(b) == 0:
         return {}
@@ -141,6 +152,24 @@ def find_matching(
     if len(stack) > 0:
         raise IndexError(f"No opening {opening} at {stack.pop():d}")
 
+    if return_array:
+        return _indices2array(ret)
+
+    return ret
+
+
+def _indices2array(indices: dict[int]):
+    """
+    Convert indices for :py:func:`find_matching` to array.
+
+    :param indices: Dictionary of indices ``{a: b, ...}``
+    :return: Array of indices ``[[a, b], ...]``
+    """
+
+    ret = np.zeros((len(indices), 2), dtype=int)
+    for i, opening in enumerate(indices):
+        ret[i, 0] = opening
+        ret[i, 1] = indices[opening]
     return ret
 
 
@@ -157,6 +186,382 @@ def remove_comments(text: str) -> str:
     return "\n".join(text)
 
 
+def environments(text: str) -> list[str]:
+    r"""
+    Return list with present environments (between \begin{...} ... \end{...}).
+    """
+
+    ret = []
+    curly_braces = find_matching(text, "{", "}", ignore_escaped=True)
+
+    for i in re.finditer(r"\\begin{.*}", text):
+        opening = i.span(0)[0] + 6
+        closing = curly_braces[opening]
+        i = opening + 1
+        ret += [text[i:closing]]
+
+    return list(set(ret))
+
+
+class PlacholderType(enum.Enum):
+    """
+    Type of placeholder.
+    """
+
+    comment = enum.auto()
+    inline_math = enum.auto()
+    environment = enum.auto()
+    command = enum.auto()
+    noindent_block = enum.auto()
+    special_indent = enum.auto()
+
+
+class Placeholder:
+    """
+    Placeholder for text.
+    This class stores the text to be replaced by a placeholder and the placeholder itself.
+    In addition, it can store the whitespace before and after the placeholder.
+
+    :param placeholder: The placeholder to use.
+    :param content: The text replaced by the placeholder.
+    :param space_front: The whitespace before the placeholder.
+    :param space_back: The whitespace after the placeholder.
+    :param ptype: The type of placeholder.
+    """
+
+    def __init__(
+        self,
+        placeholder: str,
+        content: str,
+        space_front: str = None,
+        space_back: str = None,
+        ptype: PlacholderType = None,
+    ):
+        self.placeholder = placeholder
+        self.content = content
+        self.space_front = space_front
+        self.space_back = space_back
+        self.ptype = ptype
+
+    @classmethod
+    def from_text(
+        self, placeholder: str, text: str, start: int, end: int, ptype: PlacholderType = None
+    ):
+        """
+        Replace text with placeholder.
+        Save the content and the current whitespace before and after the placeholder.
+        To restore the original text precisely::
+
+            placeholder, text = Placeholder.from_text(placeholder, text, start, end)
+            text = placeholder.to_text(text)
+
+        :param placeholder: The placeholder to use.
+        :param text: The text to consider.
+        :param start: The start index of ``text`` to be replaced by the placeholder.
+        :param end: The end index of ``text`` to be replaced by the placeholder.
+        :param ptype: The type of placeholder.
+        :return: ``(Placeholder, text)`` where in ``text`` the placeholder is inserted.
+        """
+        pre = text[:start][::-1]
+        post = text[end:]
+        front = re.search(r"\s*", pre).end()
+        back = re.search(r"\s*", post).end()
+        return (
+            Placeholder(placeholder, text[start:end], pre[:front][::-1], post[:back], ptype),
+            text[:start] + placeholder + text[end:],
+        )
+
+    def to_text(self, text: str, index: int = None) -> str:
+        """
+        Replace placeholder with content.
+        If the whitespace before and after the placeholder is stored, it is restored.
+
+        :param text: The string to consider.
+        :param index: The index of the placeholder.
+        """
+        if index is None:
+            index = text.find(self.placeholder)
+
+        pre = text[:index][::-1]
+        post = text[index + len(self.placeholder) :]  # noqa: E203
+
+        if self.space_front is not None:
+            front = re.search(r"\s*", pre).end()
+            pre = pre[front:][::-1] + self.space_front
+
+        if self.space_back is not None:
+            back = re.search(r"\s*", post).end()
+            post = self.space_back + post[back:]
+
+        return pre + self.content + post
+
+    def __repr__(self) -> str:
+        return self.placeholder
+
+
+class GeneratePlaceholder:
+    """
+    Class to generate a new placeholder.
+    The following placeholder is generated every time the object is called::
+
+        -{base}-{name}-{i:d}-
+
+    For example::
+
+        >>> gen = GeneratePlaceholder(base="foo", name="bar")
+        >>> gen()
+        '-foo-bar-1-'
+        >>> gen()
+        '-foo-bar-2-'
+
+    :param base: The base of the placeholder.
+    :param name: The name of the placeholder.
+    """
+
+    def __init__(self, base: str, name: str):
+        self.i = 0
+        self.base = base
+        self.name = name
+
+    def __call__(self):
+        self.i += 1
+        return f"-{self.base}-{self.name}-{self.i:d}-"
+
+
+def _apply_placeholders(
+    text: str,
+    indices: ArrayLike,
+    base: str,
+    name: str,
+    ptype: PlacholderType,
+) -> tuple[str, list[Placeholder]]:
+    """
+    Replace text with placeholders.
+    Note: nested placeholders are skipped.
+
+    :param text: The text to consider.
+    :param indices: A list of start and end indices of the text to be replaced by a placeholder.
+    :param base: The base of the placeholder, see :py:class:`GeneratePlaceholder`.
+    :param name: The name of the placeholder, see :py:class:`GeneratePlaceholder`.
+    :param ptype: The type of placeholder, see :py:class:`PlacholderType`.
+    :return:
+        ``(text, placeholders)`` where:
+        - ``text`` is the text with the placeholders.
+        - ``placeholders`` is a list of the placeholders that includes their original content.
+    """
+
+    if indices is None:
+        return text, []
+
+    if len(indices) == 0:
+        return text, []
+
+    # filter nested
+    i = np.argsort(indices[:, 0])
+    indices = indices[i]
+    keep = np.ones(len(indices), dtype=bool)
+    i = 0
+    while i < len(indices) - 2:
+        while indices[i + 1, 0] < indices[i, 1]:
+            keep[i + 1] = False
+            i += 1
+        i += 1
+    indices = indices[keep]
+
+    # replacement
+    ret = []
+    gen = GeneratePlaceholder(base, name)
+    for i in range(indices.shape[0]):
+        placeholder, text = Placeholder.from_text(gen(), text, indices[i, 0], indices[i, 1], ptype)
+        ret += [placeholder]
+        indices -= len(placeholder.content) - len(placeholder.placeholder)
+
+    return text, ret
+
+
+def text_to_placeholders(
+    text: str, ptypes: list[PlacholderType], base: str = "TEXINDENT"
+) -> tuple[str, list[Placeholder]]:
+    r"""
+    Replace text with placeholders.
+    The following placeholders are supported:
+
+    -   :py:class:`PlacholderType.noindent_block`::
+
+        .. code-block:: latex
+
+            % \begin{noindent}
+            ...
+            % \end{noindent}
+
+
+    -   :py:class:`PlacholderType.comment`::
+
+        .. code-block:: latex
+
+            % ...
+
+    -   :py:class:`PlacholderType.inline_math`::
+
+        .. code-block:: latex
+
+            $...$
+
+    -   :py:class:`PlacholderType.environment`::
+
+        .. code-block:: latex
+
+            \begin{...}
+            ...
+            \end{...}
+
+    -   :py:class:`PlacholderType.special_indent`:
+
+        ``-PLACEHOLDER-)`` <- ``.)``, ``?)``, or ``!)``
+        ``text-PLACEHOLDER-\n`` <- ``text:\n``
+    """
+
+    ret = []
+
+    for ptype in ptypes:
+        if ptype == PlacholderType.noindent_block:
+            indices = find_matching(
+                text,
+                r"%\s*\\begin{noindent}",
+                r"%\s*\\end{noindent}",
+                escape=False,
+                closing_match=1,
+                return_array=True,
+            )
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "noindent".upper(), PlacholderType.noindent_block
+            )
+            ret += placeholders
+
+        elif ptype == PlacholderType.comment:
+            indices = np.array([i.span() for i in re.finditer(r"(?<!\\)(%)(.*)(\n)", text)])
+            if len(indices) == 0:
+                continue
+            indices[:, 1] -= 1
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "comment".upper(), PlacholderType.comment
+            )
+            ret += placeholders
+
+        elif ptype == PlacholderType.environment:
+            indices = find_matching(
+                text, r"\\begin{.*}", r"\\end{.*}", escape=False, closing_match=1, return_array=True
+            )
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "environment".upper(), PlacholderType.environment
+            )
+            ret += placeholders
+
+        elif ptype == PlacholderType.inline_math:
+            pattern = r"(?<!\\)" + re.escape("$")  # ignore escaped dollar signs
+            indices = []
+            for i in re.finditer(pattern, text):
+                indices.append(i.span()[0])
+            indices = np.array(indices).reshape((-1, 2))
+            indices[:, 1] += 1
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "math".upper(), PlacholderType.inline_math
+            )
+            ret += placeholders
+
+        elif ptype == PlacholderType.command:
+            braces = find_matching(text, "{", "}", ignore_escaped=True)
+            braces.update(find_matching(text, "[", "]", ignore_escaped=True))
+
+            indices = {}
+            last_stop = 0
+
+            for match in re.finditer(r"(?<!\\)(\\)(\w*)", text):
+                start, stop = match.span()
+
+                # skip begin/end
+                if text[start:stop] in ["\\begin", "\\end"]:
+                    continue
+
+                # skip nested command
+                if start < last_stop:
+                    continue
+
+                # continue until there are no more following "{" or "[
+                while True:
+                    index = re.search(r"(\s*)([\{\[])", text[stop:])
+                    if index is None:
+                        break
+                    if index.start() != 0:
+                        break
+                    stop = braces[index.end() + stop - 1] + 1
+
+                indices[start] = stop
+                last_stop = stop
+
+            indices = _indices2array(indices)
+
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "command".upper(), PlacholderType.command
+            )
+            ret += placeholders
+
+        elif ptype == PlacholderType.special_indent:
+            indices = np.array(
+                [
+                    [i.span()[0], i.span()[1] - 1]
+                    for i in re.finditer(r"(?<!\\)([\?\!\.])(\))", text)
+                ]
+                + [[i.span()[0], i.span()[1] - 1] for i in re.finditer(r"(?<!\\)(\:)(\n)", text)]
+            )
+
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "subordinate".upper(), PlacholderType.special_indent
+            )
+            ret += placeholders
+
+        else:
+            raise ValueError(f"Unknown placeholder type: {ptype}")
+
+    return text, ret
+
+
+def text_from_placeholders(
+    text: str,
+    placeholders: list[Placeholder],
+    default_naming: bool = True,
+    prefix: str = "TEXINDENT",
+) -> str:
+    """
+    Replace placeholders with original text.
+    """
+
+    if len(placeholders) == 0:
+        return text
+
+    if default_naming and len(placeholders) > 1:
+        placeholders = {i.placeholder: i for i in placeholders}
+        while True:
+            indices = [
+                (text[i.span()[0] : i.span()[1]], i.span()[0])  # noqa: E203
+                for i in re.finditer("-" + prefix + r"-\w*-[0-9]*-", text)
+            ]
+            if len(indices) == 0:
+                return text
+            offset = 0
+            for name, index in indices:
+                placeholder = placeholders[name]
+                n = len(text)
+                text = placeholder.to_text(text, index + offset)
+                offset += len(text) - n
+
+    for placeholder in placeholders:
+        n = len(text)
+        text = placeholder.to_text(text)
+
+    return text
+
+
 class TeX:
     """
     Simple TeX file manipulations.
@@ -165,7 +570,6 @@ class TeX:
     """
 
     def __init__(self, text: str):
-
         self.dirname = None
         self.filename = None
 
@@ -575,7 +979,6 @@ class TeX:
         ret = f"{key}"
 
         if prefix is not None:
-
             ret = f"{key}:{prefix}"
 
             for sep in [":", "-", "_"]:
@@ -648,17 +1051,7 @@ class TeX:
         r"""
         Return list with present environments (between \begin{...} ... \end{...}).
         """
-
-        ret = []
-        curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
-
-        for i in re.finditer(r"\\begin{.*}", self.main):
-            opening = i.span(0)[0] + 6
-            closing = curly_braces[opening]
-            i = opening + 1
-            ret += [self.main[i:closing]]
-
-        return list(set(ret))
+        return environments(self.main)
 
     def format_labels(self, prefix: str = None):
         """
@@ -701,7 +1094,6 @@ class TeX:
         headers = self._header_index()
 
         for label in self.labels():
-
             ilab = self.main.index(rf"\label{{{label}}}")
             stop = False
 
@@ -924,7 +1316,6 @@ def texcleanup(args: list[str]):
     assert all([os.path.isfile(file) for file in args.files])
 
     for file in args.files:
-
         tex = TeX.from_file(file)
 
         if args.remove_commentlines or args.remove_comments:
@@ -1011,7 +1402,6 @@ def texplain(args: list[str]):
     # Copy/rename figures
 
     if len(includegraphics) > 0:
-
         new_includegraphics = []
 
         for i, (okey, ofile) in enumerate(includegraphics):
@@ -1029,7 +1419,6 @@ def texplain(args: list[str]):
     # Copy/reduce BibTeX files
 
     if len(bibfiles) > 0:
-
         if len(bibfiles) > 1:
             raise OSError("texplain is only implemented for one BibTeX file")
 
@@ -1059,6 +1448,276 @@ def _texplain_cli():
     texplain(sys.argv[1:])
 
 
+def _texindent_latexindent(
+    config: dict, text: str, tempdir: pathlib.Path, generate_filename: Callable
+) -> str:
+    """
+    Run ``latexindent.pl`` on text.
+
+    :param config: Configuration of ``latexindent.pl``.
+    :param text: Text to format.
+    :param tempdir: Temporary directory to write files to.
+    :param generate_filename: Generator of filenames for temporary files ``tempdir / filename``.
+    :return: Formatted text.
+    """
+
+    with open(tempdir / ".latexindent.yaml", "w") as f:
+        yaml.dump(config, f)
+
+    if generate_filename is not None:
+        filename = generate_filename()
+    else:
+        filename = "main.tex"
+
+    (tempdir / filename).write_text(text)
+
+    subprocess.check_output(
+        ["latexindent.pl", "-s", "-wd", "-l", "-m", "-r", filename], cwd=tempdir
+    )
+
+    return (tempdir / filename).read_text()
+
+
+def _texindent_default(
+    config: dict, text: str, tempdir: pathlib.Path, generate_filename: Callable
+) -> str:
+    """
+    Run ``latexindent.pl`` with in addition to the user configuration the following settings:
+
+    .. code-block:: yaml
+
+        modifyLineBreaks:
+            oneSentencePerLine:
+                manipulateSentences: 0
+                removeSentenceLineBreaks: 0
+
+    :param config: Configuration of ``latexindent.pl``.
+    :param text: Text to format.
+    :param tempdir: Temporary directory to write files to.
+    :param generate_filename: Generator of filenames for temporary files ``tempdir / filename``.
+    :return: Formatted text.
+    """
+
+    rules = copy.deepcopy(config)
+
+    if "modifyLineBreaks" in rules:
+        if "oneSentencePerLine" in rules["modifyLineBreaks"]:
+            rules["modifyLineBreaks"]["oneSentencePerLine"]["manipulateSentences"] = 0
+            rules["modifyLineBreaks"]["oneSentencePerLine"]["removeSentenceLineBreaks"] = 0
+
+    return _texindent_latexindent(rules, text, tempdir, generate_filename)
+
+
+def _texindent_sentence(
+    config: dict, text: str, tempdir: pathlib.Path, generate_filename: Callable
+) -> str:
+    """
+    Run ``latexindent.pl`` if the following settings are present
+
+    .. code-block:: yaml
+
+        modifyLineBreaks:
+            oneSentencePerLine:
+                manipulateSentences: 0/1
+                removeSentenceLineBreaks: 0/1
+
+    Comments, math, environments, and commands are replaced with placeholders to make formatting
+    a lot less aggressive.
+
+    :param config: Configuration of ``latexindent.pl``.
+    :param text: Text to format.
+    :param tempdir: Temporary directory to write files to.
+    :param generate_filename: Generator of filenames for temporary files ``tempdir / filename``.
+    :return: Formatted text.
+    """
+
+    if "modifyLineBreaks" not in config:
+        return text
+
+    if "oneSentencePerLine" not in config["modifyLineBreaks"]:
+        return text
+
+    if (
+        "manipulateSentences" not in config["modifyLineBreaks"]["oneSentencePerLine"]
+        and "removeSentenceLineBreaks" not in config["modifyLineBreaks"]["oneSentencePerLine"]
+    ):
+        return text
+
+    ret = TeX(text)
+
+    format, placeholders = text_to_placeholders(
+        ret.main,
+        [
+            PlacholderType.noindent_block,
+            PlacholderType.comment,
+            PlacholderType.inline_math,
+            PlacholderType.special_indent,
+            PlacholderType.command,
+            PlacholderType.environment,
+        ],
+    )
+    format = _texindent_latexindent(config, format, tempdir, generate_filename)
+
+    for placeholder in placeholders:
+        if placeholder.ptype == PlacholderType.command:
+            if re.match(r"([^\{]*\{\n)(.*)", placeholder.content):
+                if placeholder.content[-1] != "}":
+                    continue
+                content = re.split(
+                    r"([^\{]*\{\n)(\s*)(.*)", placeholder.content[:-1].rstrip(), re.MULTILINE
+                )
+                command = content[1]
+                indent = content[2]
+                content = textwrap.dedent("".join(content[2:]))
+                content, pl = text_to_placeholders(content, [PlacholderType.command], "SUBINDENT")
+                content = _texindent_latexindent(config, content, tempdir, generate_filename)
+                content = text_from_placeholders(
+                    content, pl, default_naming=True, prefix="SUBINDENT"
+                )
+                if content[-1] != "\n":
+                    content += "\n"
+                placeholder.content = command + textwrap.indent(content + "}", indent)
+
+    ret.main = "\n" + text_from_placeholders(format, placeholders)
+
+    return ret.get()
+
+
+def _detail_texindent(text: str, config: dict, tempdir: pathlib.Path, generate_filename: Callable):
+    """
+    See :py:func:`texindent`.
+    """
+
+    if generate_filename is not None:
+        (tempdir / generate_filename()).write_text(text)
+
+    # "latexindent.pl" formatting with configuration augmented by
+    # - modifyLineBreaks/oneSentencePerLine/manipulateSentences = 0
+    # - modifyLineBreaks/oneSentencePerLine/removeSentenceLineBreaks = 0
+    text = _texindent_default(config, text, tempdir, generate_filename)
+
+    # if set, formatting with
+    # - modifyLineBreaks/oneSentencePerLine/manipulateSentences
+    # - modifyLineBreaks/oneSentencePerLine/removeSentenceLineBreaks
+    text = _texindent_sentence(config, text, tempdir, generate_filename)
+
+    # "latexindent.pl" formatting with configuration augmented by
+    # - modifyLineBreaks/oneSentencePerLine/manipulateSentences = 0
+    # - modifyLineBreaks/oneSentencePerLine/removeSentenceLineBreaks = 0
+    text = _texindent_default(config, text, tempdir, generate_filename)
+
+    # remove trailing whitespaces
+    text = "\n".join([line.rstrip() for line in text.splitlines()]) + "\n"
+
+    return text
+
+
+def texindent_default_config() -> dict:
+    r"""
+    Default configuration of ``latexindent.pl``.
+
+    .. code-block:: yaml
+
+        defaultIndent: '    '
+        removeTrailingWhitespace: 1
+
+        lookForAlignDelims:
+            align:
+                alignDoubleBackSlash: 0
+            split:
+                alignDoubleBackSlash: 0
+
+        modifyLineBreaks:
+            oneSentencePerLine:
+                manipulateSentences: 1
+                removeSentenceLineBreaks: 1
+                multipleSpacesToSingle: 1
+            items:
+                ItemFinishesWithLineBreak: 1
+            environments:
+                BeginStartsOnOwnLine: 1
+                BodyStartsOnOwnLine: 1
+                EndStartsOnOwnLine: 1
+                EndFinishesWithLineBreak: 1
+                DBSFinishesWithLineBreak: 1
+
+        indentRules:
+            item: '    '
+
+        fineTuning:
+            namedGroupingBracesBrackets:
+                # https://github.com/cmhughes/latexindent.pl/issues/330
+                name: '[0-9\.a-zA-Z@\*><_]+?'
+            arguments:
+                # https://github.com/cmhughes/latexindent.pl/issues/416
+                between: _|\^|\*|\|
+    """
+
+    text = texindent_default_config.__doc__
+    text = textwrap.dedent(text.split(".. code-block:: yaml")[1])
+    return yaml.load(text, Loader=yaml.FullLoader)
+
+
+def texindent(
+    text: str, config: dict, tempdir: pathlib.Path = None, generate_filename: Callable = None
+) -> str:
+    r"""
+    Format text with ``latexindent.pl``.
+    Augmented rules:
+
+    -   A command and inline math inside a sentence is considered as a neutral placeholder.
+
+    -   The whitespace before and after any command, environment, and comment are exactly preserved.
+
+    -   The linebreaks of sentences inside commands are only changed if the command if formatted:
+
+        .. code-block:: latex
+
+            ... \mycommand{
+                This is a
+                sentence.
+            }
+
+        which is formatted to
+
+        .. code-block:: latex
+
+            ... \mycommand{
+                This is a sentence.
+            }
+
+        Instead, the following formatting does not change the linebreaks inside the command:
+
+        .. code-block:: latex
+
+            ... \mycommand{This is a
+                sentence.}
+
+    :param text: Text to format.
+
+    :param config: Configuration of ``latexindent.pl``, e.g. :py:func:`texindent_default_config`.
+
+    :param tempdir:
+        Temporary directory to write files to.
+        If ``None`` a temporary directory is created, and removed after use.
+
+    :param generate_filename:
+        Generator of filenames for temporary files ``tempdir / filename``.
+        If ```None`` a single filename is used.
+        That file is overwritten on each call.
+
+    :return: Formatted text.
+    """
+
+    if tempdir is None:
+        assert generate_filename is None
+        with tempfile.TemporaryDirectory() as tempdir:
+            tempdir = pathlib.Path(tempdir)
+            return _detail_texindent(text, config, tempdir, None)
+
+    return _detail_texindent(text, config, tempdir, generate_filename)
+
+
 def _texindent_parser():
     """
     Return parser for :py:func:`texindent`.
@@ -1067,13 +1726,45 @@ def _texindent_parser():
     desc = "Wrapper around latexindent.pl."
     parser = argparse.ArgumentParser(description=desc)
 
+    parser.add_argument("-c", "--config", type=str, help="Configuration file")
+    parser.add_argument("-t", "--tempdir", type=str, help="Temporary directory")
+
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("files", nargs="+", type=str, help="TeX file")
 
     return parser
 
 
-def texindent(args: list[str]):
+def _detail_texindent_cli(
+    filepath: str, config: dict, tempdir: pathlib.Path, generate_filename: Callable
+):
+    """
+    See :py:func:`texindent_cli`.
+    """
+
+    filepath = pathlib.Path(filepath)
+    orig = filepath.read_text()
+    formatted = texindent(orig, config, tempdir, generate_filename)
+
+    # copy back if modified
+    if formatted != orig:
+        filepath.write_text(formatted)
+
+
+class _FilenameGenerator:
+    """
+    Class to generate filenames.
+    """
+
+    def __init__(self):
+        self.i = 0
+
+    def __call__(self):
+        self.i += 1
+        return f"texindent-stage-{self.i:03d}.tex"
+
+
+def texindent_cli(args: list[str]):
     """
     Wrapper around latexindent.pl, see ``--help``.
     """
@@ -1082,9 +1773,38 @@ def texindent(args: list[str]):
     args = parser.parse_args(args)
     assert all([os.path.isfile(file) for file in args.files])
 
+    if args.config is None:
+        if os.path.isfile(".texindent.yaml"):
+            args.config = ".texindent.yaml"
+        elif os.path.isfile(".texindent.yml"):
+            args.config = ".texindent.yml"
+        elif os.path.isfile(".latexindent.yaml"):
+            args.config = ".latexindent.yaml"
+        elif os.path.isfile(".latexindent.yml"):
+            args.config = ".latexindent.yml"
+        else:
+            config = texindent_default_config()
+    else:
+        assert os.path.isfile(args.config)
 
-def _texindent_main():
-    texindent(sys.argv[1:])
+    if args.config is not None:
+        with open(args.config) as file:
+            config = yaml.load(file.read(), Loader=yaml.FullLoader)
+
+    if args.tempdir is not None:
+        assert len(args.files) == 1
+        gen = _FilenameGenerator()
+        return _detail_texindent_cli(args.files[0], config, pathlib.Path(args.tempdir), gen)
+
+    with tempfile.TemporaryDirectory() as tempdir:
+        tempdir = pathlib.Path(tempdir)
+        for filepath in args.files:
+            _detail_texindent_cli(filepath, config, tempdir, None)
+
+
+def _texindent_cli():
+    texindent_cli(sys.argv[1:])
+
 
 if __name__ == "__main__":
     pass
