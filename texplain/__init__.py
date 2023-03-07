@@ -188,7 +188,7 @@ def remove_comments(text: str) -> str:
 
 def environments(text: str) -> list[str]:
     r"""
-    Return list with present environments (between \begin{...} ... \end{...}).
+    Return list with present environments (between ``\begin{...} ... \end{...}``).
     """
 
     ret = []
@@ -386,7 +386,7 @@ def text_to_placeholders(
     Replace text with placeholders.
     The following placeholders are supported:
 
-    -   :py:class:`PlacholderType.noindent_block`::
+    -   :py:class:`PlacholderType.noindent_block`:
 
         .. code-block:: latex
 
@@ -395,19 +395,19 @@ def text_to_placeholders(
             % \end{noindent}
 
 
-    -   :py:class:`PlacholderType.comment`::
+    -   :py:class:`PlacholderType.comment`:
 
         .. code-block:: latex
 
             % ...
 
-    -   :py:class:`PlacholderType.inline_math`::
+    -   :py:class:`PlacholderType.inline_math`:
 
         .. code-block:: latex
 
             $...$
 
-    -   :py:class:`PlacholderType.environment`::
+    -   :py:class:`PlacholderType.environment`:
 
         .. code-block:: latex
 
@@ -417,8 +417,8 @@ def text_to_placeholders(
 
     -   :py:class:`PlacholderType.special_indent`:
 
-        ``-PLACEHOLDER-)`` <- ``.)``, ``?)``, or ``!)``
-        ``text-PLACEHOLDER-\n`` <- ``text:\n``
+        -   ``-PLACEHOLDER-)`` <- ``.)``, ``?)``, or ``!)``
+        -   ``text-PLACEHOLDER-\n`` <- ``text:\n``
     """
 
     ret = []
@@ -709,7 +709,7 @@ class TeX:
     def citation_keys(self) -> list[str]:
         r"""
         Read the citation keys in the TeX file
-        (keys in ``\cite{...}``, ``\citet{...}``, ``\citep{...}```).
+        (keys in ``\cite{...}``, ``\citet{...}``, ``\citep{...}``).
 
         :return: Unique list of keys in the order or appearance.
         """
@@ -1049,20 +1049,21 @@ class TeX:
 
     def environments(self) -> list[str]:
         r"""
-        Return list with present environments (between \begin{...} ... \end{...}).
+        Return list with present environments (between ``\begin{...} ... \end{...}``).
         """
         return environments(self.main)
 
     def format_labels(self, prefix: str = None):
         """
         Format all labels as:
+
         *   ``sec:...``: Section labels.
         *   ``ch:...``: Chapter labels.
         *   ``fig:...``: Figure labels.
         *   ``tab:...``: Table labels.
         *   ``eq:...``: Math labels.
 
-        :param prefix: Add optional ``prefix`. E.g. ``key:prefix:...``.
+        :param prefix: Add optional ``prefix``. E.g. ``key:prefix:...``.
         """
 
         iden = {
@@ -1239,7 +1240,7 @@ def _texcleanup_parser():
                     >>> This is a \\TG{text}{test}.
                     <<< This is a test.
 
-                Note that the number of arguments, ``[2]`` above, defaults to ``1``.
+                Note that the number of arguments defaults to 1 (above ``[2]`` fixes 2 arguments).
                 Finally, commented text is ignored.
             """
         ),
@@ -1723,7 +1724,7 @@ def _texindent_parser():
     Return parser for :py:func:`texindent`.
     """
 
-    desc = "Wrapper around latexindent.pl."
+    desc = "Wrapper around ``latexindent.pl`` with some additional rules. ``texplain.texindent``."
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument("-c", "--config", type=str, help="Configuration file")
