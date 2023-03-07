@@ -6,10 +6,11 @@ sys.path.insert(0, os.path.abspath(".."))
 # Project information
 
 project = "texplain"
-copyright = "2017-2022, Tom de Geus"
+copyright = "2017-2023, Tom de Geus"
 author = "Tom de Geus"
-
-# General configuration
+html_theme = "furo"
+autodoc_type_aliases = {"Iterable": "Iterable", "ArrayLike": "ArrayLike"}
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -17,10 +18,5 @@ extensions = [
     "sphinx.ext.todo",
     "sphinxarg.ext",
     "sphinx.ext.autosectionlabel",
+    "sphinx_mdinclude",
 ]
-
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
-
-# Options for HTML output
-
-html_theme = "sphinx_rtd_theme"

@@ -6,48 +6,52 @@
 
 **Documentation: [https://texplain.readthedocs.io](texplain.readthedocs.io)**
 
-<!-- MarkdownTOC -->
-
-- [Usage](#usage)
-    - [pre-commit](#pre-commit)
-    - [From the command-line](#from-the-command-line)
-    - [From Python](#from-python)
-- [Disclaimer](#disclaimer)
-- [Getting texplain](#getting-texplain)
-    - [Using conda](#using-conda)
-    - [Using PyPi](#using-pypi)
-    - [From source](#from-source)
-
-<!-- /MarkdownTOC -->
-
 # Usage
 
-Clean-up TeX files.
+## command-line
 
-## pre-commit
+*   [texcleanup](https://texplain.readthedocs.io/en/latest/tools.html#texcleanup):
+    Apply any of the following options to a TeX-file:
 
-For example:
+    -   Remove all comments or comment-lines.
+    -   Modify all occurrences of a command, for example to change `\TG{deleted}{inserted}` to `inserted`.
+    -   Rename a label.
+    -   Ensure common prefixes for all labels.
+    -   Ensure usage of `\cref` instead of `\ref`.
 
-```yaml
-repos:
-- repo: https://github.com/tdegeus/texplain
-  rev: v0.5.6
-  hooks:
-  - id: texcleanup
-    args: [--format-labels, --remove-commentlines, --use-cleveref]
-```
+*   [texindent](https://texplain.readthedocs.io/en/latest/tools.html#texindent):
+    Wrapper around [latexindent.pl](https://github.com/cmhughes/latexindent.pl) with augmented rules to make especially `oneSentencePerLine` more robust.
 
-## From the command-line
-
-*   [`texcleanup`](https://texplain.readthedocs.io/en/latest/tools.html#texcleanup):
-    Run several common fixes, such as ensuring nicely formatted labels.
-
-*   [`texplain`](https://texplain.readthedocs.io/en/latest/tools.html#texplain):
+*   [texplain](https://texplain.readthedocs.io/en/latest/tools.html#texplain):
     Create a directory with a TeX-file and only its dependencies
     (those figure-files and references that are actually included).
     This is particularly useful to create a clean version to submit to a journal.
 
-## From Python
+## pre-commit
+
+*   [texcleanup](https://texplain.readthedocs.io/en/latest/tools.html#texcleanup):
+
+    ```yaml
+    repos:
+    - repo: https://github.com/tdegeus/texplain
+      rev: v0.7.0
+      hooks:
+      - id: texcleanup
+        args: [--format-labels, --use-cleveref]
+    ```
+
+*   [texindent](https://texplain.readthedocs.io/en/latest/tools.html#texindent):
+
+    ```yaml
+    repos:
+    - repo: https://github.com/tdegeus/texplain
+      rev: v0.7.0
+      hooks:
+      - id: texindent
+        args: []
+    ```
+
+## Python
 
 All of these tools wrap around a
 [Python module](https://texplain.readthedocs.io/en/latest/module.html)
