@@ -606,8 +606,8 @@ class TeX:
         ret.dirname = file.parent
         ret.filename = file.name
 
-        has_input = re.search(r"(.*)(\\input\{)(.*)(\})", cls.original, re.MULTILINE)
-        has_include = re.search(r"(.*)(\\include\{)(.*)(\})", cls.original, re.MULTILINE)
+        has_input = re.search(r"(.*)(\\input\{)(.*)(\})", ret.original, re.MULTILINE)
+        has_include = re.search(r"(.*)(\\include\{)(.*)(\})", ret.original, re.MULTILINE)
 
         if has_input or has_include:
             raise OSError(r"TeX files with \input{...} or \include{...} not supported")
