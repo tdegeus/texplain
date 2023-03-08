@@ -122,6 +122,8 @@ def find_matching(
     b = [-1 * i.span()[closing_match] for i in re.finditer(closing, text)]
 
     if len(a) == 0 and len(b) == 0:
+        if return_array:
+            return np.zeros((0, 2), dtype=int)
         return {}
 
     if ignore_commented:
@@ -132,7 +134,7 @@ def find_matching(
         b = list(-b[~is_comment[b]])
 
     if len(a) != len(b):
-        raise OSError(f"Unmatching {opening}...{closing} found")
+        raise IndexError(f"Unmatching {opening}...{closing} found")
 
     brackets = sorted(a + b, key=lambda i: abs(i))
 
@@ -201,6 +203,107 @@ def environments(text: str) -> list[str]:
 
     return list(set(ret))
 
+
+def _detail_one_sentence_per_line(text: str) -> str:
+    """
+    ??
+    """
+
+    text = re.split(r'(?<=[\.\!\?])\s+', text)
+
+    for i in range(len(text)):
+        text[i] = re.sub("(\n[\ \t]*)([\w\$\(\[])", r" \2", text[i])
+
+    return "\n".join(text)
+
+
+def one_sentence_per_line(text: str) -> str:
+    """
+    ??
+    """
+
+    # remove trailing spaces and strip starting and ending newlines
+    text = "\n".join([line.rstrip() for line in text.split("\n")])
+    pre, text = re.split(r'^\s+', text)
+    text, post = re.split(r'\s+$', text)
+
+    text, placeholders = text_to_placeholders(text, [PlacholderType.inline_math, PlacholderType.command])
+
+    # format in blocks separated by blocks between ``(start, end)`` in ``skip``
+    skip = []
+
+    # noindent blocks
+    skip += find_matching(
+        text,
+        r"%\s*\\begin{noindent}",
+        r"%\s*\\end{noindent}",
+        escape=False,
+        closing_match=1,
+        return_array=True,
+    ).tolist()
+
+    # verbatim blocks
+    skip = find_matching(
+        text,
+        r"\\begin{verbatim}",
+        r"\\end{verbatim}",
+        escape=False,
+        closing_match=1,
+        return_array=True,
+    ).tolist()
+
+    # \begin{...}
+    skip += [i.span() for i in re.finditer(r"(?<!\\)(\\)(begin\{\w*\}\s*)", text)]
+
+    # \end{...}
+    skip += [i.span() for i in re.finditer(r"(?<!\\)(\\)(end\{\w*\}\s*)", text)]
+
+    # comments
+    skip += [i.span() for i in re.finditer(r"(?<!\\)(%)(.*)(\n)", text)]
+
+    # multiple newlines
+    skip += [i.span() for i in re.finditer(r"(\n\n+)", text)]
+
+    if len(skip) == 0:
+        return pre + _detail_one_sentence_per_line(text) + post
+
+    skip = np.array(skip)
+    skip = skip[skip[:, 0].argsort()].tolist()
+
+    ret = ""
+    start = 0
+    for s, e in skip:
+        ret += _detail_one_sentence_per_line(text[start:s])
+        ret += text[s:e]
+        start = e
+    ret += _detail_one_sentence_per_line(text[start:])
+
+    # apply one sentence per line to multi-line commands
+    for placeholder in placeholders:
+        if placeholder.ptype == PlacholderType.command:
+            if not re.match(r".*\n.*", placeholder.content):
+                continue
+            c = find_matching(placeholder.content, "{", "}", ignore_escaped=True, return_array=True)
+            s = find_matching(placeholder.content, "[", "]", ignore_escaped=True, return_array=True)
+            braces = np.vstack((c, s))
+            braces = braces[np.argsort(braces[:, 0])]
+            braces[:, 1] += 1
+
+            content = [placeholder.content[:braces[0, 0]]]
+            for o, c in braces:
+                content += [placeholder.content[o:c]]
+            content += [placeholder.content[braces[-1, 1]:]]
+
+            for i in range(1, len(content) - 1):
+                if not re.match(r".*\n.*", content[i]):
+                    continue
+                o = content[i][0]
+                c = content[i][-1]
+                content[i] = content[i][0] + "\n" + _detail_one_sentence_per_line(content[i][1:-1].strip()).strip() + "\n" + content[i][-1]
+
+            placeholder.content = "".join(content)
+
+    return pre + text_from_placeholders(ret, placeholders) + post
 
 class PlacholderType(enum.Enum):
     """
@@ -457,16 +560,17 @@ def text_to_placeholders(
             ret += placeholders
 
         elif ptype == PlacholderType.inline_math:
-            pattern = r"(?<!\\)" + re.escape("$")  # ignore escaped dollar signs
-            indices = []
-            for i in re.finditer(pattern, text):
-                indices.append(i.span()[0])
-            indices = np.array(indices).reshape((-1, 2))
-            indices[:, 1] += 1
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "math".upper(), PlacholderType.inline_math
-            )
-            ret += placeholders
+            for match in ["$$", "$"]:
+                pattern = r"(?<!\\)" + re.escape(match)  # ignore escaped dollar signs
+                indices = []
+                for i in re.finditer(pattern, text):
+                    indices.append(i.span()[0])
+                indices = np.array(indices).reshape((-1, 2))
+                indices[:, 1] += 1
+                text, placeholders = _apply_placeholders(
+                    text, indices, base, "math".upper(), PlacholderType.inline_math
+                )
+                ret += placeholders
 
         elif ptype == PlacholderType.command:
             braces = find_matching(text, "{", "}", ignore_escaped=True)
@@ -1608,23 +1712,55 @@ def _texindent_sentence(
 
     for placeholder in placeholders:
         if placeholder.ptype == PlacholderType.command:
-            if re.match(r"([^\{]*\{\n)(.*)", placeholder.content):
-                if placeholder.content[-1] != "}":
+            if not re.match(r".*\n.*", placeholder.content):
+                continue
+            c = find_matching(placeholder.content, "{", "}", ignore_escaped=True, return_array=True)
+            s = find_matching(placeholder.content, "[", "]", ignore_escaped=True, return_array=True)
+            braces = np.vstack((c, s))
+            braces = braces[np.argsort(braces[:, 0])]
+            braces[:, 1] += 1
+
+            content = [placeholder.content[:braces[0, 0]]]
+            for o, c in braces:
+                content += [placeholder.content[o:c]]
+            content += [placeholder.content[braces[-1, 1]:]]
+
+            for i in range(1, len(content) - 1):
+                if not re.match(r".*\n.*", content[i]):
                     continue
-                content = re.split(
-                    r"([^\{]*\{\n)(\s*)(.*)", placeholder.content[:-1].rstrip(), re.MULTILINE
-                )
-                command = content[1]
-                indent = content[2]
-                content = textwrap.dedent("".join(content[2:]))
-                content, pl = text_to_placeholders(content, [PlacholderType.command], "SUBINDENT")
-                content = _texindent_latexindent(config, content, tempdir, generate_filename)
-                content = text_from_placeholders(
-                    content, pl, default_naming=True, prefix="SUBINDENT"
-                )
-                if content[-1] != "\n":
-                    content += "\n"
-                placeholder.content = command + textwrap.indent(content + "}", indent)
+                o = content[i][0]
+                c = content[i][-1]
+                # todo: change
+                content[i] = content[i][0] + "\n" + _texindent_latexindent(config, content[i][1:-1].strip(), tempdir, generate_filename).strip() + "\n" + content[i][-1]
+
+            placeholder.content = "".join(content)
+
+
+
+            # for opening, closing in braces.items():
+            #     if re.match(r".*\n.*", placeholder.content[opening:closing]):
+            # print(placeholder.content)
+            # print(braces)
+            # print(content)
+
+
+            # if re.match(r"([^\{]*\{\n)(.*)", placeholder.content):
+            #     if placeholder.content[-1] != "}":
+            #         continue
+            #     content = re.split(
+            #         r"([^\{]*\{\n)(\s*)(.*)", placeholder.content[:-1].rstrip(), re.MULTILINE
+            #     )
+            #     command = content[1]
+            #     indent = content[2]
+            #     content = textwrap.dedent("".join(content[2:]))
+            #     content, pl = text_to_placeholders(content, [PlacholderType.command], "SUBINDENT")
+            #     content = _texindent_latexindent(config, content, tempdir, generate_filename)
+            #     content = text_from_placeholders(
+            #         content, pl, default_naming=True, prefix="SUBINDENT"
+            #     )
+            #     if content[-1] != "\n":
+            #         content += "\n"
+            #     placeholder.content = command + textwrap.indent(content + "}", indent)
 
     ret.main = "\n" + text_from_placeholders(format, placeholders)
 
@@ -1680,8 +1816,6 @@ def texindent_default_config() -> dict:
                 manipulateSentences: 1
                 removeSentenceLineBreaks: 1
                 multipleSpacesToSingle: 1
-            items:
-                ItemFinishesWithLineBreak: 1
             environments:
                 BeginStartsOnOwnLine: 1
                 BodyStartsOnOwnLine: 1
@@ -1690,7 +1824,7 @@ def texindent_default_config() -> dict:
                 DBSFinishesWithLineBreak: 1
 
         indentRules:
-            item: '    '
+            item: ''
 
         fineTuning:
             namedGroupingBracesBrackets:

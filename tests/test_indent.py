@@ -8,6 +8,71 @@ class TestIndent(unittest.TestCase):
     Tests
     """
 
+    def test_multiline_command_a(self):
+
+        text = r"""
+A start\footnote{This is a footnote. With
+    some poor formatting.
+}.
+A new sentence.
+        """
+
+        formatted = r"""
+A start\footnote{
+    This is a footnote.
+    With some poor formatting.
+}.
+A new sentence.
+        """
+
+        config = texplain.texindent_default_config()
+        ret = texplain.texindent(text, config)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_multiline_command_b(self):
+
+        text = r"""
+A start\footnote[Some option]{This is a footnote. With
+    some poor formatting.
+}.
+A new sentence.
+        """
+
+        formatted = r"""
+A start\footnote[Some option]{
+    This is a footnote.
+    With some poor formatting.
+}.
+A new sentence.
+        """
+
+        config = texplain.texindent_default_config()
+        ret = texplain.texindent(text, config)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_multiline_command_comment(self):
+
+        text = r"""
+A start\footnote{ %
+    This is a footnote. With
+    some poor formatting.
+}.
+A new sentence.
+        """
+
+        formatted = r"""
+A start\footnote{ %
+    This is a footnote.
+    With some poor formatting.
+}.
+A new sentence.
+        """
+
+        config = texplain.texindent_default_config()
+        ret = texplain.texindent(text, config)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+
     def test_command_punctuation(self):
         """
         Keep exact indentation of command.
