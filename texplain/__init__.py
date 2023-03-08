@@ -9,7 +9,6 @@ import subprocess
 import sys
 import tempfile
 import textwrap
-import warnings
 from collections.abc import Callable
 from copy import deepcopy
 from shutil import copyfile
@@ -562,6 +561,153 @@ def text_from_placeholders(
     return text
 
 
+def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
+    """
+    Classify characters to identify to which environment a label belongs.
+
+    :param text: The text to classify.
+    :return:
+        ``(categories, classification)`` where ``categories`` is the list of label categories
+        ``"eq"``, ``"fig"``, etc.) and ``classification`` is an array of the same length as ``text``
+        where each element is the index of the category to which the character belongs.
+    """
+
+    categories = ["misc", "eq", "item", "note", "sec", "ch", "fig", "tab"]
+    classification = np.zeros(len(text), dtype=int)
+    braces = find_matching(text, "{", "}", ignore_escaped=True)
+
+    # ---
+
+    r = -1
+
+    for match in re.finditer(r"(\s*\\label\s*\{)", text):
+        i = match.span()[0]
+        j = braces[match.span()[1] - 1]
+        classification[i:j] = r
+        r -= 1
+
+    # ---
+
+    r = categories.index("eq")
+
+    index = find_matching(
+        text,
+        r"\\begin\{equation\*?\}",
+        r"\\end\{equation\*?\}",
+        escape=False,
+        closing_match=1,
+    )
+    for i, j in index.items():
+        classification[i:j] = r
+
+    index = find_matching(
+        text,
+        r"\\begin\{align\*?\}",
+        r"\\end\{align\*?\}",
+        escape=False,
+        closing_match=1,
+    )
+    for i, j in index.items():
+        classification[i:j] = r
+
+    index = find_matching(
+        text,
+        r"\\begin\{eqnarray\*?\}",
+        r"\\end\{eqnarray\*?\}",
+        escape=False,
+        closing_match=1,
+    )
+    for i, j in index.items():
+        classification[i:j] = r
+
+    # ---
+
+    r = categories.index("fig")
+
+    index = find_matching(
+        text,
+        r"\begin{figure}",
+        r"\end{figure}",
+        escape=True,
+        closing_match=1,
+    )
+    for i, j in index.items():
+        classification[i:j] = r
+
+    # ---
+
+    r = categories.index("tab")
+
+    index = find_matching(
+        text,
+        r"\begin{table}",
+        r"\end{table}",
+        escape=True,
+        closing_match=1,
+    )
+    for i, j in index.items():
+        classification[i:j] = r
+
+    # ---
+
+    r = categories.index("item")
+
+    index = find_matching(
+        text,
+        r"\begin{itemize}",
+        r"\end{itemize}",
+        escape=True,
+        closing_match=1,
+    )
+    for i, j in index.items():
+        classification[i:j] = r
+
+    index = find_matching(
+        text,
+        r"\begin{enumerate}",
+        r"\end{enumerate}",
+        escape=True,
+        closing_match=1,
+    )
+    for i, j in index.items():
+        classification[i:j] = r
+
+    # ---
+
+    r = categories.index("note")
+
+    for match in re.finditer(r"(\\footnote\s*\{)", text):
+        i = match.span()[0]
+        j = braces[match.span()[1] - 1]
+        classification[i:j] = r
+
+    # ---
+
+    r = categories.index("sec")
+
+    for match in re.finditer(r"(\\)(sub)*(section\s*\{)", text):
+        i = match.span()[0]
+        j = braces[match.span()[1] - 1]
+        classification[i:j] = r
+
+        if classification[j + 1] < 0:
+            classification[classification == classification[j + 1]] = r
+
+    # ---
+
+    r = categories.index("ch")
+
+    for match in re.finditer(r"(\\)(chapter\s*\{)", text):
+        i = match.span()[0]
+        j = braces[match.span()[1] - 1]
+        classification[i:j] = r
+
+        if classification[j + 1] < 0:
+            classification[classification == classification[j + 1]] = r
+
+    return categories, classification
+
+
 class TeX:
     """
     Simple TeX file manipulations.
@@ -995,58 +1141,6 @@ class TeX:
 
         return f"{ret}:{label}"
 
-    def _environment_index(self, envs: list[str], iden: dict) -> dict:
-        """
-        Get the start and end index of every occurrence of a list of environments.
-
-        :param envs: List of environments present in the main text.
-
-        :param iden:
-            Dictionary with identification "key" per environment.
-            E.g. ``{"figure": "fig", "figure*": "fig"}``.
-
-        :return:
-            Dictionary with an array per "key" with per line the start and end index
-            of each environment corresponding to that "key".
-        """
-
-        index = {}
-
-        for env in envs:
-            key = iden.get(env, "misc")
-            a = rf"\begin{{{env}}}"
-            b = rf"\end{{{env}}}"
-            i = find_matching(self.main, a, b, ignore_escaped=False)
-            if key not in index:
-                index[key] = i
-            else:
-                index[key] = index[key] | i
-
-        for key in index:
-            index[key] = np.array(list(index[key].items()))
-
-        return index
-
-    def _header_index(self) -> dict:
-        """
-        Get the index of the closing "}" of all present headers.
-
-        :return:
-            A dictionary with for each present header a list with indices corresponding to the
-            closing "}" of different occurrences of the headers.
-        """
-
-        ret = {"section": [], "subsection": [], "subsubsection": [], "chapter": [], "paragraph": []}
-        curly_braces = find_matching(self.main, "{", "}", ignore_escaped=True)
-
-        for key in ret:
-            match = r"(\\)(" + key + r")({)([^}]*)(})"
-            for i in re.finditer(match, self.main):
-                opening = i.span(0)[0] + 1 + len(key)
-                ret[key].append(curly_braces[opening])
-
-        return {i: np.array(ret[i]) for i in ret if len(ret[i]) > 0}
-
     def environments(self) -> list[str]:
         r"""
         Return list with present environments (between ``\begin{...} ... \end{...}``).
@@ -1062,67 +1156,20 @@ class TeX:
         *   ``fig:...``: Figure labels.
         *   ``tab:...``: Table labels.
         *   ``eq:...``: Math labels.
+        *   ``note:...``: Footnote.
+        *   ``misc:...``: Anything else.
 
         :param prefix: Add optional ``prefix``. E.g. ``key:prefix:...``.
         """
 
-        iden = {
-            "section": "sec",
-            "section*": "sec",
-            "subsection": "sec",
-            "subsection*": "sec",
-            "subsubsection": "sec",
-            "subsubsection*": "sec",
-            "paragraph": "sec",
-            "paragraph*": "sec",
-            "chapter": "ch",
-            "chapter*": "ch",
-            "figure": "fig",
-            "figure*": "fig",
-            "table": "tab",
-            "table*": "tab",
-            "equation": "eq",
-            "equation*": "eq",
-            "align": "eq",
-            "align*": "eq",
-            "eqnarray": "eq",
-            "eqnarray*": "eq",
-        }
-
-        environments = self.environments()
+        categories, classification = _classify_for_label(self.main)
         change = {}
-        envs = self._environment_index(environments, iden)
-        headers = self._header_index()
 
         for label in self.labels():
-            ilab = self.main.index(rf"\label{{{label}}}")
-            stop = False
-
-            for key in envs:
-                c = np.logical_and(envs[key][:, 0] < ilab, envs[key][:, 1] > ilab)
-                if np.any(c):
-                    change[label] = self._reformat(label, key, prefix=prefix)
-                    stop = True
-                    break
-
-            if stop:
-                continue
-
-            for h in headers:
-                test = ilab > headers[h]
-                if not np.any(test):
-                    continue
-                i = test.size - 1 if np.all(test) else np.argmin(test) - 1
-                start = headers[h][i] + 1
-                if re.match(r"([\s\n%]*)(\\label{)", self.main[start:]):
-                    change[label] = self._reformat(label, iden[h], prefix=prefix)
-                    stop = True
-                    break
-
-            if stop:
-                continue
-
-            warnings.warn(f'Unrecognised label "{label}"')
+            i = self.main.index(rf"\label{{{label}}}")
+            c = self._reformat(label, categories[classification[i]], prefix=prefix)
+            if c != label:
+                change[label] = c
 
         for label in change:
             self.change_label(label, change[label])
