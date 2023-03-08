@@ -220,6 +220,13 @@ def _detail_one_sentence_per_line(text: str) -> str:
 def one_sentence_per_line(text: str) -> str:
     """
     ??
+
+    TODO: Read and keep indentation level.
+
+    TODO: Store indentation level in commands replaced with placeholders.
+    Apply it to reformatting of multi-line commands.
+
+    TODO: Format multi-line commands recursively.
     """
 
     # remove trailing spaces and strip starting and ending newlines
