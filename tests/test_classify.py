@@ -22,6 +22,20 @@ class MyTests(unittest.TestCase):
         tex.format_labels()
         self.assertEqual(tex.get(), text)
 
+        # --
+
+        text = r"""
+        My text
+        \begin{equation}
+            a = b
+            \label{eq:qew}
+        \end{equation}
+        """
+
+        tex = texplain.TeX(text)
+        tex.format_labels()
+        self.assertEqual(tex.get(), text)
+
     def test_section(self):
         text = r"""
         foo bar
