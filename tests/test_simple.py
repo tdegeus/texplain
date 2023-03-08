@@ -61,7 +61,10 @@ see below \cref{my-o-sec}
 \section{Another sections}
 \label{my-o-sec}
 
-Foo
+Foo\footnote{
+    \label{myfootnote}
+    This is a footnote.
+}
 
 \section{Measurement of \texorpdfstring{$\ell_c$}{l\_c}}
 \label{sec-lc}
@@ -102,7 +105,10 @@ see below \cref{sec:my-o-sec}
 \section{Another sections}
 \label{sec:my-o-sec}
 
-Foo
+Foo\footnote{
+    \label{note:myfootnote}
+    This is a footnote.
+}
 
 \section{Measurement of \texorpdfstring{$\ell_c$}{l\_c}}
 \label{sec:lc}
@@ -122,6 +128,7 @@ Bar
                 "FIG:dep:b",
                 "FiG:dep",
                 "my-o-sec",
+                "myfootnote",
                 "sec-lc",
             ],
         )
@@ -139,6 +146,7 @@ Bar
                     "fig:dep:b",
                     "fig:dep",
                     "sec:my-o-sec",
+                    "note:myfootnote",
                     "sec:lc",
                 ],
             )
