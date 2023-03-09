@@ -204,6 +204,54 @@ def environments(text: str) -> list[str]:
     return list(set(ret))
 
 
+def indent(text: str) -> str:
+    """
+    Indent text.
+
+    ??
+    """
+
+    # remove all indentation and leading/trailing newlines
+    text = ("\n".join([line.strip() for line in text.split("\n")])).strip()
+
+    # preserve comments
+    text, placeholders = text_to_placeholders(text, [PlacholderType.comment])
+
+    # add indentation between ``\begin{...}`` and ``\end{...}``
+    # - place all ``\begin{...}`` and ``\end{...}`` on a new line
+    text = re.sub(r"(\ +)(\\begin{[^}]*})", r"\n\2", text)
+    # text = re.sub(r"(\\begin{[^}]*})(\ +)([^%])", r"\1\n\3", text)
+    text = re.sub(r"(\\begin{[^}]*})(\ +)", r"\1\n", text)
+    text = re.sub(r"(\ +)(\\end{[^}]*})", r"\n\2", text)
+    text = re.sub(r"(\\end{[^}]*})(\ +)", r"\1\n", text)
+
+
+    # - add indentation to all lines between ``\begin{...}`` and ``\end{...}``
+    indices = find_matching(
+        text, r"\\begin{.*}", r"\\end{.*}", escape=False, opening_match=0, closing_match=1, return_array=True
+    )
+
+    # print(indices)
+
+    # tmp = ""
+    # start = 0
+
+    # for opening, closing in indices:
+    #     tmp += text[start:opening] + "--"
+    #     start = closing
+    #     # text = text[:opening] + "\n" + text[opening:closing] + "\n" + text[closing:]
+
+    # text = tmp
+
+
+
+
+    return text_from_placeholders(text, placeholders)
+
+
+
+
+
 def _detail_one_sentence_per_line(text: str) -> str:
     """
     ??
