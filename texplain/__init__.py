@@ -233,9 +233,6 @@ def indent(text: str, indent: str = "    ") -> str:
     # remove trailing whitespace of each line
     text = "\n".join([line.rstrip() for line in text.split("\n")])
 
-    print("====")
-    print(text)
-
     # remove trailing whitespace before comments
     # replace noindent blocks and comments with placeholders
     text = text.splitlines()
@@ -265,14 +262,8 @@ def indent(text: str, indent: str = "    ") -> str:
     text = re.sub(r"(\ +)(\\end{[^}]*})", r"\n\2", text)
     text = re.sub(r"(\\end{[^}]*})(\ +)", r"\1\n", text)
 
-    print("---1")
-    print(text)
-
     # apply one sentence per line
     text = _one_sentence_per_line(text)
-
-    print("---3")
-    print(text)
 
     # get line number of each character
     lineno = np.empty(len(text), dtype=int)
@@ -285,11 +276,10 @@ def indent(text: str, indent: str = "    ") -> str:
         i += 1
     lineno[i:] = line + 1
 
+    print(text)
+
     # initialize indentation level
     indent_level = np.zeros(lineno[-1] + 1, dtype=int)
-
-    print("---3")
-    print(text)
 
     # add indentation to all lines between ``\begin{...}`` and ``\end{...}``
     for env in environments(text):
@@ -361,28 +351,30 @@ def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [Placeholder
     skip += [i.span() for i in re.finditer(r"(\n\n+)", text)]
 
     if len(skip) == 0:
-        return text_from_placeholders(_detail_one_sentence_per_line(text), placeholders)
+        ret = _detail_one_sentence_per_line(text)
+    else:
+        skip = np.array(skip)
+        skip = skip[skip[:, 0].argsort()].tolist()
 
-    skip = np.array(skip)
-    skip = skip[skip[:, 0].argsort()].tolist()
-
-    ret = ""
-    start = 0
-    for s, e in skip:
-        ret += _detail_one_sentence_per_line(text[start:s])
-        ret += text[s:e]
-        start = e
-    ret += _detail_one_sentence_per_line(text[start:])
+        ret = ""
+        start = 0
+        for s, e in skip:
+            ret += _detail_one_sentence_per_line(text[start:s])
+            ret += text[s:e]
+            start = e
+        ret += _detail_one_sentence_per_line(text[start:])
 
     # apply one sentence per line to multi-line commands
     for placeholder in placeholders:
         if placeholder.ptype == PlaceholderType.command:
+
             if not re.match(r".*\n.*", placeholder.content):
                 continue
-            c = find_matching(placeholder.content, "{", "}", ignore_escaped=True, return_array=True)
-            s = find_matching(placeholder.content, "[", "]", ignore_escaped=True, return_array=True)
-            braces = np.vstack((c, s))
-            braces = braces[np.argsort(braces[:, 0])]
+
+            braces = _filter_nested(np.array(
+                find_matching(placeholder.content, "{", "}", ignore_escaped=True, return_array=True).tolist() +
+                find_matching(placeholder.content, "[", "]", ignore_escaped=True, return_array=True).tolist()
+            ))
             braces[:, 1] += 1
 
             content = [placeholder.content[:braces[0, 0]]]
@@ -390,17 +382,12 @@ def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [Placeholder
                 content += [placeholder.content[o:c]]
             content += [placeholder.content[braces[-1, 1]:]]
 
-            print(content)
-
             for i in range(1, len(content) - 1):
                 if not re.match(r".*\n.*", content[i]):
                     continue
-                o = content[i][0]
-                c = content[i][-1]
-                print("....")
-                print(content[i][1:-1].strip())
-                print(_one_sentence_per_line(content[i][1:-1].strip(), [PlaceholderType.command]).strip())
-                content[i] = content[i][0] + "\n" + _one_sentence_per_line(content[i][1:-1].strip(), [PlaceholderType.command]).strip() + "\n" + content[i][-1]
+                body = content[i][1:-1].strip()
+                body = _one_sentence_per_line(body, [PlaceholderType.command])
+                content[i] = content[i][0] + "\n" + body + "\n" + content[i][-1]
 
             placeholder.content = "".join(content)
 
@@ -517,6 +504,22 @@ class GeneratePlaceholder:
         self.i += 1
         return f"-{self.base}-{self.name}-{self.i:d}-"
 
+def _filter_nested(indices: ArrayLike) -> ArrayLike:
+
+    indices = indices[np.argsort(indices[:, 0])]
+    keep = np.ones(len(indices), dtype=bool)
+    i = 0
+
+    while i < len(indices) - 1:
+        while indices[i + 1, 0] < indices[i, 1]:
+            keep[i + 1] = False
+            i += 1
+            if i == len(indices) - 1:
+                break
+        i += 1
+
+    return indices[keep]
+
 
 def _apply_placeholders(
     text: str,
@@ -548,21 +551,9 @@ def _apply_placeholders(
     if len(indices) == 0:
         return text, []
 
-    # filter nested
     if filter_nested:
-        indices = indices[np.argsort(indices[:, 0])]
-        keep = np.ones(len(indices), dtype=bool)
-        i = 0
-        while i < len(indices) - 1:
-            while indices[i + 1, 0] < indices[i, 1]:
-                keep[i + 1] = False
-                i += 1
-                if i == len(indices) - 1:
-                    break
-            i += 1
-        indices = indices[keep]
+        indices = _filter_nested(indices)
 
-    # replacement
     ret = []
     gen = GeneratePlaceholder(base, name)
     for i in range(indices.shape[0]):
