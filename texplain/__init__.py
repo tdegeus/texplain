@@ -203,91 +203,73 @@ def environments(text: str) -> list[str]:
 
     return list(set(ret))
 
-def _detail_indent_environment(text: str, indent: str, indent_level: int, env: str) -> str:
-    """
-    Indent text between ``\begin{...}`` and ``\end{...}``.
-    """
-
-
-
-    indices = find_matching(
-        text, r"\\begin{" + env + r"}", r"\\end{" + env + r"}", escape=False, opening_match=1, closing_match=0, return_array=True
-    )
-    print("----")
-    print(text)
-    print(env)
-
-
-    # remove nested environments
-    indices = indices[np.argsort(indices[:, 0])]
-    print(indices)
-    row = 0
-    keep = np.ones(len(indices), dtype=bool)
-    while row < len(indices) - 1:
-        start = 0
-        while indices[row + 1, 0] < indices[row, 1]:
-            row += 1
-            keep[row] = False
-            if row == len(indices) - 1:
-                break
-        if start != row:
-            snippet = text[indices[start, 0]:indices[row - 1, 1]]
-            print(".....")
-            print(start, row, snippet, indent_level)
-            formatted = textwrap.indent(_detail_indent_environment(snippet, indent, indent_level, env), indent * indent_level)
-            print(formatted)
-            print("::")
-            text = text[:indices[start, 0]] + formatted + text[indices[row - 1, 1]:]
-            print(text)
-            print("---------")
-            keep[start] = False
-            indices[row:, :] += len(formatted) - len(snippet)
-        row += 1
-    indices = indices[keep]
-
-
-    tmp = ""
-    start = 0
-    for opening, closing in indices:
-        tmp += text[start:opening] + textwrap.indent(text[opening:closing], indent * indent_level)
-        start = closing
-    text = tmp + text[start:]
-
-    print("===")
-    print(text)
-    print("===")
-
-    return text
-
-
-
-
 def indent(text: str, indent: str = "    ") -> str:
     """
     Indent text.
 
-    ??
+    :param text: The text to indent.
+    :param indent: The indentation to use.
+    :return: The indented text.
     """
 
-    # remove all indentation and leading/trailing newlines
-    text = ("\n".join([line.strip() for line in text.split("\n")])).strip()
+    # remove leading/trailing newlines
+    text = text.strip()
 
-    # preserve comments
-    text, placeholders = text_to_placeholders(text, [PlacholderType.comment])
+    # remove trailing whitespace of each line
+    text = "\n".join([line.rstrip() for line in text.split("\n")])
 
-    # add indentation between ``\begin{...}`` and ``\end{...}``
-    # - place all ``\begin{...}`` and ``\end{...}`` on a new line
+    # remove trailing whitespace before comments
+    # replace noindent blocks and comments with placeholders
+    text = text.splitlines()
+    for i in range(len(text)):
+        text[i] = re.sub(r"^(\s+)(?<!\\)(%)(.*)$", r"\2\3", text[i])
+    text = "\n".join(text)
+    text, placeholders = text_to_placeholders(text, [PlacholderType.noindent_block, PlacholderType.comment])
+
+    # remove indentation before ``\begin{...}`` and ``\end{...}``
+    # replace verbatim blocks with placeholders
+    text = text.splitlines()
+    for i in range(len(text)):
+        text[i] = re.sub(r"([^\s]*)(\s+)(?<!\\)(\\begin{verbatim})(.*)$", r"\1 \3\4", text[i])
+        text[i] = re.sub(r"([^\s]*)(\s+)(?<!\\)(\\end{verbatim})(.*)$", r"\1 \3\4", text[i])
+        text[i] = re.sub(r"^(\s+)(?<!\\)(\\begin{verbatim})(.*)$", r"\2\3", text[i])
+        text[i] = re.sub(r"^(\s+)(?<!\\)(\\end{verbatim})(.*)$", r"\2\3", text[i])
+    text = "\n".join(text)
+    text, pl = text_to_placeholders(text, [PlacholderType.verbatim])
+    placeholders += pl
+
+    # remove all indentation and leading newlines
+    text = "\n".join([line.lstrip() for line in text.split("\n")])
+
+    # place all ``\begin{...}`` and ``\end{...}`` on a new line
     text = re.sub(r"(\ +)(\\begin{[^}]*})", r"\n\2", text)
     text = re.sub(r"(\\begin{[^}]*})(\ +)", r"\1\n", text)
     text = re.sub(r"(\ +)(\\end{[^}]*})", r"\n\2", text)
     text = re.sub(r"(\\end{[^}]*})(\ +)", r"\1\n", text)
 
-    # - add indentation to all lines between ``\begin{...}`` and ``\end{...}``
-    for env in environments(text):
-        text = _detail_indent_environment(text, indent, 1, env)
+    # get line number of each character
+    lineno = np.empty(len(text), dtype=int)
+    i = 0
+    for line, match in enumerate(re.finditer(r"\n", text)):
+        lineno[i:match.span()[0]] = line
+        i = match.span()[0]
+        lineno[i] = line
+        i += 1
+    lineno[i:] = line + 1
 
-    # add indentation between ``{`` and ``}``
-    # - place all ``{`` and ``}`` on a new line
+    # add indentation to all lines between ``\begin{...}`` and ``\end{...}``
+    indent_level = np.zeros(lineno[-1] + 1, dtype=int)
+    for env in environments(text):
+        indices = find_matching(
+            text, r"\\begin{" + env + r"}\n", r"\n\\end{" + env + r"}", escape=False, opening_match=1, closing_match=0, return_array=True
+        )
+        for opening, closing in indices:
+            indent_level[np.unique(lineno[opening:closing])] += 1
+
+    text = text.splitlines()
+    for i in range(len(text)):
+        text[i] = indent_level[i] * indent + text[i]
+    text = "\n".join(text)
 
     return text_from_placeholders(text, placeholders)
 
@@ -413,6 +395,7 @@ class PlacholderType(enum.Enum):
     environment = enum.auto()
     command = enum.auto()
     noindent_block = enum.auto()
+    verbatim = enum.auto()
     special_indent = enum.auto()
 
 
@@ -598,6 +581,13 @@ def text_to_placeholders(
             ...
             % \end{noindent}
 
+    -   :py:class:`PlacholderType.verbatim`:
+
+        .. code-block:: latex
+
+            \begin{verbatim}
+            ...
+            \end{verbatim}
 
     -   :py:class:`PlacholderType.comment`:
 
@@ -639,6 +629,20 @@ def text_to_placeholders(
             )
             text, placeholders = _apply_placeholders(
                 text, indices, base, "noindent".upper(), PlacholderType.noindent_block
+            )
+            ret += placeholders
+
+        elif ptype == PlacholderType.verbatim:
+            indices = find_matching(
+                text,
+                r"\\begin{verbatim}",
+                r"\\end{verbatim}",
+                escape=False,
+                closing_match=1,
+                return_array=True,
+            )
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "verbatim".upper(), PlacholderType.verbatim
             )
             ret += placeholders
 
