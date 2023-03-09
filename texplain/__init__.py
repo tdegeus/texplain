@@ -203,8 +203,66 @@ def environments(text: str) -> list[str]:
 
     return list(set(ret))
 
+def _detail_indent_environment(text: str, indent: str, indent_level: int, env: str) -> str:
+    """
+    Indent text between ``\begin{...}`` and ``\end{...}``.
+    """
 
-def indent(text: str) -> str:
+
+
+    indices = find_matching(
+        text, r"\\begin{" + env + r"}", r"\\end{" + env + r"}", escape=False, opening_match=1, closing_match=0, return_array=True
+    )
+    print("----")
+    print(text)
+    print(env)
+
+
+    # remove nested environments
+    indices = indices[np.argsort(indices[:, 0])]
+    print(indices)
+    row = 0
+    keep = np.ones(len(indices), dtype=bool)
+    while row < len(indices) - 1:
+        start = 0
+        while indices[row + 1, 0] < indices[row, 1]:
+            row += 1
+            keep[row] = False
+            if row == len(indices) - 1:
+                break
+        if start != row:
+            snippet = text[indices[start, 0]:indices[row - 1, 1]]
+            print(".....")
+            print(start, row, snippet, indent_level)
+            formatted = textwrap.indent(_detail_indent_environment(snippet, indent, indent_level, env), indent * indent_level)
+            print(formatted)
+            print("::")
+            text = text[:indices[start, 0]] + formatted + text[indices[row - 1, 1]:]
+            print(text)
+            print("---------")
+            keep[start] = False
+            indices[row:, :] += len(formatted) - len(snippet)
+        row += 1
+    indices = indices[keep]
+
+
+    tmp = ""
+    start = 0
+    for opening, closing in indices:
+        tmp += text[start:opening] + textwrap.indent(text[opening:closing], indent * indent_level)
+        start = closing
+    text = tmp + text[start:]
+
+    print("===")
+    print(text)
+    print("===")
+
+    return text
+
+
+
+
+def indent(text: str, indent: str = "    ") -> str:
     """
     Indent text.
 
@@ -220,31 +278,16 @@ def indent(text: str) -> str:
     # add indentation between ``\begin{...}`` and ``\end{...}``
     # - place all ``\begin{...}`` and ``\end{...}`` on a new line
     text = re.sub(r"(\ +)(\\begin{[^}]*})", r"\n\2", text)
-    # text = re.sub(r"(\\begin{[^}]*})(\ +)([^%])", r"\1\n\3", text)
     text = re.sub(r"(\\begin{[^}]*})(\ +)", r"\1\n", text)
     text = re.sub(r"(\ +)(\\end{[^}]*})", r"\n\2", text)
     text = re.sub(r"(\\end{[^}]*})(\ +)", r"\1\n", text)
 
-
     # - add indentation to all lines between ``\begin{...}`` and ``\end{...}``
-    indices = find_matching(
-        text, r"\\begin{.*}", r"\\end{.*}", escape=False, opening_match=0, closing_match=1, return_array=True
-    )
+    for env in environments(text):
+        text = _detail_indent_environment(text, indent, 1, env)
 
-    # print(indices)
-
-    # tmp = ""
-    # start = 0
-
-    # for opening, closing in indices:
-    #     tmp += text[start:opening] + "--"
-    #     start = closing
-    #     # text = text[:opening] + "\n" + text[opening:closing] + "\n" + text[closing:]
-
-    # text = tmp
-
-
-
+    # add indentation between ``{`` and ``}``
+    # - place all ``{`` and ``}`` on a new line
 
     return text_from_placeholders(text, placeholders)
 
@@ -491,6 +534,7 @@ def _apply_placeholders(
     base: str,
     name: str,
     ptype: PlacholderType,
+    filter_nested: bool = True,
 ) -> tuple[str, list[Placeholder]]:
     """
     Replace text with placeholders.
@@ -501,6 +545,7 @@ def _apply_placeholders(
     :param base: The base of the placeholder, see :py:class:`GeneratePlaceholder`.
     :param name: The name of the placeholder, see :py:class:`GeneratePlaceholder`.
     :param ptype: The type of placeholder, see :py:class:`PlacholderType`.
+    :param filter_nested: If ``True``, nested placeholders are skipped.
     :return:
         ``(text, placeholders)`` where:
         - ``text`` is the text with the placeholders.
@@ -514,16 +559,18 @@ def _apply_placeholders(
         return text, []
 
     # filter nested
-    i = np.argsort(indices[:, 0])
-    indices = indices[i]
-    keep = np.ones(len(indices), dtype=bool)
-    i = 0
-    while i < len(indices) - 2:
-        while indices[i + 1, 0] < indices[i, 1]:
-            keep[i + 1] = False
+    if filter_nested:
+        indices = indices[np.argsort(indices[:, 0])]
+        keep = np.ones(len(indices), dtype=bool)
+        i = 0
+        while i < len(indices) - 1:
+            while indices[i + 1, 0] < indices[i, 1]:
+                keep[i + 1] = False
+                i += 1
+                if i == len(indices) - 1:
+                    break
             i += 1
-        i += 1
-    indices = indices[keep]
+        indices = indices[keep]
 
     # replacement
     ret = []
@@ -601,8 +648,10 @@ def text_to_placeholders(
                 continue
             indices[:, 1] -= 1
             text, placeholders = _apply_placeholders(
-                text, indices, base, "comment".upper(), PlacholderType.comment
+                text, indices, base, "comment".upper(), PlacholderType.comment, False
             )
+            for placeholder in placeholders:
+                placeholder.space_back = None
             ret += placeholders
 
         elif ptype == PlacholderType.environment:
