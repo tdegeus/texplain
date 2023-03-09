@@ -264,6 +264,7 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # remove duplicate spaces
     text = re.sub(r"(\ +)", r" ", text)
+    text = re.sub(r"(\n\n+)", r"\n\n", text)
 
     # place all ``\begin{...}`` and ``\end{...}`` on a new line
     text = re.sub(r"(\ +)(\\begin{[^}]*})", r"\n\2", text)
@@ -338,7 +339,7 @@ def _detail_one_sentence_per_line(text: str) -> str:
     text = re.split(r'(?<=[\.\!\?])\s+', text)
 
     for i in range(len(text)):
-        text[i] = re.sub("(\n[\ \t]*)([\w\$\(\[])", r" \2", text[i])
+        text[i] = re.sub("(\n[\ \t]*)([\w\$\(\[\`])", r" \2", text[i])
 
     return "\n".join(text)
 
@@ -490,6 +491,8 @@ class Placeholder:
         if self.space_front is not None:
             front = re.search(r"\s*", pre).end()
             pre = pre[front:][::-1] + self.space_front
+        else:
+            pre = pre[::-1]
 
         if self.space_back is not None:
             back = re.search(r"\ *\n?", post).end()
@@ -725,6 +728,10 @@ def text_to_placeholders(
                 text, placeholders = _apply_placeholders(
                     text, indices, base, "inlinemath".upper(), PlaceholderType.inline_math
                 )
+                if match == "$":
+                    for placeholder in placeholders:
+                        placeholder.space_front = None
+                        placeholder.space_back = None
                 ret += placeholders
 
         elif ptype == PlaceholderType.command:
