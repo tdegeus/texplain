@@ -2,55 +2,52 @@ import unittest
 
 import texplain
 
+class TestLatexIndent(unittest.TestCase):
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
 
+    def test_dbmrq(self):
+        """
+        Important difference: whitespace before and after commands is preserved.
+        """
 
-# class TestLatexIndent(unittest.TestCase):
-#     """
-#     From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
-#     """
+        text = r"""
+A distinção entre conteúdo \emph{real} e conteúdo \emph{intencional} está
+relacionada, ainda, à distinção entre o conceito husserliano de
+\emph{experiência} e o uso popular desse termo. No sentido comum,
+o \term{experimentado} é um complexo de eventos exteriores,
+e o \term{experimentar} consiste em percepções (além de julgamentos e outros
+atos) nas quais tais eventos aparecem como objetos, e objetos frequentemente
+relacionados ao ego empírico. Nesse sentido, diz-se, por exemplo, que se
+\term{experimentou} uma guerra. No sentido fenomenológico, no entanto,
+é evidente que os eventos ou objetos externos não estão dentro do ego que os
+experimenta, nem são seu conteúdo ou suas partes constituintes
+\cite[5.][3]{lu}. Experimentar eventos exteriores, nesse sentido, significa
+direcionar certos atos de percepção a tais eventos, de modo que certos
+conteúdos constituem, então, uma unidade de consciência no fluxo unificado de
+um ego empírico. Nesse caso, temos um todo \emph{real} do qual se pode dizer
+que cada parte é de fato \emph{experimentada}. Enquanto no primeiro sentido há
+uma distinção entre o conteúdo da consciência e aquilo que é experimentado
+(e.g.\, entre a sensação e aquilo que é sentido), nesse último sentido aquilo
+que o ego ou a consciência experimenta \emph{é} seu conteúdo.
+        """
 
-#     def test_dbmrq(self):
-#         """
-#         Important difference: whitespace before and after commands is preserved.
-#         """
+        formatted = r"""
+A distinção entre conteúdo \emph{real} e conteúdo \emph{intencional} está relacionada, ainda, à distinção entre o conceito husserliano de
+\emph{experiência} e o uso popular desse termo.
+No sentido comum, o \term{experimentado} é um complexo de eventos exteriores, e o \term{experimentar} consiste em percepções (além de julgamentos e outros atos) nas quais tais eventos aparecem como objetos, e objetos frequentemente relacionados ao ego empírico.
+Nesse sentido, diz-se, por exemplo, que se
+\term{experimentou} uma guerra.
+No sentido fenomenológico, no entanto, é evidente que os eventos ou objetos externos não estão dentro do ego que os experimenta, nem são seu conteúdo ou suas partes constituintes
+\cite[5.][3]{lu}.
+Experimentar eventos exteriores, nesse sentido, significa direcionar certos atos de percepção a tais eventos, de modo que certos conteúdos constituem, então, uma unidade de consciência no fluxo unificado de um ego empírico.
+Nesse caso, temos um todo \emph{real} do qual se pode dizer que cada parte é de fato \emph{experimentada}.
+Enquanto no primeiro sentido há uma distinção entre o conteúdo da consciência e aquilo que é experimentado (e.g.\, entre a sensação e aquilo que é sentido), nesse último sentido aquilo que o ego ou a consciência experimenta \emph{é} seu conteúdo.
+        """
 
-#         text = r"""
-# A distinção entre conteúdo \emph{real} e conteúdo \emph{intencional} está
-# relacionada, ainda, à distinção entre o conceito husserliano de
-# \emph{experiência} e o uso popular desse termo. No sentido comum,
-# o \term{experimentado} é um complexo de eventos exteriores,
-# e o \term{experimentar} consiste em percepções (além de julgamentos e outros
-# atos) nas quais tais eventos aparecem como objetos, e objetos frequentemente
-# relacionados ao ego empírico. Nesse sentido, diz-se, por exemplo, que se
-# \term{experimentou} uma guerra. No sentido fenomenológico, no entanto,
-# é evidente que os eventos ou objetos externos não estão dentro do ego que os
-# experimenta, nem são seu conteúdo ou suas partes constituintes
-# \cite[5.][3]{lu}. Experimentar eventos exteriores, nesse sentido, significa
-# direcionar certos atos de percepção a tais eventos, de modo que certos
-# conteúdos constituem, então, uma unidade de consciência no fluxo unificado de
-# um ego empírico. Nesse caso, temos um todo \emph{real} do qual se pode dizer
-# que cada parte é de fato \emph{experimentada}. Enquanto no primeiro sentido há
-# uma distinção entre o conteúdo da consciência e aquilo que é experimentado
-# (e.g.\, entre a sensação e aquilo que é sentido), nesse último sentido aquilo
-# que o ego ou a consciência experimenta \emph{é} seu conteúdo.
-#         """
-
-#         formatted = r"""
-# A distinção entre conteúdo \emph{real} e conteúdo \emph{intencional} está relacionada, ainda, à distinção entre o conceito husserliano de
-# \emph{experiência} e o uso popular desse termo.
-# No sentido comum, o \term{experimentado} é um complexo de eventos exteriores, e o \term{experimentar} consiste em percepções (além de julgamentos e outros atos) nas quais tais eventos aparecem como objetos, e objetos frequentemente relacionados ao ego empírico.
-# Nesse sentido, diz-se, por exemplo, que se
-# \term{experimentou} uma guerra.
-# No sentido fenomenológico, no entanto, é evidente que os eventos ou objetos externos não estão dentro do ego que os experimenta, nem são seu conteúdo ou suas partes constituintes
-# \cite[5.][3]{lu}.
-# Experimentar eventos exteriores, nesse sentido, significa direcionar certos atos de percepção a tais eventos, de modo que certos conteúdos constituem, então, uma unidade de consciência no fluxo unificado de um ego empírico.
-# Nesse caso, temos um todo \emph{real} do qual se pode dizer que cada parte é de fato \emph{experimentada}.
-# Enquanto no primeiro sentido há uma distinção entre o conteúdo da consciência e aquilo que é experimentado (e.g.\, entre a sensação e aquilo que é sentido), nesse último sentido aquilo que o ego ou a consciência experimenta \emph{é} seu conteúdo.
-#         """
-
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
-#         self.assertEqual(ret.strip(), formatted.strip())
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_dbmrq3(self):
 #         """
@@ -103,8 +100,7 @@ import texplain
 # }
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_dot_followed_by_tilde(self):
@@ -118,8 +114,7 @@ import texplain
 # Here is another sentence (Fig.~\ref{dummy19}).
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_issue_321(self):
@@ -134,8 +129,7 @@ import texplain
 # \end{document}
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), text.strip())
 
 #     def test_issue_355(self):
@@ -153,8 +147,7 @@ import texplain
 # This is a very long sentence that is formatted like it should and it should therefore not be touched by the formatter.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_issue_376(self):
@@ -187,8 +180,7 @@ import texplain
 # which we verify in \cref{fig:2c}.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_issue_392(self):
@@ -222,8 +214,7 @@ import texplain
 # Ph.D.\ With sentences.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_kiryph1(self):
@@ -245,8 +236,7 @@ import texplain
 # Xxxx x xxxxxxxx xx xxxxxx \emph{xxxxxxx} \cite{XxxxxXxXx:xxxx} xxx xx xxxxxxxx xxxxxxxxxxxxx xx x xxxxxxxx \emp{Xxxxxxx'x xxxxx}.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_konfect(self):
@@ -267,8 +257,7 @@ import texplain
 # C'est bon; à six heures on y va.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_mlep(self):
@@ -290,8 +279,7 @@ import texplain
 # The URL is \url{www.scilab.org}.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_mlep2(self):
@@ -328,8 +316,7 @@ import texplain
 # \end{table}
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), text.strip())
 
 
@@ -413,8 +400,7 @@ import texplain
 # \end{figure}
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 
@@ -429,8 +415,7 @@ import texplain
 # and paragraph removal routine. % fifth comment
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), text.strip())
 
 
@@ -462,8 +447,7 @@ import texplain
 # furthermore we have that.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_pcc_program_review1(self):
@@ -1523,8 +1507,7 @@ import texplain
 # As the Math SAC looks for ways to increase completion rates for students who place into developmental mathematics courses, serious attention will be given to plans that increase the consistency of classroom experience for students; consistency that is built upon evidence-based best practices.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_pcc_program_review2(self):
@@ -2123,8 +2106,7 @@ import texplain
 # }
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_sentence_across_blocks(self):
@@ -2157,8 +2139,7 @@ import texplain
 # this one.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_six_sentences_mutl_blank(self):
@@ -2212,8 +2193,7 @@ import texplain
 # This is the eleventh sentence.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_textbook_snippet(self):
@@ -2253,8 +2233,7 @@ import texplain
 # Brave and experienced drivers at the controls of \TeX\ will gradually enter more and more of these hazardous areas, but for most applications the details won't matter.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_three_sentences_trailing_comments(self):
@@ -2279,8 +2258,7 @@ import texplain
 # This is the sixth sentence.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_trailing_comments(self):
@@ -2313,8 +2291,7 @@ import texplain
 # This is the sixth sentence.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_two_sentences(self):
@@ -2333,8 +2310,7 @@ import texplain
 # This is the second sentence!
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 #     def test_verbatim_test(self):
@@ -2372,8 +2348,7 @@ import texplain
 # This is the sixth sentence.
 #         """
 
-#         config = texplain.texindent_default_config()
-#         ret = texplain.texindent(text, config)
+#         ret = texplain.indent(text)
 #         self.assertEqual(ret.strip(), formatted.strip())
 
 if __name__ == "__main__":
