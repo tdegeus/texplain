@@ -516,7 +516,31 @@ And \footnote{
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_nested_environment(self):
 
+        text = r"""
+\some{
+\mycommand{
+\begin{something}
+Some text \emph{with some highlighting}. And two sentences.
+\end{something}
+}
+}
+        """
+
+        formatted = r"""
+\some{
+    \mycommand{
+        \begin{something}
+            Some text \emph{with some highlighting}.
+            And two sentences.
+        \end{something}
+    }
+}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
 
 if __name__ == "__main__":
     unittest.main()

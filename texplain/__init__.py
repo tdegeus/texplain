@@ -196,7 +196,7 @@ def remove_comments(text: str) -> str:
     :param text: The string to consider.
     :return: The string without comments.
     """
-    text = text.split("\n")
+    text = text.splitlines()
     for i in range(len(text)):
         text[i] = re.sub(r"([^%]*)(?<!\\)(%)(.*)$", r"\1", text[i])
     return "\n".join(text)
@@ -218,20 +218,26 @@ def environments(text: str) -> list[str]:
 
     return list(set(ret))
 
+def _strip_trailing_whitespace(text: str) -> str:
+    """
+    ???
+    """
+
+    return "\n".join([line.rstrip() for line in text.splitlines()])
+
 def indent(text: str, indent: str = "    ") -> str:
     """
     Indent text.
+
+    TODO: remove duplicate spaces
 
     :param text: The text to indent.
     :param indent: The indentation to use.
     :return: The indented text.
     """
 
-    # remove leading/trailing newlines
-    text = text.strip()
-
-    # remove trailing whitespace of each line
-    text = "\n".join([line.rstrip() for line in text.split("\n")])
+    # remove leading/trailing newlines, and trailing whitespace
+    text = _strip_trailing_whitespace(text.strip())
 
     # remove trailing whitespace before comments
     # replace noindent blocks and comments with placeholders
@@ -254,7 +260,10 @@ def indent(text: str, indent: str = "    ") -> str:
     placeholders += pl
 
     # remove all indentation and leading newlines
-    text = "\n".join([line.lstrip() for line in text.split("\n")])
+    text = "\n".join([line.lstrip() for line in text.splitlines()])
+
+    # remove duplicate spaces
+    text = re.sub(r"(\ +)", r" ", text)
 
     # place all ``\begin{...}`` and ``\end{...}`` on a new line
     text = re.sub(r"(\ +)(\\begin{[^}]*})", r"\n\2", text)
@@ -313,7 +322,7 @@ def indent(text: str, indent: str = "    ") -> str:
         text[i] = indent_level[i] * indent + text[i]
     text = "\n".join(text)
 
-    return text_from_placeholders(text, placeholders)
+    return _strip_trailing_whitespace(text_from_placeholders(text, placeholders))
 
 
 
@@ -344,7 +353,7 @@ def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [Placeholder
     TODO: Format multi-line commands recursively.
     """
 
-    text, placeholders = text_to_placeholders(text, fold)
+    text, placeholders = text_to_placeholders(text, fold, base="TEXONEPERLINE")
 
     # format in blocks separated by blocks between ``(start, end)`` in ``skip``
     skip = []
@@ -362,7 +371,13 @@ def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [Placeholder
         ret = _detail_one_sentence_per_line(text)
     else:
         skip = np.array(skip)
-        skip = skip[skip[:, 0].argsort()].tolist()
+        skip = _filter_nested(skip[skip[:, 0].argsort()])
+        keep = np.ones(skip.shape[0], dtype=bool)
+        for i in range(skip.shape[0] - 1):
+            if skip[i, 1] == skip[i + 1, 0]:
+                skip[i + 1, 0] = skip[i, 0]
+                keep[i] = False
+        skip = skip[keep]
 
         ret = ""
         start = 0
@@ -399,7 +414,7 @@ def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [Placeholder
 
             placeholder.content = "".join(content)
 
-    return text_from_placeholders(ret, placeholders)
+    return text_from_placeholders(ret, placeholders, base="TEXONEPERLINE")
 
 class Placeholder:
     """
@@ -516,15 +531,13 @@ def _filter_nested(indices: ArrayLike) -> ArrayLike:
 
     indices = indices[np.argsort(indices[:, 0])]
     keep = np.ones(len(indices), dtype=bool)
-    i = 0
 
-    while i < len(indices) - 1:
-        while indices[i + 1, 0] < indices[i, 1]:
-            keep[i + 1] = False
-            i += 1
-            if i == len(indices) - 1:
-                break
-        i += 1
+    last = 0
+    for i in range(len(indices)):
+        if indices[i, 0] < last:
+            keep[i] = False
+        else:
+            last = indices[i, 1]
 
     return indices[keep]
 
@@ -717,7 +730,7 @@ def text_to_placeholders(
             indices = {}
             last_stop = 0
 
-            for match in re.finditer(r"(?<!\\)(\\)(\w*)", text):
+            for match in re.finditer(r"(?<!\\)(\\)(\w+)", text):
                 start, stop = match.span()
 
                 # skip begin/end
@@ -771,7 +784,7 @@ def text_from_placeholders(
     text: str,
     placeholders: list[Placeholder],
     default_naming: bool = True,
-    prefix: str = "TEXINDENT",
+    base: str = "TEXINDENT",
 ) -> str:
     """
     Replace placeholders with original text.
@@ -785,7 +798,7 @@ def text_from_placeholders(
         while True:
             indices = [
                 (text[i.span()[0] : i.span()[1]], i.span()[0])  # noqa: E203
-                for i in re.finditer("-" + prefix + r"-\w*-[0-9]*-", text)
+                for i in re.finditer("-" + base + r"-\w*-[0-9]*-", text)
             ]
             if len(indices) == 0:
                 return text
@@ -1147,7 +1160,7 @@ class TeX:
         Remove lines that are entirely a comment.
         """
 
-        tmp = self.main.split("\n")
+        tmp = self.main.splitlines()
         tmp = list(itertools.filterfalse(re.compile(r"^\s*%.*$").match, tmp))
         self.main = "\n".join(tmp)
 
