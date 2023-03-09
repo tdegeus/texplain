@@ -2,6 +2,30 @@ import unittest
 
 import texplain
 
+class TestComment(unittest.TestCase):
+
+    def test_comment_a(self):
+
+        text = r"This is a % comment"
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), text.strip())
+
+    def test_comment_b(self):
+
+        text = r"This is a. % comment"
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), text.strip())
+
+    def test_comment_c(self):
+
+        text = "This is a. % comment a\nAnd another. % comment b"
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), text.strip())
+
+
 
 class TestIndentEnvironment(unittest.TestCase):
 

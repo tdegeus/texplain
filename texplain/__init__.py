@@ -300,11 +300,13 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # add indentation to all lines between ``\begin{...}`` and ``\end{...}``
     for env in environments(text):
+        opening = r"\\begin{" + env + r"}"
+        closing = r"\\end{" + env + r"}"
         indices = find_matching(
-            text, r"\\begin{" + env + r"}\n", r"\n\\end{" + env + r"}", escape=False, opening_match=1, closing_match=0, ignore_escaped=True, return_array=True
+            text, opening, closing, escape=False, opening_match=1, closing_match=0, ignore_escaped=True, return_array=True
         )
         for opening, closing in indices:
-            indent_level[np.unique(lineno[opening:closing])] += 1
+            indent_level[np.unique(lineno[opening:closing])[1:]] += 1
 
     # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
     indices = find_matching(text, "{", "}", ignore_escaped=True, return_array=True)
@@ -680,9 +682,11 @@ def text_to_placeholders(
             ret += placeholders
 
         elif ptype == PlaceholderType.comment:
-            indices = np.array([i.span() for i in re.finditer(r"(?<!\\)(%)(.*)(\n)", text)])
+            indices = [i.span() for i in re.finditer(r"(?<!\\)(%)(.*)(\n)", text)]
+            indices += [i.span() for i in re.finditer(r"(?<!\\)(%)(.*)($)", text)]
             if len(indices) == 0:
                 continue
+            indices = np.array(indices)
             indices[:, 1] -= 1
             text, placeholders = _apply_placeholders(
                 text, indices, base, "comment".upper(), PlaceholderType.comment, False
@@ -730,7 +734,7 @@ def text_to_placeholders(
             indices = {}
             last_stop = 0
 
-            for match in re.finditer(r"(?<!\\)(\\)(\w+)", text):
+            for match in re.finditer(r"(?<!\\)(\\)([\w\*]+)", text):
                 start, stop = match.span()
 
                 # skip begin/end
