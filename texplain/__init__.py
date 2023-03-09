@@ -265,6 +265,16 @@ def indent(text: str, indent: str = "    ") -> str:
     # apply one sentence per line
     text = _one_sentence_per_line(text)
 
+    # for comments placeholders to end with a newline
+    for placeholder in placeholders:
+        if placeholder.ptype == PlaceholderType.comment:
+            index = text.find(placeholder.placeholder)
+            i = index + len(placeholder.placeholder)
+            if i >= len(text) - 2:
+                continue
+            if text[i] == " ":
+                text = text[:i] + "\n" + text[i + 1:]
+
     # get line number of each character
     lineno = np.empty(len(text), dtype=int)
     i = 0
@@ -275,8 +285,6 @@ def indent(text: str, indent: str = "    ") -> str:
         lineno[i] = line
         i += 1
     lineno[i:] = line + 1
-
-    print(text)
 
     # initialize indentation level
     indent_level = np.zeros(lineno[-1] + 1, dtype=int)
@@ -442,7 +450,7 @@ class Placeholder:
         pre = text[:start][::-1]
         post = text[end:]
         front = re.search(r"\s*", pre).end()
-        back = re.search(r"\s*", post).end()
+        back = re.search(r"\ *\n?", post).end()
         return (
             Placeholder(placeholder, text[start:end], pre[:front][::-1], post[:back], ptype),
             text[:start] + placeholder + text[end:],
@@ -467,7 +475,7 @@ class Placeholder:
             pre = pre[front:][::-1] + self.space_front
 
         if self.space_back is not None:
-            back = re.search(r"\s*", post).end()
+            back = re.search(r"\ *\n?", post).end()
             post = self.space_back + post[back:]
 
         return pre + self.content + post
