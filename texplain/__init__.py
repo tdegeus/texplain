@@ -122,6 +122,7 @@ def find_matching(
     :param opening_match: Select index of begin (``0``) or end (``1``) of opening bracket match.
     :param closing_match: Select index of begin (``0``) or end (``1``) of closing bracket match.
     :param return_array: If ``True``, return array of indices instead of dictionary.
+    TODO: change to list(ret.items())
     :return: Dictionary with ``{index_opening: index_closing}``
     """
 
