@@ -1122,7 +1122,17 @@ class TeX:
         """
         Return document.
         """
-        return self.preamble + self.start + self.main + self.postamble
+        tmp = self.main
+
+        if len(self.postamble) > 0:
+
+            if tmp[-1] != "\n":
+                tmp += "\n"
+
+            if tmp[-2] != "\n":
+                tmp += "\n"
+
+        return self.preamble + self.start + tmp + self.postamble
 
     def changed(self):
         """
