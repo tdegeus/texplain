@@ -248,7 +248,7 @@ def _lstrip_lines(text: str) -> str:
     return "\n".join([line.lstrip() for line in text.splitlines()])
 
 
-def _dedent(text: str, partial: list[PlaceholderType] = [PlaceholderType.tabular]) -> str:
+def _dedent(text: str, partial: list[PlaceholderType]) -> str:
     """
     Remove indentation
     #TODO: optional use of latexindent.pl to format tables
@@ -269,7 +269,7 @@ def _dedent(text: str, partial: list[PlaceholderType] = [PlaceholderType.tabular
 
     return text
 
-def _squashspaces(text: str, skip: list[PlaceholderType] = [PlaceholderType.tabular]) -> str:
+def _squashspaces(text: str, skip: list[PlaceholderType]) -> str:
     """
     Squash spaces
     """
@@ -285,8 +285,6 @@ def _squashspaces(text: str, skip: list[PlaceholderType] = [PlaceholderType.tabu
 def indent(text: str, indent: str = "    ") -> str:
     """
     Indent text.
-
-    TODO: remove duplicate spaces
 
     :param text: The text to indent.
     :param indent: The indentation to use.
@@ -306,21 +304,22 @@ def indent(text: str, indent: str = "    ") -> str:
         placeholder.space_back = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_back)
         placeholder.space_back = re.sub(r"\ +", r" ", placeholder.space_back)
 
-    # exclude comments
+    # comments: exclude from formatting
     text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
     text, placeholders_inline_comment = text_to_placeholders(text, [PlaceholderType.inline_comment])
 
+    # line comments: remove leading whitespace
     for placeholder in placeholders_comment:
         placeholder.space_front = "\n"
 
+    # inline comments: remove duplicate spaces
     for placeholder in placeholders_inline_comment:
         placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
-    # remove multiple newlines
+    # remove multiple newlines, duplicate spaces, and any leading whitespace
     text = re.sub(r"(\n\n+)", r"\n\n", text)
-
-    text = _dedent(text)
-    text = _squashspaces(text)
+    text = _dedent(text, partial=[PlaceholderType.tabular])
+    text = _squashspaces(text, skip=[PlaceholderType.tabular])
 
     # place all ``\begin{...}`` and ``\end{...}`` on a new line
     #TODO:treat math differently, solution: loop over all lines
@@ -349,18 +348,9 @@ def indent(text: str, indent: str = "    ") -> str:
     # apply one sentence per line
     text = _one_sentence_per_line(text)
 
-    # for comments placeholders to end with a newline
+    # place comment placeholders where they belong to do indentation
     text = text_from_placeholders(text, placeholders_comment + placeholders_inline_comment)
     text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment, PlaceholderType.inline_comment])
-
-    # for placeholder in placeholders_comment + placeholders_inline_comment:
-    #     if placeholder.ptype == PlaceholderType.comment or placeholder.ptype == PlaceholderType.inline_comment:
-    #         index = text.find(placeholder.placeholder)
-    #         i = index + len(placeholder.placeholder)
-    #         if i >= len(text) - 2:
-    #             continue
-    #         if text[i] == " ":
-    #             text = text[:i] + "\n" + text[i + 1:]
 
     # ignore inline math in computing indentation level
     text, pl_math = text_to_placeholders(text, [PlaceholderType.math], base="MYFOOA")
