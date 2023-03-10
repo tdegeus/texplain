@@ -63,6 +63,23 @@ some more text.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_environment_b(self):
+
+        text = r"""
+Some text \begin{equation}[0, 1)\end{equation} some more text on interval $[0, 1)$.
+        """
+
+        formatted = r"""
+Some text
+\begin{equation}
+    [0, 1)
+\end{equation}
+some more text on interval $[0, 1)$.
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_environment_nested_a(self):
 
         text = r"""

@@ -321,7 +321,8 @@ def indent(text: str, indent: str = "    ") -> str:
     for i in re.finditer(r"\\begin{[^}]*}.+", text):
         start = i.span()[0] + 6
         tmp = text[start:].split("\n", 1)[0]
-        start += _find_arguments(tmp)
+        if not re.match(r"\{equation.*", tmp):
+            start += _find_arguments(tmp)
         if text[start] != "\n":
             text = text[:start] + "\n" + text[start:]
 
@@ -382,11 +383,13 @@ def indent(text: str, indent: str = "    ") -> str:
         indent_level[np.unique(lineno[opening:closing])[1:]] += 1
 
     # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
+    #TODO: ignore math and inline math
     indices = find_matching(text, "{", "}", ignore_escaped=True, return_array=True)
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1:lineno[indices[i, 1]]] += 1
 
     # add indentation to all lines between ``[`` and ``]`` containing at least one ``\n``
+    #TODO: ignore math and inline math
     indices = find_matching(text, "[", "]", ignore_escaped=True, return_array=True)
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1:lineno[indices[i, 1]]] += 1
