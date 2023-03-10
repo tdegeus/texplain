@@ -225,6 +225,53 @@ def _strip_trailing_whitespace(text: str) -> str:
 
     return "\n".join([line.rstrip() for line in text.splitlines()])
 
+def _lstrip_comment(text: str) -> str:
+    """
+    remove trailing whitespace before comments
+    """
+
+    text = text.splitlines()
+
+    for i in range(len(text)):
+        text[i] = re.sub(r"^(\s+)(?<!\\)(%)(.*)$", r"\2\3", text[i])
+
+    text = "\n".join(text)
+
+    return text
+
+def _dedent(text: str, partial: list[PlaceholderType] = [PlaceholderType.tabular]) -> str:
+    """
+    Remove indentation
+    """
+
+    text, placholders = text_to_placeholders(text, partial, base="TEXDEDENT")
+
+    text = "\n".join([line.lstrip() for line in text.splitlines()])
+
+    # keep common indentation table
+    # TODO: make more clever
+    for placeholder in placholders:
+        tmp = placeholder.content.splitlines()
+        placeholder.content = tmp[0].lstrip() + "\n" + textwrap.dedent("\n".join(tmp[1:-1])) + "\n" + tmp[-1].lstrip()
+        placeholder.space_front = "\n"
+
+    text = text_from_placeholders(text, placholders, base="TEXDEDENT")
+
+    return text
+
+def _squashspaces(text: str, skip: list[PlaceholderType] = [PlaceholderType.tabular]) -> str:
+    """
+    Squash spaces
+    """
+
+    text, placholders = text_to_placeholders(text, skip, base="TEXSQUASH")
+
+    text = re.sub(r"(\ +)", r" ", text)
+
+    text = text_from_placeholders(text, placholders, base="TEXSQUASH")
+
+    return text
+
 def indent(text: str, indent: str = "    ") -> str:
     """
     Indent text.
@@ -239,12 +286,7 @@ def indent(text: str, indent: str = "    ") -> str:
     # remove leading/trailing newlines, and trailing whitespace
     text = _strip_trailing_whitespace(text.strip())
 
-    # remove trailing whitespace before comments
     # replace noindent blocks and comments with placeholders
-    text = text.splitlines()
-    for i in range(len(text)):
-        text[i] = re.sub(r"^(\s+)(?<!\\)(%)(.*)$", r"\2\3", text[i])
-    text = "\n".join(text)
     text, placeholders = text_to_placeholders(text, [PlaceholderType.noindent_block, PlaceholderType.comment])
 
     # remove indentation before ``\begin{...}`` and ``\end{...}``
@@ -259,12 +301,11 @@ def indent(text: str, indent: str = "    ") -> str:
     text, pl = text_to_placeholders(text, [PlaceholderType.verbatim])
     placeholders += pl
 
-    # remove all indentation and leading newlines
-    text = "\n".join([line.lstrip() for line in text.splitlines()])
-
-    # remove duplicate spaces
-    text = re.sub(r"(\ +)", r" ", text)
+    # remove multiple newlines
     text = re.sub(r"(\n\n+)", r"\n\n", text)
+
+    text = _dedent(text)
+    text = _squashspaces(text)
 
     # place all ``\begin{...}`` and ``\end{...}`` on a new line
     text = re.sub(r"(\ +)(\\begin{[^}]*})", r"\n\2", text)
