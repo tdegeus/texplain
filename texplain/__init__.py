@@ -322,6 +322,7 @@ def indent(text: str, indent: str = "    ") -> str:
     for i in re.finditer(r"\\begin{[^}]*}.+", text):
         start = i.span()[0] + 6
         tmp = text[start:].split("\n", 1)[0]
+        start += _find_arguments(tmp)
         if text[start] != "\n":
             text = text[:start] + "\n" + text[start:]
 
