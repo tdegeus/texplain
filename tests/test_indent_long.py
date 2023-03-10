@@ -2152,7 +2152,8 @@ across lines.
 As does
 \begin{tabular}{cc}
     1 & 2\\
-3&4\end{tabular}
+    3&4
+\end{tabular}
 this one.
         """
 

@@ -311,9 +311,17 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # place all ``\begin{...}`` and ``\end{...}`` on a new line
     text = re.sub(r"(\ +)(\\begin{[^}]*})", r"\n\2", text)
+    text = re.sub(r"(\w)(\\begin{[^}]*})", r"\1\n\2", text)
     text = re.sub(r"(\\begin{[^}]*})(\ +)", r"\1\n", text)
     text = re.sub(r"(\ +)(\\end{[^}]*})", r"\n\2", text)
+    text = re.sub(r"(\w)(\\end{[^}]*})", r"\1\n\2", text)
     text = re.sub(r"(\\end{[^}]*})(\ +)", r"\1\n", text)
+
+    # place all ``\[`` and ``\]`` on a new line
+    text = re.sub(r"(\ +)(\\\[)", r"\n\2", text)
+    text = re.sub(r"(\\\[)(\ +)", r"\1\n", text)
+    text = re.sub(r"(\ +)(\\\])", r"\n\2", text)
+    text = re.sub(r"(\\\])(\ +)", r"\1\n", text)
 
     # apply one sentence per line
     text = _one_sentence_per_line(text)
@@ -351,6 +359,15 @@ def indent(text: str, indent: str = "    ") -> str:
         )
         for opening, closing in indices:
             indent_level[np.unique(lineno[opening:closing])[1:]] += 1
+
+    # add indentation to all lines between ``\[`` and ``\]``
+    opening = r"\\\["
+    closing = r"\\\]"
+    indices = find_matching(
+        text, opening, closing, escape=False, opening_match=1, closing_match=0, ignore_escaped=True, return_array=True
+    )
+    for opening, closing in indices:
+        indent_level[np.unique(lineno[opening:closing])[1:]] += 1
 
     # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
     indices = find_matching(text, "{", "}", ignore_escaped=True, return_array=True)
@@ -754,6 +771,9 @@ def text_to_placeholders(
                 indices += find_matching(
                     text, r"\\begin{" + env + "}", r"\\end{" + env + "}", escape=False, closing_match=1, return_array=True
                 ).tolist()
+            indices += find_matching(
+                text, r"\\\[", r"\\\]", escape=False, closing_match=1, return_array=True
+            ).tolist()
             indices = np.array(indices)
             text, placeholders = _apply_placeholders(
                 text, indices, base, "math".upper(), PlaceholderType.environment
@@ -776,6 +796,14 @@ def text_to_placeholders(
                         placeholder.space_front = None
                         placeholder.space_back = None
                 ret += placeholders
+
+            indices = find_matching(
+                text, r"\\\(", r"\\\)", escape=False, closing_match=1, return_array=True
+            )
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "inlinemath".upper(), PlaceholderType.environment
+            )
+            ret += placeholders
 
         elif ptype == PlaceholderType.command:
             braces = find_matching(text, "{", "}", ignore_escaped=True)
