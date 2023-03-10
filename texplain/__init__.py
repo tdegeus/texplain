@@ -244,6 +244,7 @@ def _lstrip_comment(text: str) -> str:
 def _dedent(text: str, partial: list[PlaceholderType] = [PlaceholderType.tabular]) -> str:
     """
     Remove indentation
+    #TODO: optional use of latexindent.pl to format tables
     """
 
     text, placholders = text_to_placeholders(text, partial, base="TEXDEDENT")
@@ -405,6 +406,7 @@ def indent(text: str, indent: str = "    ") -> str:
 def _detail_one_sentence_per_line(text: str) -> str:
     """
     ??
+    TODO: optional split characters such as ``;`` and ``:``
     """
 
     text = re.split(r'(?<=[\.\!\?])\s+', text)
@@ -415,7 +417,7 @@ def _detail_one_sentence_per_line(text: str) -> str:
     return "\n".join(text)
 
 
-def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [PlaceholderType.math, PlaceholderType.tabular, PlaceholderType.inline_math, PlaceholderType.command]) -> str:
+def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [PlaceholderType.math, PlaceholderType.tabular, PlaceholderType.inline_math, PlaceholderType.command], base: str = "TEXONEPERLINE") -> str:
     """
     ??
 
@@ -427,7 +429,7 @@ def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [Placeholder
     TODO: Format multi-line commands recursively.
     """
 
-    text, placeholders = text_to_placeholders(text, fold, base="TEXONEPERLINE")
+    text, placeholders = text_to_placeholders(text, fold, base=base)
 
     # format in blocks separated by blocks between ``(start, end)`` in ``skip``
     skip = []
@@ -483,12 +485,12 @@ def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [Placeholder
                 if not re.match(r".*\n.*", content[i]):
                     continue
                 body = content[i][1:-1].strip()
-                body = _one_sentence_per_line(body, [PlaceholderType.command])
+                body = _one_sentence_per_line(body, [PlaceholderType.command], f"TEXONEPERLINENESTED{i}")
                 content[i] = content[i][0] + "\n" + body + "\n" + content[i][-1]
 
             placeholder.content = "".join(content)
 
-    return text_from_placeholders(ret, placeholders, base="TEXONEPERLINE")
+    return text_from_placeholders(ret, placeholders, base=base)
 
 class Placeholder:
     """
@@ -1121,18 +1123,28 @@ class TeX:
     def get(self):
         """
         Return document.
+        #TODO: improve
         """
-        tmp = self.main
+        tmp_start = self.start
+        tmp_main = self.main
+
+        if len(tmp_start) > 0:
+
+            if tmp_start[-1] != "\n":
+                tmp_start += "\n"
+
+            if tmp_start[-2] != "\n":
+                tmp_start += "\n"
 
         if len(self.postamble) > 0:
 
-            if tmp[-1] != "\n":
-                tmp += "\n"
+            if tmp_main[-1] != "\n":
+                tmp_main += "\n"
 
-            if tmp[-2] != "\n":
-                tmp += "\n"
+            if tmp_main[-2] != "\n":
+                tmp_main += "\n"
 
-        return self.preamble + self.start + tmp + self.postamble
+        return self.preamble + tmp_start + tmp_main + self.postamble
 
     def changed(self):
         """
@@ -2155,13 +2167,17 @@ def texindent(
     :return: Formatted text.
     """
 
-    if tempdir is None:
-        assert generate_filename is None
-        with tempfile.TemporaryDirectory() as tempdir:
-            tempdir = pathlib.Path(tempdir)
-            return _detail_texindent(text, config, tempdir, None)
+    tex = TeX(text)
+    tex.main = indent(tex.main)
+    return tex.get()
 
-    return _detail_texindent(text, config, tempdir, generate_filename)
+    # if tempdir is None:
+    #     assert generate_filename is None
+    #     with tempfile.TemporaryDirectory() as tempdir:
+    #         tempdir = pathlib.Path(tempdir)
+    #         return _detail_texindent(text, config, tempdir, None)
+
+    # return _detail_texindent(text, config, tempdir, generate_filename)
 
 
 def _texindent_parser():
