@@ -316,11 +316,20 @@ def indent(text: str, indent: str = "    ") -> str:
     text = re.sub(r"(\ +)(\\end{[^}]*})", r"\n\2", text)
     text = re.sub(r"(\w)(\\end{[^}]*})", r"\1\n\2", text)
     text = re.sub(r"(\\end{[^}]*})(\ +)", r"\1\n", text)
+    # hand-check all ``\begin{...}...`` remaining
+    for i in re.finditer(r"\\begin{[^}]*}.+", text):
+        start = i.span()[0] + 6
+        tmp = text[start:].split("\n", 1)[0]
+        start += _find_arguments(tmp)
+        if text[start] != "\n":
+            text = text[:start] + "\n" + text[start:]
 
     # place all ``\[`` and ``\]`` on a new line
     text = re.sub(r"(\ +)(\\\[)", r"\n\2", text)
+    text = re.sub(r"(\w)(\\\[)", r"\1\n\2", text)
     text = re.sub(r"(\\\[)(\ +)", r"\1\n", text)
     text = re.sub(r"(\ +)(\\\])", r"\n\2", text)
+    text = re.sub(r"(\w)(\\\])", r"\1\n\2", text)
     text = re.sub(r"(\\\])(\ +)", r"\1\n", text)
 
     # apply one sentence per line
@@ -649,6 +658,24 @@ def _apply_placeholders(
 
     return text, ret
 
+def _find_arguments(text: str, start: int = 0, braces: dict = None) -> tuple[int, int]:
+    """
+    Find the index at which there are no more optional or required arguments.
+
+    :param start: Index to start searching.
+    """
+
+    if braces is None:
+        braces = find_matching(text, "{", "}", ignore_escaped=True)
+        braces.update(find_matching(text, "[", "]", ignore_escaped=True))
+
+    while True:
+        index = re.search(r"(\s*)([\{\[])", text[start:])
+        if index is None:
+            return start
+        if index.start() != 0:
+            return start
+        start = braces[index.end() + start - 1] + 1
 
 def text_to_placeholders(
     text: str, ptypes: list[PlaceholderType], base: str = "TEXINDENT"
@@ -824,15 +851,7 @@ def text_to_placeholders(
                     continue
 
                 # continue until there are no more following "{" or "[
-                while True:
-                    index = re.search(r"(\s*)([\{\[])", text[stop:])
-                    if index is None:
-                        break
-                    if index.start() != 0:
-                        break
-                    stop = braces[index.end() + stop - 1] + 1
-
-                indices[start] = stop
+                indices[start] = _find_arguments(text, stop, braces)
                 last_stop = stop
 
             indices = _indices2array(indices)

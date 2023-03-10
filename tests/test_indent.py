@@ -46,6 +46,23 @@ some more text.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_environment_a(self):
+
+        text = r"""
+Some text \begin{equation}a = b\end{equation} some more text.
+        """
+
+        formatted = r"""
+Some text
+\begin{equation}
+    a = b
+\end{equation}
+some more text.
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_environment_nested_a(self):
 
         text = r"""
