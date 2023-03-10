@@ -311,6 +311,7 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _squashspaces(text)
 
     # place all ``\begin{...}`` and ``\end{...}`` on a new line
+    #TODO:treat math differently, solution: loop over all lines
     text = re.sub(r"(\ +)(\\begin{[^}]*})", r"\n\2", text)
     text = re.sub(r"(\w)(\\begin{[^}]*})", r"\1\n\2", text)
     text = re.sub(r"(\\begin{[^}]*})(\ +)", r"\1\n", text)
@@ -321,8 +322,6 @@ def indent(text: str, indent: str = "    ") -> str:
     for i in re.finditer(r"\\begin{[^}]*}.+", text):
         start = i.span()[0] + 6
         tmp = text[start:].split("\n", 1)[0]
-        if not re.match(r"\{equation.*", tmp):
-            start += _find_arguments(tmp)
         if text[start] != "\n":
             text = text[:start] + "\n" + text[start:]
 
