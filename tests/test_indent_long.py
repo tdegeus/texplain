@@ -1,7 +1,6 @@
 import unittest
 
 import texplain
-import pathlib
 
 class TestLatexIndent(unittest.TestCase):
     """
@@ -2107,8 +2106,6 @@ We look forward to working with the broader PCC community as we pursue our commo
         """
 
         ret = texplain.indent(text)
-        pathlib.Path('tmp_ret.tex').write_text(ret)
-        pathlib.Path('tmp_formatted.tex').write_text(formatted)
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_sentence_across_blocks(self):
