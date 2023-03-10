@@ -258,7 +258,7 @@ def _dedent(text: str, partial: list[PlaceholderType] = [PlaceholderType.tabular
         placeholder.content = tmp[0].lstrip() + "\n" + textwrap.dedent("\n".join(tmp[1:-1])) + "\n" + tmp[-1].lstrip()
         placeholder.space_front = "\n"
 
-    text = text_from_placeholders(text, placholders, base="TEXDEDENT")
+    text = text_from_placeholders(text, placholders)
 
     return text
 
@@ -271,7 +271,7 @@ def _squashspaces(text: str, skip: list[PlaceholderType] = [PlaceholderType.tabu
 
     text = re.sub(r"(\ +)", r" ", text)
 
-    text = text_from_placeholders(text, placholders, base="TEXSQUASH")
+    text = text_from_placeholders(text, placholders)
 
     return text
 
@@ -347,6 +347,11 @@ def indent(text: str, indent: str = "    ") -> str:
             if text[i] == " ":
                 text = text[:i] + "\n" + text[i + 1:]
 
+    # ignore inline math in computing indentation level
+    text, pl_math = text_to_placeholders(text, [PlaceholderType.math], base="MYFOOA")
+    text, pl_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math], base="MYFOOB")
+    text = text_from_placeholders(text, pl_math)
+
     # get line number of each character
     lineno = np.empty(len(text), dtype=int)
     i = 0
@@ -383,22 +388,25 @@ def indent(text: str, indent: str = "    ") -> str:
         indent_level[np.unique(lineno[opening:closing])[1:]] += 1
 
     # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
-    #TODO: ignore math and inline math
+    #TODO: ignore inline math
     indices = find_matching(text, "{", "}", ignore_escaped=True, return_array=True)
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1:lineno[indices[i, 1]]] += 1
 
     # add indentation to all lines between ``[`` and ``]`` containing at least one ``\n``
-    #TODO: ignore math and inline math
+    #TODO: ignore inline math
     indices = find_matching(text, "[", "]", ignore_escaped=True, return_array=True)
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1:lineno[indices[i, 1]]] += 1
 
     # apply indentation
+    #TODO: apply indentation to comments too
     text = text.splitlines()
     for i in range(len(text)):
         text[i] = indent_level[i] * indent + text[i]
     text = "\n".join(text)
+
+    text = text_from_placeholders(text, pl_inline_math)
 
     return _strip_trailing_whitespace(text_from_placeholders(text, placeholders))
 
@@ -493,7 +501,7 @@ def _one_sentence_per_line(text: str, fold: list[PlaceholderType] = [Placeholder
 
             placeholder.content = "".join(content)
 
-    return text_from_placeholders(ret, placeholders, base=base)
+    return text_from_placeholders(ret, placeholders)
 
 class Placeholder:
     """
@@ -506,6 +514,9 @@ class Placeholder:
     :param space_front: The whitespace before the placeholder.
     :param space_back: The whitespace after the placeholder.
     :param ptype: The type of placeholder.
+    :param search_regex:
+        The regex used to search for the placeholder
+        (optional, but speeds up greatly for batch searches).
     """
 
     def __init__(
@@ -515,16 +526,18 @@ class Placeholder:
         space_front: str = None,
         space_back: str = None,
         ptype: PlaceholderType = None,
+        search_regex: str = None,
     ):
         self.placeholder = placeholder
         self.content = content
         self.space_front = space_front
         self.space_back = space_back
         self.ptype = ptype
+        self.search_regex = search_regex
 
     @classmethod
     def from_text(
-        self, placeholder: str, text: str, start: int, end: int, ptype: PlaceholderType = None
+        self, placeholder: str, text: str, start: int, end: int, ptype: PlaceholderType = None, search_regex: str = None
     ):
         """
         Replace text with placeholder.
@@ -539,6 +552,7 @@ class Placeholder:
         :param start: The start index of ``text`` to be replaced by the placeholder.
         :param end: The end index of ``text`` to be replaced by the placeholder.
         :param ptype: The type of placeholder.
+        :param search_regex: The regex used to search the placeholder, see :py:class:`Placeholder`.
         :return: ``(Placeholder, text)`` where in ``text`` the placeholder is inserted.
         """
         pre = text[:start][::-1]
@@ -546,7 +560,7 @@ class Placeholder:
         front = re.search(r"\s*", pre).end()
         back = re.search(r"\ *\n?", post).end()
         return (
-            Placeholder(placeholder, text[start:end], pre[:front][::-1], post[:back], ptype),
+            Placeholder(placeholder, text[start:end], pre[:front][::-1], post[:back], ptype, search_regex),
             text[:start] + placeholder + text[end:],
         )
 
@@ -608,6 +622,13 @@ class GeneratePlaceholder:
         self.i += 1
         return f"-{self.base}-{self.name}-{self.i:d}-"
 
+    @property
+    def search_regex(self) -> str:
+        """
+        Return the regex that can be used to search for the placeholder.
+        """
+        return f"-{self.base}-{self.name}-\\d+-"
+
 def _filter_nested(indices: ArrayLike) -> ArrayLike:
 
     indices = indices[np.argsort(indices[:, 0])]
@@ -658,8 +679,9 @@ def _apply_placeholders(
 
     ret = []
     gen = GeneratePlaceholder(base, name)
+    search_regex = gen.search_regex
     for i in range(indices.shape[0]):
-        placeholder, text = Placeholder.from_text(gen(), text, indices[i, 0], indices[i, 1], ptype)
+        placeholder, text = Placeholder.from_text(gen(), text, indices[i, 0], indices[i, 1], ptype, search_regex)
         ret += [placeholder]
         indices -= len(placeholder.content) - len(placeholder.placeholder)
 
@@ -891,8 +913,6 @@ def text_to_placeholders(
 def text_from_placeholders(
     text: str,
     placeholders: list[Placeholder],
-    default_naming: bool = True,
-    base: str = "TEXINDENT",
 ) -> str:
     """
     Replace placeholders with original text.
@@ -901,23 +921,30 @@ def text_from_placeholders(
     if len(placeholders) == 0:
         return text
 
-    if default_naming and len(placeholders) > 1:
-        placeholders = {i.placeholder: i for i in placeholders}
-        while True:
-            indices = [
-                (text[i.span()[0] : i.span()[1]], i.span()[0])  # noqa: E203
-                for i in re.finditer("-" + base + r"-\w*-[0-9]*-", text)
-            ]
-            if len(indices) == 0:
-                return text
-            offset = 0
-            for name, index in indices:
-                placeholder = placeholders[name]
-                n = len(text)
-                text = placeholder.to_text(text, index + offset)
-                offset += len(text) - n
+    search_regex = []
 
-    for placeholder in placeholders:
+    if len(placeholders) > 1:
+        search_regex = list(set([i.search_regex for i in placeholders]))
+
+    placeholders = {i.placeholder: i for i in placeholders}
+
+    for search in search_regex:
+        if search is None:
+            continue
+        indices = {text[i.span()[0] : i.span()[1]]: i.span()[0] for i in re.finditer(search, text)}
+        offset = 0
+        for key, index in indices.items():
+            placeholder = placeholders.pop(key, None)
+            if placeholder is None:
+                continue
+            n = len(text)
+            text = placeholder.to_text(text, index + offset)
+            offset += len(text) - n
+            if len(placeholders) == 0:
+                return text
+
+    for key in placeholders:
+        placeholder = placeholders[key]
         n = len(text)
         text = placeholder.to_text(text)
 
