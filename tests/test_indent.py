@@ -25,6 +25,31 @@ class TestComment(unittest.TestCase):
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), text.strip())
 
+    def test_comment_d(self):
+
+        text = r"""
+% a
+% b
+ % c
+% d
+  %% e
+ % f
+%% g
+        """
+
+        formatted = r"""
+% a
+% b
+% c
+% d
+%% e
+% f
+%% g
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
 
 class TestNoindent(unittest.TestCase):
 

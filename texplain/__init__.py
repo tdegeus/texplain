@@ -301,14 +301,20 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # remove leading/trailing duplicate newlines
     for placeholder in placeholders_noindent:
-        placeholder.space_front = re.sub(r"\n\n+", r"\n\n", placeholder.space_front)
+        placeholder.space_front = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_front)
         placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
-        placeholder.space_back = re.sub(r"\n\n+", r"\n\n", placeholder.space_back)
+        placeholder.space_back = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_back)
         placeholder.space_back = re.sub(r"\ +", r" ", placeholder.space_back)
 
     # exclude comments
     text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
     text, placeholders_inline_comment = text_to_placeholders(text, [PlaceholderType.inline_comment])
+
+    for placeholder in placeholders_comment:
+        placeholder.space_front = "\n"
+
+    for placeholder in placeholders_inline_comment:
+        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
     # remove multiple newlines
     text = re.sub(r"(\n\n+)", r"\n\n", text)
@@ -344,14 +350,17 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _one_sentence_per_line(text)
 
     # for comments placeholders to end with a newline
-    for placeholder in placeholders_comment + placeholders_inline_comment:
-        if placeholder.ptype == PlaceholderType.comment or placeholder.ptype == PlaceholderType.inline_comment:
-            index = text.find(placeholder.placeholder)
-            i = index + len(placeholder.placeholder)
-            if i >= len(text) - 2:
-                continue
-            if text[i] == " ":
-                text = text[:i] + "\n" + text[i + 1:]
+    text = text_from_placeholders(text, placeholders_comment + placeholders_inline_comment)
+    text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment, PlaceholderType.inline_comment])
+
+    # for placeholder in placeholders_comment + placeholders_inline_comment:
+    #     if placeholder.ptype == PlaceholderType.comment or placeholder.ptype == PlaceholderType.inline_comment:
+    #         index = text.find(placeholder.placeholder)
+    #         i = index + len(placeholder.placeholder)
+    #         if i >= len(text) - 2:
+    #             continue
+    #         if text[i] == " ":
+    #             text = text[:i] + "\n" + text[i + 1:]
 
     # ignore inline math in computing indentation level
     text, pl_math = text_to_placeholders(text, [PlaceholderType.math], base="MYFOOA")
@@ -406,6 +415,7 @@ def indent(text: str, indent: str = "    ") -> str:
         indent_level[lineno[indices[i, 0]] + 1:lineno[indices[i, 1]]] += 1
 
     # apply indentation
+    text = text_from_placeholders(text, placeholders_comment)
     #TODO: apply indentation to comments too
     text = text.splitlines()
     for i in range(len(text)):
@@ -414,7 +424,7 @@ def indent(text: str, indent: str = "    ") -> str:
 
     text = text_from_placeholders(text, pl_inline_math)
 
-    return _strip_trailing_whitespace(text_from_placeholders(text, placeholders_noindent + placeholders_comment + placeholders_inline_comment))
+    return _strip_trailing_whitespace(text_from_placeholders(text, placeholders_noindent))
 
 
 
@@ -810,7 +820,7 @@ def text_to_placeholders(
             ret += placeholders
 
         elif ptype == PlaceholderType.inline_comment:
-            indices = [i.span(2) for i in re.finditer(r"([^\ ][\ ]*)(?<!\\)(%.*)(\n|$)", text)]
+            indices = [i.span(2) for i in re.finditer(r"([^\ ][\ ]*)(?<!\\)(%.*)", text)]
             if len(indices) == 0:
                 continue
             indices = np.array(indices)
@@ -820,7 +830,7 @@ def text_to_placeholders(
             ret += placeholders
 
         elif ptype == PlaceholderType.comment:
-            indices = [i.span(2) for i in re.finditer(r"(^|\n\ *)(?<!\\)(%.*)(\n|$)", text)]
+            indices = [i.span(3) for i in re.finditer(r"(^|\n)(\ *)(?<!\\)(%.*)", text)]
             if len(indices) == 0:
                 continue
             indices = np.array(indices)

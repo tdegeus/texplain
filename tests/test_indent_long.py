@@ -2283,7 +2283,7 @@ the first%    2nd comment
 sentence.% 3rd comment
 
 This is the second sentence. %  ?!     4th comment
-This is the     % 5th comment
+This is the % 5th comment
 third sentence.
 
 This is the fourth sentence!
