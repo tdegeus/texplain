@@ -228,6 +228,8 @@ def _strip_trailing_whitespace(text: str) -> str:
 def _lstrip_comment(text: str) -> str:
     """
     remove trailing whitespace before comments
+    TODO: comments should follow the normal indentation, or none
+    A way to do this is to replace them just before indenting
     """
 
     text = text.splitlines()
