@@ -118,35 +118,20 @@ Here is another sentence (Fig.~\ref{dummy19}).
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
-    def test_issue_321_indent(self):
+    def test_issue_321(self):
 
         text = r"""
 \documentclass{article}
 
 \begin{document}
 
-    I.e.\ it is a finite constant.
+I.e.\ it is a finite constant.
 
 \end{document}
         """
 
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), text.strip())
-
-#     def test_issue_321(self):
-
-#         text = r"""
-# \documentclass{article}
-
-# \begin{document}
-
-# I.e.\ it is a finite constant.
-
-# \end{document}
-#         """
-
-#         ret = texplain.texindent(text)
-#         self.assertEqual(ret.strip(), text.strip())
 
     def test_issue_355(self):
 

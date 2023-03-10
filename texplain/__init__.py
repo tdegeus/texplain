@@ -361,6 +361,8 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # add indentation to all lines between ``\begin{...}`` and ``\end{...}``
     for env in environments(text):
+        if env == "document":
+            continue
         opening = r"\\begin{" + env + r"}"
         closing = r"\\end{" + env + r"}"
         indices = find_matching(
