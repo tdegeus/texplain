@@ -767,7 +767,7 @@ def text_to_placeholders(
                 for i in re.finditer(pattern, text):
                     indices.append(i.span()[0])
                 indices = np.array(indices).reshape((-1, 2))
-                indices[:, 1] += 1
+                indices[:, 1] += len(match)
                 text, placeholders = _apply_placeholders(
                     text, indices, base, "inlinemath".upper(), PlaceholderType.inline_math
                 )
