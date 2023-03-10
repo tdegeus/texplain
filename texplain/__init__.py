@@ -26,6 +26,7 @@ class PlaceholderType(enum.Enum):
     Type of placeholder.
     """
 
+    inline_comment = enum.auto()
     comment = enum.auto()
     tabular = enum.auto()
     math = enum.auto()
@@ -242,6 +243,11 @@ def _lstrip_comment(text: str) -> str:
 
     return text
 
+
+def _lstrip_lines(text: str) -> str:
+    return "\n".join([line.lstrip() for line in text.splitlines()])
+
+
 def _dedent(text: str, partial: list[PlaceholderType] = [PlaceholderType.tabular]) -> str:
     """
     Remove indentation
@@ -250,7 +256,7 @@ def _dedent(text: str, partial: list[PlaceholderType] = [PlaceholderType.tabular
 
     text, placholders = text_to_placeholders(text, partial, base="TEXDEDENT")
 
-    text = "\n".join([line.lstrip() for line in text.splitlines()])
+    text = _lstrip_lines(text)
 
     # keep common indentation table
     # TODO: make more clever
@@ -291,7 +297,7 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _strip_trailing_whitespace(text.strip())
 
     # replace noindent blocks and comments with placeholders
-    text, placeholders = text_to_placeholders(text, [PlaceholderType.noindent_block, PlaceholderType.comment])
+    text, placeholders = text_to_placeholders(text, [PlaceholderType.noindent_block, PlaceholderType.comment, PlaceholderType.inline_comment])
 
     # remove indentation before ``\begin{...}`` and ``\end{...}``
     # replace verbatim blocks with placeholders
@@ -340,7 +346,7 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # for comments placeholders to end with a newline
     for placeholder in placeholders:
-        if placeholder.ptype == PlaceholderType.comment:
+        if placeholder.ptype == PlaceholderType.comment or placeholder.ptype == PlaceholderType.inline_comment:
             index = text.find(placeholder.placeholder)
             i = index + len(placeholder.placeholder)
             if i >= len(text) - 2:
@@ -801,13 +807,21 @@ def text_to_placeholders(
             )
             ret += placeholders
 
-        elif ptype == PlaceholderType.comment:
-            indices = [i.span() for i in re.finditer(r"(?<!\\)(%)(.*)(\n)", text)]
-            indices += [i.span() for i in re.finditer(r"(?<!\\)(%)(.*)($)", text)]
+        elif ptype == PlaceholderType.inline_comment:
+            indices = [i.span(2) for i in re.finditer(r"([^\ ][\ ]*)(?<!\\)(%.*)(\n|$)", text)]
             if len(indices) == 0:
                 continue
             indices = np.array(indices)
-            indices[:, 1] -= 1
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "inline-comment".upper(), PlaceholderType.inline_comment, False
+            )
+            ret += placeholders
+
+        elif ptype == PlaceholderType.comment:
+            indices = [i.span(2) for i in re.finditer(r"(^|\n\ *)(?<!\\)(%.*)(\n|$)", text)]
+            if len(indices) == 0:
+                continue
+            indices = np.array(indices)
             text, placeholders = _apply_placeholders(
                 text, indices, base, "comment".upper(), PlaceholderType.comment, False
             )
@@ -2009,6 +2023,7 @@ def _texindent_sentence(
         [
             PlaceholderType.noindent_block,
             PlaceholderType.comment,
+            PlaceholderType.inline_comment,
             PlaceholderType.inline_math,
             PlaceholderType.special_indent,
             PlaceholderType.command,
@@ -2042,32 +2057,6 @@ def _texindent_sentence(
 
             placeholder.content = "".join(content)
 
-
-
-            # for opening, closing in braces.items():
-            #     if re.match(r".*\n.*", placeholder.content[opening:closing]):
-            # print(placeholder.content)
-            # print(braces)
-            # print(content)
-
-
-            # if re.match(r"([^\{]*\{\n)(.*)", placeholder.content):
-            #     if placeholder.content[-1] != "}":
-            #         continue
-            #     content = re.split(
-            #         r"([^\{]*\{\n)(\s*)(.*)", placeholder.content[:-1].rstrip(), re.MULTILINE
-            #     )
-            #     command = content[1]
-            #     indent = content[2]
-            #     content = textwrap.dedent("".join(content[2:]))
-            #     content, pl = text_to_placeholders(content, [PlaceholderType.command], "SUBINDENT")
-            #     content = _texindent_latexindent(config, content, tempdir, generate_filename)
-            #     content = text_from_placeholders(
-            #         content, pl, default_naming=True, prefix="SUBINDENT"
-            #     )
-            #     if content[-1] != "\n":
-            #         content += "\n"
-            #     placeholder.content = command + textwrap.indent(content + "}", indent)
 
     ret.main = "\n" + text_from_placeholders(format, placeholders)
 

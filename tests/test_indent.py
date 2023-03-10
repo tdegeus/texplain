@@ -528,6 +528,7 @@ A new sentence.
     def test_command_newline_comment_a(self):
 
         text = r"""
+% my comment
 A start\footnote{ %
     This is a footnote. With
     some poor formatting.
@@ -535,6 +536,7 @@ A start\footnote{ %
         """
 
         formatted = r"""
+% my comment
 A start\footnote{ %
     This is a footnote.
     With some poor formatting.
