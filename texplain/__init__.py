@@ -296,20 +296,19 @@ def indent(text: str, indent: str = "    ") -> str:
     # remove leading/trailing newlines, and trailing whitespace
     text = _strip_trailing_whitespace(text.strip())
 
-    # replace noindent blocks and comments with placeholders
-    text, placeholders = text_to_placeholders(text, [PlaceholderType.noindent_block, PlaceholderType.comment, PlaceholderType.inline_comment])
+    # "noindent" blocks are kept exactly as they are
+    text, placeholders_noindent = text_to_placeholders(text, [PlaceholderType.noindent_block, PlaceholderType.verbatim])
 
-    # remove indentation before ``\begin{...}`` and ``\end{...}``
-    # replace verbatim blocks with placeholders
-    text = text.splitlines()
-    for i in range(len(text)):
-        text[i] = re.sub(r"([^\s]*)(\s+)(?<!\\)(\\begin{verbatim})(.*)$", r"\1 \3\4", text[i])
-        text[i] = re.sub(r"([^\s]*)(\s+)(?<!\\)(\\end{verbatim})(.*)$", r"\1 \3\4", text[i])
-        text[i] = re.sub(r"^(\s+)(?<!\\)(\\begin{verbatim})(.*)$", r"\2\3", text[i])
-        text[i] = re.sub(r"^(\s+)(?<!\\)(\\end{verbatim})(.*)$", r"\2\3", text[i])
-    text = "\n".join(text)
-    text, pl = text_to_placeholders(text, [PlaceholderType.verbatim])
-    placeholders += pl
+    # remove leading/trailing duplicate newlines
+    for placeholder in placeholders_noindent:
+        placeholder.space_front = re.sub(r"\n\n+", r"\n\n", placeholder.space_front)
+        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+        placeholder.space_back = re.sub(r"\n\n+", r"\n\n", placeholder.space_back)
+        placeholder.space_back = re.sub(r"\ +", r" ", placeholder.space_back)
+
+    # exclude comments
+    text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
+    text, placeholders_inline_comment = text_to_placeholders(text, [PlaceholderType.inline_comment])
 
     # remove multiple newlines
     text = re.sub(r"(\n\n+)", r"\n\n", text)
@@ -345,7 +344,7 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _one_sentence_per_line(text)
 
     # for comments placeholders to end with a newline
-    for placeholder in placeholders:
+    for placeholder in placeholders_comment + placeholders_inline_comment:
         if placeholder.ptype == PlaceholderType.comment or placeholder.ptype == PlaceholderType.inline_comment:
             index = text.find(placeholder.placeholder)
             i = index + len(placeholder.placeholder)
@@ -415,7 +414,7 @@ def indent(text: str, indent: str = "    ") -> str:
 
     text = text_from_placeholders(text, pl_inline_math)
 
-    return _strip_trailing_whitespace(text_from_placeholders(text, placeholders))
+    return _strip_trailing_whitespace(text_from_placeholders(text, placeholders_noindent + placeholders_comment + placeholders_inline_comment))
 
 
 

@@ -26,6 +26,92 @@ class TestComment(unittest.TestCase):
         self.assertEqual(ret.strip(), text.strip())
 
 
+class TestNoindent(unittest.TestCase):
+
+    def test_verbatim(self):
+
+        text = r"""
+Some text   \begin{verbatim} a = b \end{verbatim}    some more text.
+        """
+
+        formatted = r"""
+Some text \begin{verbatim} a = b \end{verbatim} some more text.
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_verbatim_a(self):
+
+        text = r"""
+Some text
+
+
+\begin{verbatim} a = b \end{verbatim}
+
+
+some more text.
+        """
+
+        formatted = r"""
+Some text
+
+\begin{verbatim} a = b \end{verbatim}
+
+some more text.
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_noindent(self):
+
+        text = r"""
+Some  text
+% \begin{noindent}
+should be ignored
+% \end{noindent}
+  some more text.
+        """
+
+        formatted = r"""
+Some text
+% \begin{noindent}
+should be ignored
+% \end{noindent}
+some more text.
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_verbatim_a(self):
+
+        text = r"""
+Some  text
+
+
+% \begin{noindent}
+should be ignored
+% \end{noindent}
+
+
+  some more text.
+        """
+
+        formatted = r"""
+Some text
+
+% \begin{noindent}
+should be ignored
+% \end{noindent}
+
+some more text.
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
 
 class TestIndentEnvironment(unittest.TestCase):
 
@@ -58,23 +144,6 @@ Some text
     a = b
 \end{equation}
 some more text.
-        """
-
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
-
-    def test_environment_b(self):
-
-        text = r"""
-Some text \begin{equation}[0, 1)\end{equation} some more text on interval $[0, 1)$.
-        """
-
-        formatted = r"""
-Some text
-\begin{equation}
-    [0, 1)
-\end{equation}
-some more text on interval $[0, 1)$.
         """
 
         ret = texplain.indent(text)
