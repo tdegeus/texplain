@@ -521,7 +521,7 @@ class Placeholder:
     :param space_front: The whitespace before the placeholder.
     :param space_back: The whitespace after the placeholder.
     :param ptype: The type of placeholder.
-    :param search_regex:
+    :param search_placeholder:
         The regex used to search for the placeholder
         (optional, but speeds up greatly for batch searches).
     """
@@ -533,18 +533,18 @@ class Placeholder:
         space_front: str = None,
         space_back: str = None,
         ptype: PlaceholderType = None,
-        search_regex: str = None,
+        search_placeholder: str = None,
     ):
         self.placeholder = placeholder
         self.content = content
         self.space_front = space_front
         self.space_back = space_back
         self.ptype = ptype
-        self.search_regex = search_regex
+        self.search_placeholder = search_placeholder
 
     @classmethod
     def from_text(
-        self, placeholder: str, text: str, start: int, end: int, ptype: PlaceholderType = None, search_regex: str = None
+        self, placeholder: str, text: str, start: int, end: int, ptype: PlaceholderType = None, search_placeholder: str = None
     ):
         """
         Replace text with placeholder.
@@ -559,7 +559,7 @@ class Placeholder:
         :param start: The start index of ``text`` to be replaced by the placeholder.
         :param end: The end index of ``text`` to be replaced by the placeholder.
         :param ptype: The type of placeholder.
-        :param search_regex: The regex used to search the placeholder, see :py:class:`Placeholder`.
+        :param search_placeholder: The regex used to search the placeholder, see :py:class:`Placeholder`.
         :return: ``(Placeholder, text)`` where in ``text`` the placeholder is inserted.
         """
         pre = text[:start][::-1]
@@ -567,7 +567,7 @@ class Placeholder:
         front = re.search(r"\s*", pre).end()
         back = re.search(r"\ *\n?", post).end()
         return (
-            Placeholder(placeholder, text[start:end], pre[:front][::-1], post[:back], ptype, search_regex),
+            Placeholder(placeholder, text[start:end], pre[:front][::-1], post[:back], ptype, search_placeholder),
             text[:start] + placeholder + text[end:],
         )
 
@@ -630,7 +630,7 @@ class GeneratePlaceholder:
         return f"-{self.base}-{self.name}-{self.i:d}-"
 
     @property
-    def search_regex(self) -> str:
+    def search_placeholder(self) -> str:
         """
         Return the regex that can be used to search for the placeholder.
         """
@@ -684,11 +684,14 @@ def _apply_placeholders(
     if filter_nested:
         indices = _filter_nested(indices)
 
-    ret = []
+
     gen = GeneratePlaceholder(base, name)
-    search_regex = gen.search_regex
+    search_placeholder = gen.search_placeholder
+    assert re.match(search_placeholder, text) is None
+
+    ret = []
     for i in range(indices.shape[0]):
-        placeholder, text = Placeholder.from_text(gen(), text, indices[i, 0], indices[i, 1], ptype, search_regex)
+        placeholder, text = Placeholder.from_text(gen(), text, indices[i, 0], indices[i, 1], ptype, search_placeholder)
         ret += [placeholder]
         indices -= len(placeholder.content) - len(placeholder.placeholder)
 
@@ -936,14 +939,14 @@ def text_from_placeholders(
     if len(placeholders) == 0:
         return text
 
-    search_regex = []
+    search_placeholder = []
 
     if len(placeholders) > 1:
-        search_regex = list(set([i.search_regex for i in placeholders]))
+        search_placeholder = list(set([i.search_placeholder for i in placeholders]))
 
     placeholders = {i.placeholder: i for i in placeholders}
 
-    for search in search_regex:
+    for search in search_placeholder:
         if search is None:
             continue
         indices = {text[i.span()[0] : i.span()[1]]: i.span()[0] for i in re.finditer(search, text)}
