@@ -283,6 +283,44 @@ def _squashspaces(text: str, skip: list[PlaceholderType]) -> str:
 
     return text
 
+def _begin_end_one_separate_line(text: str) -> str:
+    """
+    Put \begin{...} and \end{...} on separate lines.
+    """
+
+    # begin all ``\begin{...}``and ``\end{...}`` on newline
+    # text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\begin\{)", r"\n\2", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\end\{)", r"\n\2", text)
+    # end all ``\end{...}`` on newline
+    text = re.sub(r"(?<!\\)(\\end\{[^\s]*)(\ *\n?)", r"\1\n", text)
+    # end all ``\begin{...}[...]{...}`` on newline
+    # - math
+    text, placeholders_math = text_to_placeholders(text, [PlaceholderType.math], base="TEXBEGINEND")
+    for placeholder in placeholders_math:
+        placeholder.content = re.sub(r"(?<!\\)(\\begin{[^}]*})(\ *\n?)", r"\1\n", placeholder.content)
+    # - non-math
+    for i in re.finditer(r"\\begin{[^}]*}.+", text):
+        start = i.span()[0] + 6
+        tmp = text[start:].split("\n", 1)[0]
+        start += _find_arguments(tmp)
+        if text[start] != "\n":
+            text = text[:start] + "\n" + text[start:]
+    # - replace math
+    text = text_from_placeholders(text, placeholders_math)
+
+    # place all ``\[`` and ``\]`` on a new line
+    text = re.sub(r"(\ +)(\\\[)", r"\n\2", text)
+    text = re.sub(r"(\w)(\\\[)", r"\1\n\2", text)
+    text = re.sub(r"(\\\[)(\ +)", r"\1\n", text)
+    text = re.sub(r"(\ +)(\\\])", r"\n\2", text)
+    text = re.sub(r"(\w)(\\\])", r"\1\n\2", text)
+    text = re.sub(r"(\\\])(\ +)", r"\1\n", text)
+
+    return text
+
+
+
 def indent(text: str, indent: str = "    ") -> str:
     """
     Indent text.
@@ -322,34 +360,17 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _dedent(text, partial=[PlaceholderType.tabular])
     text = _squashspaces(text, skip=[PlaceholderType.tabular])
 
-    # begin all ``\begin{...}``and ``\end{...}`` on newline
-    # text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\begin\{)", r"\n\2", text)
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\end\{)", r"\n\2", text)
-    # end all ``\end{...}`` on newline
-    text = re.sub(r"(?<!\\)(\\end\{[^\s]*)(\ *\n?)", r"\1\n", text)
-    # end all ``\begin{...}[...]{...}`` on newline
-    # - math
-    text, placeholders_math = text_to_placeholders(text, [PlaceholderType.math])
-    for placeholder in placeholders_math:
-        placeholder.content = re.sub(r"(?<!\\)(\\begin{[^}]*})(\ *\n?)", r"\1\n", placeholder.content)
-    # - non-math
-    for i in re.finditer(r"\\begin{[^}]*}.+", text):
-        start = i.span()[0] + 6
-        tmp = text[start:].split("\n", 1)[0]
-        start += _find_arguments(tmp)
-        if text[start] != "\n":
-            text = text[:start] + "\n" + text[start:]
-    # - replace math
-    text = text_from_placeholders(text, placeholders_math)
+    # fold inline math
+    text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
+    # inline math: always on one line
+    for placeholder in placeholders_inline_math:
+        placeholder.content = placeholder.content.replace("\n", " ")
+        placeholder.content = re.sub(r"(\ +)", r" ", placeholder.content)
+        placeholder.space_front = None
+        placeholder.space_back = None
 
-    # place all ``\[`` and ``\]`` on a new line
-    text = re.sub(r"(\ +)(\\\[)", r"\n\2", text)
-    text = re.sub(r"(\w)(\\\[)", r"\1\n\2", text)
-    text = re.sub(r"(\\\[)(\ +)", r"\1\n", text)
-    text = re.sub(r"(\ +)(\\\])", r"\n\2", text)
-    text = re.sub(r"(\w)(\\\])", r"\1\n\2", text)
-    text = re.sub(r"(\\\])(\ +)", r"\1\n", text)
+    # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
+    text = _begin_end_one_separate_line(text)
 
     # apply one sentence per line
     text = _one_sentence_per_line(text)
@@ -361,7 +382,7 @@ def indent(text: str, indent: str = "    ") -> str:
     # ignore inline math in computing indentation level
     #TODO: ensure inline math on one line
     text, pl_math = text_to_placeholders(text, [PlaceholderType.math], base="MYFOOA")
-    text, pl_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math], base="MYFOOB")
+    # text, pl_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math], base="MYFOOB")
     text = text_from_placeholders(text, pl_math)
 
     text, pl = text_to_placeholders(text, [PlaceholderType.math_line])
@@ -422,7 +443,7 @@ def indent(text: str, indent: str = "    ") -> str:
         text[i] = indent_level[i] * indent + text[i]
     text = "\n".join(text)
 
-    text = text_from_placeholders(text, pl_inline_math)
+    text = text_from_placeholders(text, placeholders_inline_math)
 
     return _strip_trailing_whitespace(text_from_placeholders(text, placeholders_noindent))
 
@@ -901,21 +922,19 @@ def text_to_placeholders(
             ret += placeholders
 
         elif ptype == PlaceholderType.inline_math:
-            for match in ["$$", "$"]:
-                pattern = r"(?<!\\)" + re.escape(match)  # ignore escaped dollar signs
-                indices = []
-                for i in re.finditer(pattern, text):
-                    indices.append(i.span()[0])
-                indices = np.array(indices).reshape((-1, 2))
-                indices[:, 1] += len(match)
-                text, placeholders = _apply_placeholders(
-                    text, indices, base, "inlinemath".upper(), ptype
-                )
-                if match == "$":
-                    for placeholder in placeholders:
-                        placeholder.space_front = None
-                        placeholder.space_back = None
-                ret += placeholders
+            pattern = r"(?<!\\)(\$)"
+            indices = []
+            for i in re.finditer(pattern, text):
+                indices.append(i.span()[0])
+            indices = np.array(indices).reshape((-1, 2))
+            indices[:, 1] += 1
+            text, placeholders = _apply_placeholders(
+                text, indices, base, "inlinemath".upper(), ptype
+            )
+            for placeholder in placeholders:
+                placeholder.space_front = None
+                placeholder.space_back = None
+            ret += placeholders
 
             indices = find_matching(
                 text, r"\\\(", r"\\\)", escape=False, closing_match=1, return_array=True
