@@ -172,6 +172,142 @@ def find_matching(
 
     return ret
 
+def _detail_find_option(text: str, index: int, braces: ArrayLike, ret: list[tuple[int]]) -> list[tuple[int]]:
+
+    if len(braces) == 0:
+        return ret
+
+    if braces[0] < 0:
+        return ret
+
+    if len(text[index:braces[0]].strip()) > 0:
+        return ret
+
+    stack = []
+
+    for i, trial in enumerate(braces):
+        trial = braces[i]
+        if trial >= 0:
+            stack.append(trial)
+        else:
+            if len(stack) == 0:
+                raise IndexError(f"No closing closing bracket at: {text[index:abs(trial)]}")
+            open = stack.pop()
+            if len(stack) == 0:
+                closing = -1 * trial
+                break
+
+    return _detail_find_option(text, closing + 1, braces[i + 1 :], ret + [(open, closing + 1)])
+
+def _find_option(text: str, index: int, opening: ArrayLike, closing: ArrayLike) -> list[int]:
+
+    if len(opening) == 0:
+        return []
+
+    braces = np.concatenate((opening, -np.array(closing)))
+    braces = braces[np.argsort(np.abs(braces))]
+    return _detail_find_option(text, index, braces, [])
+
+
+def find_commands(text: str, name: str = None, escape: bool = True, ignore_commented: bool = True) -> list[list[tuple[int]]]:
+    """
+    Find indices of command, and their arguments.
+
+    :param text: Text.
+    :param name: Name of command without backslash (e.g. ``"textbf"``).
+    :param escape: If ``True``, ``name`` is escaped.
+    :return: List of indices of commands and their arguments:
+        ``[[(name_start, name_end), (arg1_start, arg1_end), ...], ...]``
+        Note the definition is such that one can find the command name as follows:
+        ``text[cmd[i][0]:cmd[i][1]]``.
+    """
+
+    if name is not None:
+        if escape:
+            name = re.escape(name)
+        name = r"(?<!\\)(\\)" + name
+    else:
+        name = r"(?<!\\)(\\)[a-zA-Z]+"
+
+    cmd_start = []
+    cmd_end = []
+
+    for i in re.finditer(name, text):
+        cmd_start.append(i.span()[0])
+        cmd_end.append(i.span()[1])
+
+    if len(cmd_start) == 0:
+        return []
+
+    square_open = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\[)", text)])
+    square_closing = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\])", text)])
+    curly_open = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\{)", text)])
+    curly_closing = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\})", text)])
+
+    if ignore_commented:
+        is_comment = is_commented(text)
+        is_comment = np.append(is_comment, is_comment[-1])
+        cmd_start = np.array(cmd_start)
+        cmd_end = np.array(cmd_end)
+        cmd_start = cmd_start[~is_comment[cmd_start]]
+        cmd_end = cmd_end[~is_comment[cmd_end]]
+        if square_open.size > 0:
+            square_open = square_open[~is_comment[square_open]]
+        if square_closing.size > 0:
+            square_closing = square_closing[~is_comment[square_closing]]
+        if curly_open.size > 0:
+            curly_open = curly_open[~is_comment[curly_open]]
+        if curly_closing.size > 0:
+            curly_closing = curly_closing[~is_comment[curly_closing]]
+
+    cmd_open_square = np.searchsorted(cmd_end, square_open, side="right") - 1
+    cmd_closing_square = np.searchsorted(cmd_end, square_closing, side="right") - 1
+    cmd_open_curly = np.searchsorted(cmd_end, curly_open, side="right") - 1
+    cmd_closing_curly = np.searchsorted(cmd_end, curly_closing, side="right") - 1
+
+    ret = []
+
+    for icmd in range(len(cmd_end)):
+        index = cmd_end[icmd]
+        item = [(cmd_start[icmd], cmd_end[icmd])]
+        i_square_open = square_open[cmd_open_square == icmd]
+        i_square_closing = square_closing[cmd_closing_square == icmd]
+        i_curly_open = curly_open[cmd_open_curly == icmd]
+        i_curly_closing = curly_closing[cmd_closing_curly == icmd]
+
+        might_have_opt = True
+
+        if len(i_square_open) == 0:
+            might_have_opt = False
+        else:
+            if len(i_curly_open) > 0:
+                if i_curly_open[0] < i_square_open[0]:
+                    might_have_opt = False
+
+        if might_have_opt:
+
+            opts = _find_option(text, index, i_square_open, i_square_closing)
+
+            if len(opts) > 0:
+                index = opts[-1][1]
+                item += opts
+                i_curly_open = i_curly_open[i_curly_open >= index]
+                i_curly_closing = i_curly_closing[i_curly_closing >= index]
+
+        args = _find_option(text, index, i_curly_open, i_curly_closing)
+
+        if len(args) > 0:
+            item += args
+
+        ret += [item]
+
+    return ret
+
+
+
+
+
+
 
 def _indices2array(indices: dict[int]):
     """
@@ -218,38 +354,30 @@ def environments(text: str) -> list[str]:
     return list(set(ret))
 
 
-def _strip_trailing_whitespace(text: str) -> str:
+def _rstrip_lines(text: str) -> str:
     """
-    ???
-    """
+    ``.rstrip()`` for each line.
 
+    :param text: Text.
+    :return: Formatted text.
+    """
     return "\n".join([line.rstrip() for line in text.splitlines()])
 
 
-def _lstrip_comment(text: str) -> str:
-    """
-    remove trailing whitespace before comments
-    TODO: comments should follow the normal indentation, or none
-    A way to do this is to replace them just before indenting
-    """
-
-    text = text.splitlines()
-
-    for i in range(len(text)):
-        text[i] = re.sub(r"^(\s+)(?<!\\)(%)(.*)$", r"\2\3", text[i])
-
-    text = "\n".join(text)
-
-    return text
-
-
 def _lstrip_lines(text: str) -> str:
+    """
+    ``.rstrip()`` for each line.
+
+    :param text: Text.
+    :return: Formatted text.
+    """
     return "\n".join([line.lstrip() for line in text.splitlines()])
 
 
 def _dedent(text: str, partial: list[PlaceholderType]) -> str:
     """
-    Remove indentation
+    Remove indentation.
+
     #TODO: optional use of latexindent.pl to format tables
     """
 
@@ -273,21 +401,25 @@ def _dedent(text: str, partial: list[PlaceholderType]) -> str:
 
 def _squashspaces(text: str, skip: list[PlaceholderType]) -> str:
     """
-    Squash spaces
+    Squash spaces.
+
+    :param text: Text.
+    :param skip: List of :py:class:`PlaceholderType` to skip.
+    :return: Formatted text.
     """
 
     text, placholders = text_to_placeholders(text, skip, base="TEXSQUASH")
-
     text = re.sub(r"(\ +)", r" ", text)
-
     text = text_from_placeholders(text, placholders)
-
     return text
 
 
 def _begin_end_one_separate_line(text: str) -> str:
-    """
-    Put \begin{...} and \\end{...} on separate lines.
+    r"""
+    Put ``\begin{...}`` and ``\\end{...}``, and ``\[`` and ``\]`` on separate lines.
+
+    :param text: Text.
+    :return: Formatted text.
     """
 
     # begin all ``\begin{...}``and ``\end{...}`` on newline
@@ -338,7 +470,7 @@ def indent(text: str, indent: str = "    ") -> str:
         raise NotImplementedError("Panic: don't know to deal with double dollar signs")
 
     # remove leading/trailing newlines, and trailing whitespace
-    text = _strip_trailing_whitespace(text.strip())
+    text = _rstrip_lines(text.strip())
 
     # "noindent" blocks are kept exactly as they are
     text, placeholders_noindent = text_to_placeholders(
@@ -451,7 +583,7 @@ def indent(text: str, indent: str = "    ") -> str:
     text = "\n".join(text)
 
     text = text_from_placeholders(text, placeholders_inline_math + placeholders_noindent)
-    return _strip_trailing_whitespace(text)
+    return _rstrip_lines(text)
 
 
 def _detail_one_sentence_per_line(text: str) -> str:
