@@ -329,30 +329,6 @@ def indent(text: str, indent: str = "    ") -> str:
     # end all ``\end{...}`` on newline
     text = re.sub(r"(?<!\\)(\\end\{[^\s]*)(\ *\n?)", r"\1\n", text)
     # end all ``\begin{...}[...]{...}`` on newline
-    # split = []
-    # for match in re.finditer(r"(?<!\\)(\\begin)({)(.*)(\n)", text):
-    #     tmp = text[match.span(2)[0]:match.span(4)[0]]
-    #     start = match.span(2)[0]
-    #     if re.match(r"{*equation", tmp):
-    #         start += re.search(r"{*equation\*?}*", tmp).span()[1]
-    #     elif re.match(r"{*align", tmp):
-    #         start += re.search(r"{*align\*?}*", tmp).span()[1]
-    #     else:
-    #         offset = _find_arguments(tmp)
-    #         start += offset
-    #     end = start + re.search(r"\ *\n?", text[start:]).span()[1]
-    #     # print(match, end - start, [tmp[offset:], text[:start], text[end:]])
-    #     # start = match.span(2)[0] + _find_arguments(tmp)
-    #     split += [[start, end]]
-    # offset = 0
-    # for i, j in split:
-    #     text = text[:i + offset] + "\n" + text[j + offset:]
-    #     offset += j - 1
-    #     # print(match, [tmp], _find_arguments(tmp))
-    # end all ``\begin{...}[...]{...}`` on newline
-
-
-
     # - math
     text, placeholders_math = text_to_placeholders(text, [PlaceholderType.math])
     for placeholder in placeholders_math:
@@ -364,30 +340,8 @@ def indent(text: str, indent: str = "    ") -> str:
         start += _find_arguments(tmp)
         if text[start] != "\n":
             text = text[:start] + "\n" + text[start:]
-
     # - replace math
     text = text_from_placeholders(text, placeholders_math)
-
-    # text = text_from_placeholders(text, placeholders_inline_math)
-
-    # for match in re.finditer(r"(\ *)(?<!\\)(\\begin{)(.*)(\n)", text):
-    #     # print(match.span(), macth)
-
-    # place all ``\begin{...}`` and ``\end{...}`` on a new line
-    #TODO:treat math differently, solution: loop over all lines
-    # text = re.sub(r"(\ +)(\\begin{[^}]*})", r"\n\2", text)
-    # text = re.sub(r"(\w)(\\begin{[^}]*})", r"\1\n\2", text)
-    # text = re.sub(r"(\\begin{[^}]*})(\ +)", r"\1\n", text)
-    # text = re.sub(r"(\ +)(\\end{[^}]*})", r"\n\2", text)
-    # text = re.sub(r"(\w)(\\end{[^}]*})", r"\1\n\2", text)
-    # text = re.sub(r"(\\end{[^}]*})(\ +)", r"\1\n", text)
-    # hand-check all ``\begin{...}...`` remaining
-    # for i in re.finditer(r"\\begin{[^}]*}.+", text):
-    #     start = i.span()[0] + 6
-    #     tmp = text[start:].split("\n", 1)[0]
-    #     start += _find_arguments(tmp)
-    #     if text[start] != "\n":
-    #         text = text[:start] + "\n" + text[start:]
 
     # place all ``\[`` and ``\]`` on a new line
     text = re.sub(r"(\ +)(\\\[)", r"\n\2", text)
@@ -405,6 +359,7 @@ def indent(text: str, indent: str = "    ") -> str:
     text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment, PlaceholderType.inline_comment])
 
     # ignore inline math in computing indentation level
+    #TODO: ensure inline math on one line
     text, pl_math = text_to_placeholders(text, [PlaceholderType.math], base="MYFOOA")
     text, pl_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math], base="MYFOOB")
     text = text_from_placeholders(text, pl_math)
