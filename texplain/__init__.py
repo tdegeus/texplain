@@ -383,12 +383,7 @@ def indent(text: str, indent: str = "    ") -> str:
     text = text_from_placeholders(text, placeholders_comment + placeholders_inline_comment)
     text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment, PlaceholderType.inline_comment])
 
-    # ignore inline math in computing indentation level
-    #TODO: ensure inline math on one line
-    text, pl_math = text_to_placeholders(text, [PlaceholderType.math], base="MYFOOA")
-    # text, pl_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math], base="MYFOOB")
-    text = text_from_placeholders(text, pl_math)
-
+    # fold math lines to simplify implementation
     text, pl = text_to_placeholders(text, [PlaceholderType.math_line])
     placeholders_comment += pl
 
@@ -407,49 +402,40 @@ def indent(text: str, indent: str = "    ") -> str:
     indent_level = np.zeros(lineno[-1] + 1, dtype=int)
 
     # add indentation to all lines between ``\begin{...}`` and ``\end{...}``
-    for env in environments(text):
-        if env == "document":
-            continue
-        opening = r"\\begin{" + env + r"}"
-        closing = r"\\end{" + env + r"}"
+    for env in environments(text) + [PlaceholderType.math]:
+        if env == PlaceholderType.math:
+            opening = r"\\\["
+            closing = r"\\\]"
+        elif env == "document":
+                continue
+        else:
+            opening = r"\\begin{" + env + r"}"
+            closing = r"\\end{" + env + r"}"
         indices = find_matching(
             text, opening, closing, escape=False, opening_match=1, closing_match=0, ignore_escaped=True, return_array=True
         )
         for opening, closing in indices:
             indent_level[np.unique(lineno[opening:closing])[1:]] += 1
 
-    # add indentation to all lines between ``\[`` and ``\]``
-    opening = r"\\\["
-    closing = r"\\\]"
-    indices = find_matching(
-        text, opening, closing, escape=False, opening_match=1, closing_match=0, ignore_escaped=True, return_array=True
-    )
-    for opening, closing in indices:
-        indent_level[np.unique(lineno[opening:closing])[1:]] += 1
-
     # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
-    #TODO: ignore inline math
     indices = find_matching(text, "{", "}", ignore_escaped=True, return_array=True)
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1:lineno[indices[i, 1]]] += 1
 
     # add indentation to all lines between ``[`` and ``]`` containing at least one ``\n``
-    #TODO: ignore inline math
     indices = find_matching(text, "[", "]", ignore_escaped=True, return_array=True)
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1:lineno[indices[i, 1]]] += 1
 
     # apply indentation
     text = text_from_placeholders(text, placeholders_comment)
-    #TODO: apply indentation to comments too
     text = text.splitlines()
     for i in range(len(text)):
         text[i] = indent_level[i] * indent + text[i]
     text = "\n".join(text)
 
-    text = text_from_placeholders(text, placeholders_inline_math)
-
-    return _strip_trailing_whitespace(text_from_placeholders(text, placeholders_noindent))
+    text = text_from_placeholders(text, placeholders_inline_math + placeholders_noindent)
+    return _strip_trailing_whitespace(text)
 
 
 
