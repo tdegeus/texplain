@@ -330,6 +330,10 @@ def indent(text: str, indent: str = "    ") -> str:
     :return: The indented text.
     """
 
+    # known limitation
+    if re.match(r"(?<!\\)(\$)(?<!\\)(\$)", text):
+        raise NotImplementedError("Panic: don't know to deal with double dollar signs")
+
     # remove leading/trailing newlines, and trailing whitespace
     text = _strip_trailing_whitespace(text.strip())
 
@@ -373,7 +377,7 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _begin_end_one_separate_line(text)
 
     # apply one sentence per line
-    text = _one_sentence_per_line(text)
+    text = _one_sentence_per_line(text, fold=[PlaceholderType.math, PlaceholderType.tabular, PlaceholderType.command])
 
     # place comment placeholders where they belong to do indentation
     text = text_from_placeholders(text, placeholders_comment + placeholders_inline_comment)
@@ -746,6 +750,191 @@ def _find_arguments(text: str, start: int = 0, braces: dict = None) -> tuple[int
             return start
         start = braces[index.end() + start - 1] + 1
 
+def _detail_text_to_placholders(text: str, ptype: PlaceholderType, base: str) -> tuple[str, list[Placeholder]]:
+    """
+    ??
+    """
+
+    if ptype == PlaceholderType.noindent_block:
+        indices = find_matching(
+            text,
+            r"%\s*\\begin{noindent}",
+            r"%\s*\\end{noindent}",
+            escape=False,
+            closing_match=1,
+            return_array=True,
+        )
+        return _apply_placeholders(
+            text, indices, base, "noindent".upper(), ptype
+        )
+
+    if ptype == PlaceholderType.verbatim:
+        indices = find_matching(
+            text,
+            r"\\begin{verbatim}",
+            r"\\end{verbatim}",
+            escape=False,
+            closing_match=1,
+            return_array=True,
+        )
+        return _apply_placeholders(
+            text, indices, base, "verbatim".upper(), ptype
+        )
+
+    if ptype == PlaceholderType.tabular:
+        indices = find_matching(
+            text,
+            r"\\begin{tabular}",
+            r"\\end{tabular}",
+            escape=False,
+            closing_match=1,
+            return_array=True,
+        )
+        return _apply_placeholders(
+            text, indices, base, "tabular".upper(), ptype
+        )
+
+    if ptype == PlaceholderType.inline_comment:
+        indices = [i.span(2) for i in re.finditer(r"([^\ ][\ ]*)(?<!\\)(%.*)", text)]
+        if len(indices) == 0:
+            return text, []
+        indices = np.array(indices)
+        return _apply_placeholders(
+            text, indices, base, "inline-comment".upper(), ptype, False
+        )
+
+    if ptype == PlaceholderType.comment:
+        indices = [i.span(3) for i in re.finditer(r"(^|\n)(\ *)(?<!\\)(%.*)", text)]
+        if len(indices) == 0:
+            return text, []
+        indices = np.array(indices)
+        return _apply_placeholders(
+            text, indices, base, "comment".upper(), ptype, False
+        )
+
+    if ptype == PlaceholderType.environment:
+        indices = find_matching(
+            text, r"\\begin{.*}", r"\\end{.*}", escape=False, closing_match=1, return_array=True
+        )
+        return _apply_placeholders(
+            text, indices, base, "environment".upper(), ptype
+        )
+
+    if ptype == PlaceholderType.math or ptype == PlaceholderType.math_line:
+
+        indices = []
+        for env in ["equation", "equation*", "align", "align*"]:
+            indices += find_matching(
+                text, r"\\begin{" + env + "}", r"\\end{" + env + "}", escape=False, closing_match=1, return_array=True
+            ).tolist()
+        indices += find_matching(
+            text, r"\\\[", r"\\\]", escape=False, closing_match=1, return_array=True
+        ).tolist()
+
+        if ptype == PlaceholderType.math:
+            indices = np.array(indices)
+            return _apply_placeholders(
+                text, indices, base, "math".upper(), ptype
+            )
+
+        all_indices = []
+        for starting, closing in indices:
+            lines = text[starting:closing].splitlines()
+            starting += len(lines[0]) + 1
+            for line in lines[1:-1]:
+                skip = False
+                if re.match(r"(?<!\\)(\\begin{)", line):
+                    skip = True
+                if re.match(r"(?<!\\)(\\end{)", line):
+                    skip = True
+                n = len(line)
+                if not skip:
+                    all_indices += [[starting, starting + n]]
+                starting += n + 1
+        indices = np.array(all_indices)
+        return _apply_placeholders(
+            text, indices, base, "math-line".upper(), ptype
+        )
+
+    if ptype == PlaceholderType.math_line:
+        consider = []
+        for env in ["equation", "equation*", "align", "align*"]:
+            consider += find_matching(
+                text, r"\\begin{" + env + "}", r"\\end{" + env + "}", escape=False, closing_match=1, return_array=True
+            ).tolist()
+        consider += find_matching(
+            text, r"\\\[", r"\\\]", escape=False, closing_match=1, return_array=True
+        ).tolist()
+
+        indices = np.array(indices)
+        return _apply_placeholders(
+            text, indices, base, "math".upper(), ptype, False
+        )
+
+    if ptype == PlaceholderType.inline_math:
+        ret = []
+        pattern = r"(?<!\\)(\$)"
+        indices = []
+        for i in re.finditer(pattern, text):
+            indices.append(i.span()[0])
+        indices = np.array(indices).reshape((-1, 2))
+        indices[:, 1] += 1
+        text, placeholders = _apply_placeholders(
+            text, indices, base, "inlinemath".upper(), ptype
+        )
+        for placeholder in placeholders:
+            placeholder.space_front = None
+            placeholder.space_back = None
+        ret += placeholders
+
+        indices = find_matching(
+            text, r"\\\(", r"\\\)", escape=False, closing_match=1, return_array=True
+        )
+        text, placeholders = _apply_placeholders(
+            text, indices, base, "inlinemath".upper(), ptype
+        )
+        ret += placeholders
+
+        indices = find_matching(
+            text, r"\\begin{math}", r"\\end{math}", escape=False, closing_match=1, return_array=True
+        )
+        text, placeholders = _apply_placeholders(
+            text, indices, base, "inlinemath".upper(), ptype
+        )
+        ret += placeholders
+
+        return text, ret
+
+    if ptype == PlaceholderType.command:
+        braces = find_matching(text, "{", "}", ignore_escaped=True)
+        braces.update(find_matching(text, "[", "]", ignore_escaped=True))
+
+        indices = {}
+        last_stop = 0
+
+        for match in re.finditer(r"(?<!\\)(\\)([\w\*]+)", text):
+            start, stop = match.span()
+
+            # skip begin/end
+            if text[start:stop] in ["\\begin", "\\end"]:
+                continue
+
+            # skip nested command
+            if start < last_stop:
+                continue
+
+            # continue until there are no more following "{" or "[
+            indices[start] = _find_arguments(text, stop, braces)
+            last_stop = stop
+
+        indices = _indices2array(indices)
+
+        return _apply_placeholders(
+            text, indices, base, "command".upper(), ptype
+        )
+
+    raise ValueError(f"Unknown placeholder type: {ptype}")
+
 def text_to_placeholders(
     text: str, ptypes: list[PlaceholderType], base: str = "TEXINDENT"
 ) -> tuple[str, list[Placeholder]]:
@@ -789,214 +978,13 @@ def text_to_placeholders(
             ...
             \end{...}
 
-    -   :py:class:`PlaceholderType.special_indent`:
-
-        -   ``-PLACEHOLDER-)`` <- ``.)``, ``?)``, or ``!)``
-        -   ``text-PLACEHOLDER-\n`` <- ``text:\n``
     """
 
     ret = []
 
     for ptype in ptypes:
-        if ptype == PlaceholderType.noindent_block:
-            indices = find_matching(
-                text,
-                r"%\s*\\begin{noindent}",
-                r"%\s*\\end{noindent}",
-                escape=False,
-                closing_match=1,
-                return_array=True,
-            )
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "noindent".upper(), ptype
-            )
-            ret += placeholders
-
-        elif ptype == PlaceholderType.verbatim:
-            indices = find_matching(
-                text,
-                r"\\begin{verbatim}",
-                r"\\end{verbatim}",
-                escape=False,
-                closing_match=1,
-                return_array=True,
-            )
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "verbatim".upper(), ptype
-            )
-            ret += placeholders
-
-        elif ptype == PlaceholderType.tabular:
-            indices = find_matching(
-                text,
-                r"\\begin{tabular}",
-                r"\\end{tabular}",
-                escape=False,
-                closing_match=1,
-                return_array=True,
-            )
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "tabular".upper(), ptype
-            )
-            ret += placeholders
-
-        elif ptype == PlaceholderType.inline_comment:
-            indices = [i.span(2) for i in re.finditer(r"([^\ ][\ ]*)(?<!\\)(%.*)", text)]
-            if len(indices) == 0:
-                continue
-            indices = np.array(indices)
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "inline-comment".upper(), ptype, False
-            )
-            ret += placeholders
-
-        elif ptype == PlaceholderType.comment:
-            indices = [i.span(3) for i in re.finditer(r"(^|\n)(\ *)(?<!\\)(%.*)", text)]
-            if len(indices) == 0:
-                continue
-            indices = np.array(indices)
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "comment".upper(), ptype, False
-            )
-            ret += placeholders
-
-        elif ptype == PlaceholderType.environment:
-            indices = find_matching(
-                text, r"\\begin{.*}", r"\\end{.*}", escape=False, closing_match=1, return_array=True
-            )
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "environment".upper(), ptype
-            )
-            ret += placeholders
-
-        elif ptype == PlaceholderType.math or ptype == PlaceholderType.math_line:
-            indices = []
-            for env in ["equation", "equation*", "align", "align*"]:
-                indices += find_matching(
-                    text, r"\\begin{" + env + "}", r"\\end{" + env + "}", escape=False, closing_match=1, return_array=True
-                ).tolist()
-            indices += find_matching(
-                text, r"\\\[", r"\\\]", escape=False, closing_match=1, return_array=True
-            ).tolist()
-            if ptype == PlaceholderType.math:
-                indices = np.array(indices)
-                text, placeholders = _apply_placeholders(
-                    text, indices, base, "math".upper(), ptype
-                )
-                ret += placeholders
-            else:
-                all_indices = []
-                for starting, closing in indices:
-                    lines = text[starting:closing].splitlines()
-                    starting += len(lines[0]) + 1
-                    for line in lines[1:-1]:
-                        skip = False
-                        if re.match(r"(?<!\\)(\\begin{)", line):
-                            skip = True
-                        if re.match(r"(?<!\\)(\\end{)", line):
-                            skip = True
-                        n = len(line)
-                        if not skip:
-                            all_indices += [[starting, starting + n]]
-                        starting += n + 1
-                indices = np.array(all_indices)
-                text, placeholders = _apply_placeholders(
-                    text, indices, base, "math-line".upper(), ptype
-                )
-                ret += placeholders
-
-        elif ptype == PlaceholderType.math_line:
-            consider = []
-            for env in ["equation", "equation*", "align", "align*"]:
-                consider += find_matching(
-                    text, r"\\begin{" + env + "}", r"\\end{" + env + "}", escape=False, closing_match=1, return_array=True
-                ).tolist()
-            consider += find_matching(
-                text, r"\\\[", r"\\\]", escape=False, closing_match=1, return_array=True
-            ).tolist()
-
-            indices = np.array(indices)
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "math".upper(), ptype, False
-            )
-            ret += placeholders
-
-        elif ptype == PlaceholderType.inline_math:
-            pattern = r"(?<!\\)(\$)"
-            indices = []
-            for i in re.finditer(pattern, text):
-                indices.append(i.span()[0])
-            indices = np.array(indices).reshape((-1, 2))
-            indices[:, 1] += 1
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "inlinemath".upper(), ptype
-            )
-            for placeholder in placeholders:
-                placeholder.space_front = None
-                placeholder.space_back = None
-            ret += placeholders
-
-            indices = find_matching(
-                text, r"\\\(", r"\\\)", escape=False, closing_match=1, return_array=True
-            )
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "inlinemath".upper(), ptype
-            )
-            ret += placeholders
-
-            indices = find_matching(
-                text, r"\\begin{math}", r"\\end{math}", escape=False, closing_match=1, return_array=True
-            )
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "inlinemath".upper(), ptype
-            )
-            ret += placeholders
-
-        elif ptype == PlaceholderType.command:
-            braces = find_matching(text, "{", "}", ignore_escaped=True)
-            braces.update(find_matching(text, "[", "]", ignore_escaped=True))
-
-            indices = {}
-            last_stop = 0
-
-            for match in re.finditer(r"(?<!\\)(\\)([\w\*]+)", text):
-                start, stop = match.span()
-
-                # skip begin/end
-                if text[start:stop] in ["\\begin", "\\end"]:
-                    continue
-
-                # skip nested command
-                if start < last_stop:
-                    continue
-
-                # continue until there are no more following "{" or "[
-                indices[start] = _find_arguments(text, stop, braces)
-                last_stop = stop
-
-            indices = _indices2array(indices)
-
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "command".upper(), ptype
-            )
-            ret += placeholders
-
-        elif ptype == PlaceholderType.special_indent:
-            indices = np.array(
-                [
-                    [i.span()[0], i.span()[1] - 1]
-                    for i in re.finditer(r"(?<!\\)([\?\!\.])(\))", text)
-                ]
-                + [[i.span()[0], i.span()[1] - 1] for i in re.finditer(r"(?<!\\)(\:)(\n)", text)]
-            )
-
-            text, placeholders = _apply_placeholders(
-                text, indices, base, "subordinate".upper(), ptype
-            )
-            ret += placeholders
-
-        else:
-            raise ValueError(f"Unknown placeholder type: {ptype}")
+        text, placeholders = _detail_text_to_placholders(text, ptype, base)
+        ret += placeholders
 
     return text, ret
 
@@ -2101,7 +2089,6 @@ def _texindent_sentence(
             PlaceholderType.comment,
             PlaceholderType.inline_comment,
             PlaceholderType.inline_math,
-            PlaceholderType.special_indent,
             PlaceholderType.command,
             PlaceholderType.environment,
         ],
