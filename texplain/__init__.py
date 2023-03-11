@@ -1971,62 +1971,6 @@ def _texplain_cli():
     texplain(sys.argv[1:])
 
 
-def texindent(
-    text: str, config: dict, tempdir: pathlib.Path = None, generate_filename: Callable = None
-) -> str:
-    r"""
-    Format text with ``latexindent.pl``.
-    Augmented rules:
-
-    -   A command and inline math inside a sentence is considered as a neutral placeholder.
-
-    -   The whitespace before and after any command, environment, and comment are exactly preserved.
-
-    -   The linebreaks of sentences inside commands are only changed if the command if formatted:
-
-        .. code-block:: latex
-
-            ... \mycommand{
-                This is a
-                sentence.
-            }
-
-        which is formatted to
-
-        .. code-block:: latex
-
-            ... \mycommand{
-                This is a sentence.
-            }
-
-        Instead, the following formatting does not change the linebreaks inside the command:
-
-        .. code-block:: latex
-
-            ... \mycommand{This is a
-                sentence.}
-
-    :param text: Text to format.
-
-    :param config: Configuration of ``latexindent.pl``, e.g. :py:func:`texindent_default_config`.
-
-    :param tempdir:
-        Temporary directory to write files to.
-        If ``None`` a temporary directory is created, and removed after use.
-
-    :param generate_filename:
-        Generator of filenames for temporary files ``tempdir / filename``.
-        If ```None`` a single filename is used.
-        That file is overwritten on each call.
-
-    :return: Formatted text.
-    """
-
-    tex = TeX(text)
-    tex.main = indent(tex.main)
-    return tex.get()
-
-
 def _texindent_parser():
     """
     Return parser for :py:func:`texindent`.
@@ -2035,42 +1979,10 @@ def _texindent_parser():
     desc = "Wrapper around ``latexindent.pl`` with some additional rules. ``texplain.texindent``."
     parser = argparse.ArgumentParser(description=desc)
 
-    parser.add_argument("-c", "--config", type=str, help="Configuration file")
-    parser.add_argument("-t", "--tempdir", type=str, help="Temporary directory")
-
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("files", nargs="+", type=str, help="TeX file")
 
     return parser
-
-
-def _detail_texindent_cli(
-    filepath: str, config: dict, tempdir: pathlib.Path, generate_filename: Callable
-):
-    """
-    See :py:func:`texindent_cli`.
-    """
-
-    filepath = pathlib.Path(filepath)
-    orig = filepath.read_text()
-    formatted = texindent(orig, config, tempdir, generate_filename)
-
-    # copy back if modified
-    if formatted != orig:
-        filepath.write_text(formatted)
-
-
-class _FilenameGenerator:
-    """
-    Class to generate filenames.
-    """
-
-    def __init__(self):
-        self.i = 0
-
-    def __call__(self):
-        self.i += 1
-        return f"texindent-stage-{self.i:03d}.tex"
 
 
 def texindent_cli(args: list[str]):
@@ -2082,33 +1994,16 @@ def texindent_cli(args: list[str]):
     args = parser.parse_args(args)
     assert all([os.path.isfile(file) for file in args.files])
 
-    if args.config is None:
-        if os.path.isfile(".texindent.yaml"):
-            args.config = ".texindent.yaml"
-        elif os.path.isfile(".texindent.yml"):
-            args.config = ".texindent.yml"
-        elif os.path.isfile(".latexindent.yaml"):
-            args.config = ".latexindent.yaml"
-        elif os.path.isfile(".latexindent.yml"):
-            args.config = ".latexindent.yml"
-        else:
-            config = texindent_default_config()
-    else:
-        assert os.path.isfile(args.config)
+    for filepath in args.files:
+        filepath = pathlib.Path(filepath)
+        orig = filepath.read_text()
 
-    if args.config is not None:
-        with open(args.config) as file:
-            config = yaml.load(file.read(), Loader=yaml.FullLoader)
+        tex = TeX(orig)
+        tex.main = indent(tex.main)
+        formatted = tex.get()
 
-    if args.tempdir is not None:
-        assert len(args.files) == 1
-        gen = _FilenameGenerator()
-        return _detail_texindent_cli(args.files[0], config, pathlib.Path(args.tempdir), gen)
-
-    with tempfile.TemporaryDirectory() as tempdir:
-        tempdir = pathlib.Path(tempdir)
-        for filepath in args.files:
-            _detail_texindent_cli(filepath, config, tempdir, None)
+        if formatted != orig:
+            filepath.write_text(formatted)
 
 
 def _texindent_cli():
