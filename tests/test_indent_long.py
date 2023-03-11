@@ -2,6 +2,7 @@ import unittest
 
 import texplain
 
+
 class TestLatexIndent(unittest.TestCase):
     """
     From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
@@ -104,7 +105,6 @@ que o ego ou a consciência experimenta \emph{é} seu conteúdo.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_dot_followed_by_tilde(self):
-
         text = r"""
 Here is a sentence (Fig.~\ref{dummy18}). Here is another sentence (Fig.~\ref{dummy19}).
         """
@@ -118,7 +118,6 @@ Here is another sentence (Fig.~\ref{dummy19}).
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_issue_321(self):
-
         text = r"""
 \documentclass{article}
 
@@ -133,7 +132,6 @@ I.e.\ it is a finite constant.
         self.assertEqual(ret.strip(), text.strip())
 
     def test_issue_355(self):
-
         text = r"""
 This is a very long sentence that I would like to be cut at the set line width which is however currently not done.
 Sentences are put on different lines.
@@ -151,7 +149,6 @@ This is a very long sentence that is formatted like it should and it should ther
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_issue_376(self):
-
         text = r"""
 For a slip event at interface $s$, we have $\Delta R_s > 0$ and $\Delta R_i = 0$ for $i \neq s$, inducing
 \begin{equation}
@@ -184,7 +181,7 @@ which we verify in \cref{fig:2c}.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_issue_392(self):
-        """
+        r"""
         Difference with ``latexindent.pl``: abbrivations not automatically recognized.
         Instead use ``"~"`` or ``"\ "`` to have a space after the abbreviation.
         """
@@ -240,7 +237,6 @@ Xxxx x xxxxxxxx xx xxxxxx \emph{xxxxxxx} \cite{XxxxxXxXx:xxxx} xxx xx xxxxxxxx x
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_konfect(self):
-
         text = r"""
 The filter does different things depending on the file format;
   in most cases
@@ -261,7 +257,7 @@ C'est bon; à six heures on y va.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_mlep(self):
-        """
+        r"""
         Difference with ``latexindent.pl``: abbrivations not automatically recognized.
         Instead use ``"~"`` or ``"\ "`` to have a space after the abbreviation.
         """
@@ -283,7 +279,6 @@ The URL is \url{www.scilab.org}.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_mlep2(self):
-
         text = r"""
 The names (Smith, Doe, etc.) are inherited.
 
@@ -319,9 +314,7 @@ This is a sentence.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), text.strip())
 
-
     def test_more_code_blocks(self):
-
         text = r"""
 \section*{Executive Summary}
 Sonifications are non-verbal representation of plots or graphs.
@@ -403,10 +396,7 @@ Desirable features of an accessible graph include the following \cite{Summers201
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
-
-
     def test_multiple_sentences9(self):
-
         text = r"""
 This paragraph% first comment
 has line breaks throughout its paragraph;% second comment
@@ -418,9 +408,7 @@ and paragraph removal routine. % fifth comment
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), text.strip())
 
-
     def test_other_begins(self):
-
         text = r"""
 This is the first
 sentence. 7 is the second
@@ -451,7 +439,6 @@ furthermore we have that.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_pcc_program_review1(self):
-
         text = r"""
 % arara: pdflatex: {files: [MathSACpr2014]}
 % !arara: indent: {overwrite: yes}
@@ -1509,7 +1496,6 @@ As the Math SAC looks for ways to increase completion rates for students who pla
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_pcc_program_review2(self):
-
         text = r"""
 % arara: pdflatex: {files: [MathSACpr2014]}
 % !arara: indent: {overwrite: yes}
@@ -2109,7 +2095,6 @@ We look forward to working with the broader PCC community as we pursue our commo
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_sentence_across_blocks(self):
-
         text = r"""
 This sentence stretches
 \[
@@ -2143,7 +2128,6 @@ this one.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_six_sentences_mutl_blank(self):
-
         text = r"""
 This is the first
 sentence. This is the second sentence. This is the
@@ -2240,7 +2224,6 @@ Brave and experienced drivers at the controls of \TeX\ will gradually enter more
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_three_sentences_trailing_comments(self):
-
         text = r"""
 %This is the first
 %sentence. This is the second sentence. This is the
@@ -2265,7 +2248,6 @@ This is the sixth sentence.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_trailing_comments(self):
-
         text = r"""
 This is %1st comment
 the first%    2nd comment
@@ -2298,7 +2280,6 @@ This is the sixth sentence.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_two_sentences(self):
-
         text = r"""
 This is the
 first sentence.
@@ -2317,7 +2298,6 @@ This is the second sentence!
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_verbatim_test(self):
-
         text = r"""
 This is the fourth
 sentence! This is the fifth sentence? This is the
@@ -2353,6 +2333,7 @@ This is the sixth sentence.
 
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
+
 
 if __name__ == "__main__":
     unittest.main()

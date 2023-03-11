@@ -2,31 +2,27 @@ import unittest
 
 import texplain
 
+
 class TestComment(unittest.TestCase):
-
     def test_comment_a(self):
-
         text = r"This is a % comment"
 
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), text.strip())
 
     def test_comment_b(self):
-
         text = r"This is a. % comment"
 
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), text.strip())
 
     def test_comment_c(self):
-
         text = "This is a. % comment a\nAnd another. % comment b"
 
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), text.strip())
 
     def test_comment_d(self):
-
         text = r"""
 % a
 % b
@@ -51,7 +47,6 @@ class TestComment(unittest.TestCase):
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_comment_indent(self):
-
         text = r"""
 % a
 % b
@@ -81,9 +76,7 @@ class TestComment(unittest.TestCase):
 
 
 class TestNoindent(unittest.TestCase):
-
     def test_verbatim(self):
-
         text = r"""
 Some text   \begin{verbatim} a = b \end{verbatim}    some more text.
         """
@@ -96,7 +89,6 @@ Some text \begin{verbatim} a = b \end{verbatim} some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_verbatim_a(self):
-
         text = r"""
 Some text
 
@@ -119,7 +111,6 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_noindent(self):
-
         text = r"""
 Some  text
 % \begin{noindent}
@@ -139,8 +130,7 @@ some more text.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
-    def test_verbatim_a(self):
-
+    def test_noindent_a(self):
         text = r"""
 Some  text
 
@@ -168,9 +158,7 @@ some more text.
 
 
 class TestIndentEnvironment(unittest.TestCase):
-
     def test_environment(self):
-
         text = r"""
 Some text \begin{equation} a = b \end{equation} some more text.
         """
@@ -187,7 +175,6 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment_a(self):
-
         text = r"""
 Some text \begin{equation}a = b\end{equation} some more text.
         """
@@ -204,7 +191,6 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment_b(self):
-
         text = r"""
 Some text \begin{equation}[0, 1)\end{equation} some more text on interval $[0, 1)$.
         """
@@ -221,7 +207,6 @@ some more text on interval $[0, 1)$.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment_c(self):
-
         text = r"""
 Some text \begin{equation}
 [0, 1)
@@ -242,7 +227,6 @@ some more text on interval $[0, 1)$.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment_nested_a(self):
-
         text = r"""
 Some text \begin{equation} \begin{split} a = b \end{split} \end{equation} some more text.
         """
@@ -261,7 +245,6 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment_nested_b(self):
-
         text = r"""
 Some text \begin{equation} \begin{equation} a = b \end{equation} \end{equation} some more text.
         """
@@ -280,7 +263,6 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment_nested_c(self):
-
         text = r"""
 Some text
 \begin{equation}
@@ -313,7 +295,6 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment_multiline_a(self):
-
         text = r"""
 Some text \begin{figure}
  \foo
@@ -333,7 +314,6 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment_multiline_b(self):
-
         text = r"""
 Some text \begin{figure}
  \foo
@@ -356,7 +336,6 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment_comment(self):
-
         text = r"""
 Some text \begin{equation} % some comment
 a = b \end{equation} some more text.
@@ -374,11 +353,8 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
 
-
 class TestIndentCommand(unittest.TestCase):
-
     def test_command_punctuation(self):
-
         text = r"""
 A start\footnote{
     This is a footnote
@@ -390,7 +366,6 @@ A new sentence.
         self.assertEqual(ret.strip(), text.strip())
 
     def test_command_punctuation_a(self):
-
         text = r"""
 A start\footnote{
     This is a footnote
@@ -402,7 +377,6 @@ a continued sentence.
         self.assertEqual(ret.strip(), text.strip())
 
     def test_command_punctuation_b(self):
-
         text = r"""
 \section{My? section}
 \label{sec:a}
@@ -412,7 +386,6 @@ a continued sentence.
         self.assertEqual(ret.strip(), text.strip())
 
     def test_label_equation(self):
-
         text = r"""
 \begin{equation}
     \label{eq:a}
@@ -424,7 +397,6 @@ a continued sentence.
         self.assertEqual(ret.strip(), text.strip())
 
     def test_nested_command(self):
-
         text = r"""
 \begin{figure}
     \subfloat{\label{fig:foo}}
@@ -436,9 +408,7 @@ a continued sentence.
 
 
 class TestOneSentencePerLine(unittest.TestCase):
-
     def test_quote(self):
-
         text = r"""
 This a ``sentence!'' And another.
         """
@@ -451,7 +421,6 @@ This a ``sentence!'' And another.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_full_quote(self):
-
         text = r"""
 ``This a sentence!'' And
 another.
@@ -465,7 +434,6 @@ another.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_brace(self):
-
         text = r"""
 This a sentence. And another
 (etc.).
@@ -480,7 +448,6 @@ And another (etc.).
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_full_brace(self):
-
         text = r"""
 (This a sentence.) (This a second sentence.) And another. And one more (?).
         """
@@ -494,7 +461,6 @@ And one more (?).
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_comment_a(self):
-
         text = r"""
 This is % some comment
 a sentence.
@@ -518,7 +484,6 @@ final statement.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_comment_b(self):
-
         text = r"""
 This is a text% with a comment
 that ends here.
@@ -536,7 +501,6 @@ But this is not a comment.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_block(self):
-
         text = r"""
 This is the
 first sentence.
@@ -555,7 +519,6 @@ And the second sentence.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_environment(self):
-
         text = r"""
 This is the
 first sentence.
@@ -582,7 +545,6 @@ second sentence.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_command_ignore(self):
-
         text = r"""
 This is the
 first sentence.
@@ -601,7 +563,6 @@ And \TG{?}{and some}{.} the second sentence.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_command_newline(self):
-
         text = r"""
 This is the
 first sentence.
@@ -625,7 +586,6 @@ And \footnote{
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_command_newline_a(self):
-
         text = r"""
 A start\footnote{This is a footnote. With
     some poor formatting.
@@ -645,7 +605,6 @@ A new sentence.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_command_newline_b(self):
-
         text = r"""
 A start\footnote[Some option]{This is a footnote. With
     some poor formatting.
@@ -664,9 +623,7 @@ A new sentence.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
-
     def test_command_newline_comment(self):
-
         text = r"""
 A start\footnote{ %
     This is a footnote. With
@@ -687,7 +644,6 @@ A new sentence.
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_command_newline_comment_a(self):
-
         text = r"""
 % my comment
 A start\footnote{ %
@@ -708,7 +664,6 @@ A start\footnote{ %
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_command_newline_nested_a(self):
-
         text = r"""
 This is the
 first sentence.
@@ -738,7 +693,6 @@ And \footnote{
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_nested_environment(self):
-
         text = r"""
 \some{
 \mycommand{
@@ -762,6 +716,7 @@ Some text \emph{with some highlighting}. And two sentences.
 
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
+
 
 if __name__ == "__main__":
     unittest.main()
