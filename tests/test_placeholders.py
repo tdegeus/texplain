@@ -100,12 +100,12 @@ Bla bla bla. -TEXINDENT-NOINDENT-2- A last sentence.
         """
 
         expect = """
-        This is a text-TEXINDENT-COMMENT-1-
+        This is a text-TEXINDENT-INLINE-COMMENT-1-
         More text.
-        -TEXINDENT-COMMENT-2-
+        -TEXINDENT-COMMENT-1-
         """
 
-        ret, placeholders = texplain.text_to_placeholders(text, [texplain.PlaceholderType.comment])
+        ret, placeholders = texplain.text_to_placeholders(text, [texplain.PlaceholderType.comment, texplain.PlaceholderType.inline_comment])
         self.assertEqual(ret, expect)
         self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
 
@@ -201,6 +201,19 @@ Bla bla bla. -TEXINDENT-NOINDENT-2- A last sentence.
         -TEXINDENT-COMMAND-3-
 
         some -TEXINDENT-COMMAND-4-
+        """
+
+        ret, placeholders = texplain.text_to_placeholders(text, [texplain.PlaceholderType.command])
+        self.assertEqual(ret, expect)
+        self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
+
+    def test_command_a(self):
+        text = r"""
+        \section*{Foo} bar
+        """
+
+        expect = """
+        -TEXINDENT-COMMAND-1- bar
         """
 
         ret, placeholders = texplain.text_to_placeholders(text, [texplain.PlaceholderType.command])

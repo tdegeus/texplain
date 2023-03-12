@@ -210,7 +210,7 @@ def _find_option(text: str, index: int, opening: ArrayLike, closing: ArrayLike) 
     return _detail_find_option(text, index, braces, [])
 
 
-def find_commands(text: str, name: str = None, escape: bool = True, ignore_commented: bool = True) -> list[list[tuple[int]]]:
+def find_command(text: str, name: str = None, escape: bool = True, ignore_commented: bool = True) -> list[list[tuple[int]]]:
     """
     Find indices of command, and their arguments.
 
@@ -1067,7 +1067,7 @@ def _detail_text_to_placholders(
         return text, ret
 
     if ptype == PlaceholderType.command:
-        components = find_commands(text, ignore_commented=not contains_comments)
+        components = find_command(text, ignore_commented=not contains_comments)
         indices = []
 
         for component in components:
