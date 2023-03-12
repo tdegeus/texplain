@@ -215,32 +215,36 @@ def _find_option(
 
 
 def find_command(
-    text: str, name: str = None, escape: bool = True, is_comment: list[bool] = None
+    text: str, name: str = None, regex: str = r"(?<!\\)(\\)([a-zA-Z]+)(\*?)", is_comment: list[bool] = None
 ) -> list[list[tuple[int]]]:
     """
-    Find indices of command, and their arguments.
+    Find indices of command, and their options, and arguments.
 
     :param text: Text.
     :param name: Name of command without backslash (e.g. ``"textbf"``).
-    :param escape: If ``True``, ``name`` is escaped.
-    :param is_comment: Per character of ``text``, if ``True``, the character is part of a comment.
+    :param regex: Regex to match search the command name.
+    :param is_comment:
+        Per character of ``text``, if ``True``, the character is part of a comment.
+        Default: search for comments using :py:func:`is_commented`.
+
     :return: List of indices of commands and their arguments:
         ``[[(name_start, name_end), (arg1_start, arg1_end), ...], ...]``
-        Note the definition is such that one can find the command name as follows:
-        ``text[cmd[i][0]:cmd[i][1]]``.
+        Note the definition is such that one can extract the ``j``-th component of the ``i``-th
+        command as follows: ``text[cmd[i][j][0]:cmd[i][j][1]]``.
     """
 
     if name is not None:
-        if escape:
-            name = re.escape(name)
-        name = r"(?<!\\)(\\)" + name
-    else:
-        name = r"(?<!\\)(\\)([a-zA-Z]+)(\*?)"
+        regex = r"(?<!\\)(\\)" + re.escape(name)
+
+    if is_comment is None:
+        is_comment = is_commented(text)
+
+    is_comment = np.append(is_comment, is_comment[-1]) # convention: end of range index used
 
     cmd_start = []
     cmd_end = []
 
-    for i in re.finditer(name, text):
+    for i in re.finditer(regex, text):
         cmd_start.append(i.span()[0])
         cmd_end.append(i.span()[1])
 
@@ -252,14 +256,9 @@ def find_command(
     curly_open = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\{)", text)])
     curly_closing = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\})", text)])
 
-    # remove comments from start and end of commands, and from opening and closing brackets
-    if is_comment is None:
-        is_comment = is_commented(text)
-
-    is_comment = np.append(is_comment, is_comment[-1])
+    # ignore any match inside comments
     cmd_start = np.array(cmd_start)
-    cmd_end = np.array(cmd_end)
-    cmd_end = cmd_end[~is_comment[cmd_start]]
+    cmd_end = np.array(cmd_end)[~is_comment[cmd_start]]
     cmd_start = cmd_start[~is_comment[cmd_start]]
     if square_open.size > 0:
         square_open = square_open[~is_comment[square_open]]
@@ -277,26 +276,18 @@ def find_command(
     cmd_curly_closing = np.searchsorted(cmd_end, curly_closing, side="right") - 1
 
     ret = []
-    ignore = np.logical_or(is_comment, [i == " " or i == "\n" for i in text] + [False])
-    include = ~ignore
-
-    # print("text", text)
-    # print("cmd_start", cmd_start)
-    # print("cmd_end", cmd_end)
-    # print("square_open", square_open)
-    # print("square_closing", square_closing)
-    # print("curly_open", curly_open)
-    # print("curly_closing", curly_closing)
-    # print("include", include)
+    whitespace = np.logical_or(is_comment, [i == " " or i == "\n" for i in text] + [False])
+    character = ~whitespace # any non-whitespace and non-comment character
 
     for icmd in range(len(cmd_end)):
-        index = cmd_end[icmd]
-        item = [(cmd_start[icmd], cmd_end[icmd])]
+
         i_square_open = square_open[cmd_square_open >= icmd]
         i_square_closing = square_closing[cmd_square_closing >= icmd]
         i_curly_open = curly_open[cmd_curly_open >= icmd]
         i_curly_closing = curly_closing[cmd_curly_closing >= icmd]
 
+        item = [(cmd_start[icmd], cmd_end[icmd])]
+        index = cmd_end[icmd]
         might_have_opt = True
 
         if len(i_square_open) == 0:
@@ -307,7 +298,7 @@ def find_command(
                     might_have_opt = False
 
         if might_have_opt:
-            opts = _find_option(include, index, i_square_open, i_square_closing)
+            opts = _find_option(character, index, i_square_open, i_square_closing)
 
             if len(opts) > 0:
                 index = opts[-1][1]
@@ -315,7 +306,7 @@ def find_command(
                 i_curly_open = i_curly_open[i_curly_open >= index]
                 i_curly_closing = i_curly_closing[i_curly_closing >= index]
 
-        args = _find_option(include, index, i_curly_open, i_curly_closing)
+        args = _find_option(character, index, i_curly_open, i_curly_closing)
 
         if len(args) > 0:
             item += args
