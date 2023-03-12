@@ -36,6 +36,37 @@ class MyTests(unittest.TestCase):
         self.assertEqual(text[ret[1][1][0] : ret[1][1][1]], r"{[bararg}")
         self.assertEqual(text[ret[1][2][0] : ret[1][2][1]], r"{bararg2}")
 
+    def test_argument_comment_a(self):
+        text = r"""
+        This is a text with a \command%
+        % first comment
+        [
+            option1
+        ]%
+        % second comment
+        {
+            argument1
+        }
+
+        \bar
+        [
+            option2
+        ]
+        % comment
+        {
+            argument2
+        }
+        """
+        ret = texplain.find_command(text)
+
+        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\command")
+        self.assertEqual(text[ret[0][1][0] : ret[0][1][1]].replace(' ', "").replace("\n", ""), r"[option1]")
+        self.assertEqual(text[ret[0][2][0] : ret[0][2][1]].replace(' ', "").replace("\n", ""), r"{argument1}")
+
+        self.assertEqual(text[ret[1][0][0] : ret[1][0][1]], r"\bar")
+        self.assertEqual(text[ret[1][1][0] : ret[1][1][1]].replace(' ', "").replace("\n", ""), r"[option2]")
+        self.assertEqual(text[ret[1][2][0] : ret[1][2][1]].replace(' ', "").replace("\n", ""), r"{argument2}")
+
     def test_option_argument(self):
         text = r"This is some \foo[fooopt]{fooarg} \bar [baropt] [{baropt2}] {[bararg}  {bararg2}"
         ret = texplain.find_command(text)
