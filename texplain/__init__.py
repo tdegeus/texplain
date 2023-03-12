@@ -30,6 +30,7 @@ class PlaceholderType(enum.Enum):
     math_line = enum.auto()
     environment = enum.auto()
     command = enum.auto()
+    command_component = enum.auto()
     noindent_block = enum.auto()
     verbatim = enum.auto()
     special_indent = enum.auto()
@@ -227,7 +228,7 @@ def find_commands(text: str, name: str = None, escape: bool = True, ignore_comme
             name = re.escape(name)
         name = r"(?<!\\)(\\)" + name
     else:
-        name = r"(?<!\\)(\\)[a-zA-Z]+"
+        name = r"(?<!\\)(\\)([a-zA-Z]+)(\*?)"
 
     cmd_start = []
     cmd_end = []
@@ -260,20 +261,20 @@ def find_commands(text: str, name: str = None, escape: bool = True, ignore_comme
         if curly_closing.size > 0:
             curly_closing = curly_closing[~is_comment[curly_closing]]
 
-    cmd_open_square = np.searchsorted(cmd_end, square_open, side="right") - 1
-    cmd_closing_square = np.searchsorted(cmd_end, square_closing, side="right") - 1
-    cmd_open_curly = np.searchsorted(cmd_end, curly_open, side="right") - 1
-    cmd_closing_curly = np.searchsorted(cmd_end, curly_closing, side="right") - 1
+    cmd_square_open = np.searchsorted(cmd_end, square_open, side="right") - 1
+    cmd_square_closing = np.searchsorted(cmd_end, square_closing, side="right") - 1
+    cmd_curly_open = np.searchsorted(cmd_end, curly_open, side="right") - 1
+    cmd_curly_closing = np.searchsorted(cmd_end, curly_closing, side="right") - 1
 
     ret = []
 
     for icmd in range(len(cmd_end)):
         index = cmd_end[icmd]
         item = [(cmd_start[icmd], cmd_end[icmd])]
-        i_square_open = square_open[cmd_open_square == icmd]
-        i_square_closing = square_closing[cmd_closing_square == icmd]
-        i_curly_open = curly_open[cmd_open_curly == icmd]
-        i_curly_closing = curly_closing[cmd_closing_curly == icmd]
+        i_square_open = square_open[cmd_square_open >= icmd]
+        i_square_closing = square_closing[cmd_square_closing >= icmd]
+        i_curly_open = curly_open[cmd_curly_open >= icmd]
+        i_curly_closing = curly_closing[cmd_curly_closing >= icmd]
 
         might_have_opt = True
 
@@ -510,10 +511,19 @@ def indent(text: str, indent: str = "    ") -> str:
         placeholder.space_front = None
         placeholder.space_back = None
 
+    #TODO: use find_command to place on a new line:
+    # - ``\begin{...}``/ ``\end{...}``
+    # - ``\[`` / ``\]``
+    # - ``{`` /  ``}`` separated by at least one a new line
+    # - ``[`` / ``]`` that are command options separated by at least one a new line
+    #TODO: the latter can be combined with folding the has to be done for ``_begin_end_one_separate_line`` anyway
+
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
     text = _begin_end_one_separate_line(text)
 
     # apply one sentence per line
+    #TODO: use partial command placeholders to do the formatting inside the command
+    # check if it should be touched should be very easy as ``{`` and ``[`` are the first character
     text = _one_sentence_per_line(
         text, fold=[PlaceholderType.math, PlaceholderType.tabular, PlaceholderType.command]
     )
@@ -571,6 +581,7 @@ def indent(text: str, indent: str = "    ") -> str:
         indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
 
     # add indentation to all lines between ``[`` and ``]`` containing at least one ``\n``
+    #TODO: use find_command to only consider ``[`` and ``]`` that are command options
     indices = find_matching(text, "[", "]", ignore_escaped=True, return_array=True)
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
@@ -850,6 +861,7 @@ def _apply_placeholders(
     name: str,
     ptype: PlaceholderType,
     filter_nested: bool = True,
+    contains_comments: bool = True,
 ) -> tuple[str, list[Placeholder]]:
     """
     Replace text with placeholders.
@@ -861,6 +873,7 @@ def _apply_placeholders(
     :param name: The name of the placeholder, see :py:class:`GeneratePlaceholder`.
     :param ptype: The type of placeholder, see :py:class:`PlaceholderType`.
     :param filter_nested: If ``True``, nested placeholders are skipped.
+    :param contains_comments: If ``False``, the use ensures that the text does not contain comments.
     :return:
         ``(text, placeholders)`` where:
         - ``text`` is the text with the placeholders.
@@ -912,7 +925,7 @@ def _find_arguments(text: str, start: int = 0, braces: dict = None) -> tuple[int
 
 
 def _detail_text_to_placholders(
-    text: str, ptype: PlaceholderType, base: str
+    text: str, ptype: PlaceholderType, base: str, contains_comments: bool
 ) -> tuple[str, list[Placeholder]]:
     """
     ??
@@ -1054,36 +1067,24 @@ def _detail_text_to_placholders(
         return text, ret
 
     if ptype == PlaceholderType.command:
-        braces = find_matching(text, "{", "}", ignore_escaped=True)
-        braces.update(find_matching(text, "[", "]", ignore_escaped=True))
+        components = find_commands(text, ignore_commented=not contains_comments)
+        indices = []
 
-        indices = {}
-        last_stop = 0
-
-        for match in re.finditer(r"(?<!\\)(\\)([\w\*]+)", text):
-            start, stop = match.span()
-
-            # skip begin/end
-            if text[start:stop] in ["\\begin", "\\end"]:
+        for component in components:
+            if text[component[0][0]:component[0][1]] in [r"\\begin", r"\\end"]:
                 continue
+            indices += [[component[0][0], component[-1][1]]]
 
-            # skip nested command
-            if start < last_stop:
-                continue
-
-            # continue until there are no more following "{" or "[
-            indices[start] = _find_arguments(text, stop, braces)
-            last_stop = stop
-
-        indices = _indices2array(indices)
-
+        indices = np.array(indices)
         return _apply_placeholders(text, indices, base, "command".upper(), ptype)
+
+    #TODO: add placeholder for partial commands
 
     raise ValueError(f"Unknown placeholder type: {ptype}")
 
 
 def text_to_placeholders(
-    text: str, ptypes: list[PlaceholderType], base: str = "TEXINDENT"
+    text: str, ptypes: list[PlaceholderType], base: str = "TEXINDENT", contains_comments: bool = True
 ) -> tuple[str, list[Placeholder]]:
     r"""
     Replace text with placeholders.
@@ -1125,12 +1126,14 @@ def text_to_placeholders(
             ...
             \end{...}
 
+
+    :param contains_comments: If ``False`` the user ensures that the text does not contain comments.
     """
 
     ret = []
 
     for ptype in ptypes:
-        text, placeholders = _detail_text_to_placholders(text, ptype, base)
+        text, placeholders = _detail_text_to_placholders(text, ptype, base, contains_comments)
         ret += placeholders
 
     return text, ret
