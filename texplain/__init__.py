@@ -173,15 +173,17 @@ def find_matching(
 
     return ret
 
-def _detail_find_option(include: NDArray[np.bool_], index: int, braces: ArrayLike, ret: list[tuple[int]]) -> list[tuple[int]]:
 
+def _detail_find_option(
+    include: NDArray[np.bool_], index: int, braces: ArrayLike, ret: list[tuple[int]]
+) -> list[tuple[int]]:
     if len(braces) == 0:
         return ret
 
     if braces[0] < 0:
         return ret
 
-    if np.any(include[index:braces[0]]) and braces[0] - index > 1:
+    if np.any(include[index : braces[0]]) and braces[0] - index > 1:
         return ret
 
     stack = []
@@ -200,8 +202,10 @@ def _detail_find_option(include: NDArray[np.bool_], index: int, braces: ArrayLik
 
     return _detail_find_option(include, closing + 1, braces[i + 1 :], ret + [(open, closing + 1)])
 
-def _find_option(include: NDArray[np.bool_], index: int, opening: ArrayLike, closing: ArrayLike) -> list[int]:
 
+def _find_option(
+    include: NDArray[np.bool_], index: int, opening: ArrayLike, closing: ArrayLike
+) -> list[int]:
     if len(opening) == 0:
         return []
 
@@ -210,7 +214,9 @@ def _find_option(include: NDArray[np.bool_], index: int, opening: ArrayLike, clo
     return _detail_find_option(include, index, braces, [])
 
 
-def find_command(text: str, name: str = None, escape: bool = True, is_comment: list[bool] = None) -> list[list[tuple[int]]]:
+def find_command(
+    text: str, name: str = None, escape: bool = True, is_comment: list[bool] = None
+) -> list[list[tuple[int]]]:
     """
     Find indices of command, and their arguments.
 
@@ -301,7 +307,6 @@ def find_command(text: str, name: str = None, escape: bool = True, is_comment: l
                     might_have_opt = False
 
         if might_have_opt:
-
             opts = _find_option(include, index, i_square_open, i_square_closing)
 
             if len(opts) > 0:
@@ -318,11 +323,6 @@ def find_command(text: str, name: str = None, escape: bool = True, is_comment: l
         ret += [item]
 
     return ret
-
-
-
-
-
 
 
 def _indices2array(indices: dict[int]):
@@ -526,18 +526,18 @@ def indent(text: str, indent: str = "    ") -> str:
         placeholder.space_front = None
         placeholder.space_back = None
 
-    #TODO: use find_command to place on a new line:
+    # TODO: use find_command to place on a new line:
     # - ``\begin{...}``/ ``\end{...}``
     # - ``\[`` / ``\]``
     # - ``{`` /  ``}`` separated by at least one a new line
     # - ``[`` / ``]`` that are command options separated by at least one a new line
-    #TODO: the latter can be combined with folding the has to be done for ``_begin_end_one_separate_line`` anyway
+    # TODO: the latter can be combined with folding the has to be done for ``_begin_end_one_separate_line`` anyway
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
     text = _begin_end_one_separate_line(text)
 
     # apply one sentence per line
-    #TODO: use partial command placeholders to do the formatting inside the command
+    # TODO: use partial command placeholders to do the formatting inside the command
     # check if it should be touched should be very easy as ``{`` and ``[`` are the first character
     text = _one_sentence_per_line(
         text, fold=[PlaceholderType.math, PlaceholderType.tabular, PlaceholderType.command]
@@ -596,7 +596,7 @@ def indent(text: str, indent: str = "    ") -> str:
         indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
 
     # add indentation to all lines between ``[`` and ``]`` containing at least one ``\n``
-    #TODO: use find_command to only consider ``[`` and ``]`` that are command options
+    # TODO: use find_command to only consider ``[`` and ``]`` that are command options
     indices = find_matching(text, "[", "]", ignore_escaped=True, return_array=True)
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
@@ -1086,20 +1086,23 @@ def _detail_text_to_placholders(
         indices = []
 
         for component in components:
-            if text[component[0][0]:component[0][1]] in [r"\\begin", r"\\end"]:
+            if text[component[0][0] : component[0][1]] in [r"\\begin", r"\\end"]:
                 continue
             indices += [[component[0][0], component[-1][1]]]
 
         indices = np.array(indices)
         return _apply_placeholders(text, indices, base, "command".upper(), ptype)
 
-    #TODO: add placeholder for partial commands
+    # TODO: add placeholder for partial commands
 
     raise ValueError(f"Unknown placeholder type: {ptype}")
 
 
 def text_to_placeholders(
-    text: str, ptypes: list[PlaceholderType], base: str = "TEXINDENT", contains_comments: bool = True
+    text: str,
+    ptypes: list[PlaceholderType],
+    base: str = "TEXINDENT",
+    contains_comments: bool = True,
 ) -> tuple[str, list[Placeholder]]:
     r"""
     Replace text with placeholders.

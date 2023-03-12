@@ -105,7 +105,9 @@ Bla bla bla. -TEXINDENT-NOINDENT-2- A last sentence.
         -TEXINDENT-COMMENT-1-
         """
 
-        ret, placeholders = texplain.text_to_placeholders(text, [texplain.PlaceholderType.comment, texplain.PlaceholderType.inline_comment])
+        ret, placeholders = texplain.text_to_placeholders(
+            text, [texplain.PlaceholderType.comment, texplain.PlaceholderType.inline_comment]
+        )
         self.assertEqual(ret, expect)
         self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
 
