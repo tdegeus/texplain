@@ -175,15 +175,34 @@ def find_matching(
 
 
 def _detail_find_option(
-    include: NDArray[np.bool_], index: int, braces: ArrayLike, ret: list[tuple[int]]
+    character: NDArray[np.bool_], index: int, braces: ArrayLike, ret: list[tuple[int]]
 ) -> list[tuple[int]]:
+    """
+    Find the matching brace and recursively, until the closing brace is followed by any character
+    that is not a space (or a comment).
+
+    :param character:
+        Per character of ``text``, if ``True`` the character is not a space (nor a comment).
+
+    :param index:
+        Index from where to start searching.
+        May be the index of the opening brace or any space (or comment) before it.
+
+    :param braces:
+        Sorted list of indices of the opening and closing braces.
+        The closing braces are indicated by a negative index.
+
+    :param ret:
+        List of tuples of the indices of the opening and closing braces.
+    """
+
     if len(braces) == 0:
         return ret
 
     if braces[0] < 0:
         return ret
 
-    if np.any(include[index : braces[0]]) and braces[0] - index > 1:
+    if np.any(character[index : braces[0]]) and braces[0] - index > 1:
         return ret
 
     stack = []
@@ -200,22 +219,41 @@ def _detail_find_option(
                 closing = -1 * trial
                 break
 
-    return _detail_find_option(include, closing + 1, braces[i + 1 :], ret + [(open, closing + 1)])
+    return _detail_find_option(character, closing + 1, braces[i + 1 :], ret + [(open, closing + 1)])
 
 
 def _find_option(
-    include: NDArray[np.bool_], index: int, opening: ArrayLike, closing: ArrayLike
+    character: NDArray[np.bool_], index: int, opening: ArrayLike, closing: ArrayLike
 ) -> list[int]:
+    """
+    Find indices of command options/arguments.
+
+    :param character:
+        Per character of ``text``, if ``True`` the character is not a space (nor a comment).
+
+    :param index:
+        Index from where to start searching.
+        May be the index of the opening brace or any space (or comment) before it.
+
+    :param opening: Index of all relevant opening brackets.
+    :param closing: Index of all relevant closing brackets.
+
+    :return: List of tuples with indices of opening and closing brackets of the options.
+    """
+
     if len(opening) == 0:
         return []
 
     braces = np.concatenate((opening, -np.array(closing)))
     braces = braces[np.argsort(np.abs(braces))]
-    return _detail_find_option(include, index, braces, [])
+    return _detail_find_option(character, index, braces, [])
 
 
 def find_command(
-    text: str, name: str = None, regex: str = r"(?<!\\)(\\)([a-zA-Z]+)(\*?)", is_comment: list[bool] = None
+    text: str,
+    name: str = None,
+    regex: str = r"(?<!\\)(\\)([a-zA-Z]+)(\*?)",
+    is_comment: list[bool] = None,
 ) -> list[list[tuple[int]]]:
     """
     Find indices of command, and their options, and arguments.
@@ -239,7 +277,7 @@ def find_command(
     if is_comment is None:
         is_comment = is_commented(text)
 
-    is_comment = np.append(is_comment, is_comment[-1]) # convention: end of range index used
+    is_comment = np.append(is_comment, is_comment[-1])  # convention: end of range index used
 
     cmd_start = []
     cmd_end = []
@@ -277,10 +315,9 @@ def find_command(
 
     ret = []
     whitespace = np.logical_or(is_comment, [i == " " or i == "\n" for i in text] + [False])
-    character = ~whitespace # any non-whitespace and non-comment character
+    character = ~whitespace  # any non-whitespace and non-comment character
 
     for icmd in range(len(cmd_end)):
-
         i_square_open = square_open[cmd_square_open >= icmd]
         i_square_closing = square_closing[cmd_square_closing >= icmd]
         i_curly_open = curly_open[cmd_curly_open >= icmd]
