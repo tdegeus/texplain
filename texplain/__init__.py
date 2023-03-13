@@ -33,7 +33,6 @@ class PlaceholderType(enum.Enum):
     command_component = enum.auto()
     noindent_block = enum.auto()
     verbatim = enum.auto()
-    special_indent = enum.auto()
 
 
 def find_opening(
