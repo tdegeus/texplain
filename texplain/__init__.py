@@ -597,26 +597,6 @@ def _apply_placeholders(
     return text, ret
 
 
-def _find_arguments(text: str, start: int = 0, braces: dict = None) -> tuple[int, int]:
-    """
-    Find the index at which there are no more optional or required arguments.
-
-    :param start: Index to start searching.
-    """
-
-    if braces is None:
-        braces = find_matching(text, "{", "}", ignore_escaped=True)
-        braces.update(find_matching(text, "[", "]", ignore_escaped=True))
-
-    while True:
-        index = re.search(r"(\s*)([\{\[])", text[start:])
-        if index is None:
-            return start
-        if index.start() != 0:
-            return start
-        start = braces[index.end() + start - 1] + 1
-
-
 def _detail_text_to_placholders(
     text: str, ptype: PlaceholderType, base: str, placeholders_comments
 ) -> tuple[str, list[Placeholder]]:
