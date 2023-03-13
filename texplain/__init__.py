@@ -396,407 +396,6 @@ def environments(text: str) -> list[str]:
     return list(set(ret))
 
 
-def _rstrip_lines(text: str) -> str:
-    """
-    ``.rstrip()`` for each line.
-
-    :param text: Text.
-    :return: Formatted text.
-    """
-    return "\n".join([line.rstrip() for line in text.splitlines()])
-
-
-def _lstrip_lines(text: str) -> str:
-    """
-    ``.rstrip()`` for each line.
-
-    :param text: Text.
-    :return: Formatted text.
-    """
-    return "\n".join([line.lstrip() for line in text.splitlines()])
-
-
-def _dedent(text: str, partial: list[PlaceholderType]) -> str:
-    """
-    Remove indentation.
-
-    #TODO: optional use of latexindent.pl to format tables
-    """
-
-    text, placholders = text_to_placeholders(text, partial, base="TEXDEDENT")
-
-    text = _lstrip_lines(text)
-
-    # keep common indentation table
-    # TODO: make more clever
-    for placeholder in placholders:
-        tmp = placeholder.content.splitlines()
-        placeholder.content = (
-            tmp[0].lstrip() + "\n" + textwrap.dedent("\n".join(tmp[1:-1])) + "\n" + tmp[-1].lstrip()
-        )
-        placeholder.space_front = "\n"
-
-    text = text_from_placeholders(text, placholders)
-
-    return text
-
-
-def _squashspaces(text: str, skip: list[PlaceholderType]) -> str:
-    """
-    Squash spaces.
-
-    :param text: Text.
-    :param skip: List of :py:class:`PlaceholderType` to skip.
-    :return: Formatted text.
-    """
-
-    text, placholders = text_to_placeholders(text, skip, base="TEXSQUASH")
-    text = re.sub(r"(\ +)", r" ", text)
-    text = text_from_placeholders(text, placholders)
-    return text
-
-
-# TODO: type ``placeholders`` = list[Placeholder]
-def _is_placeholder(text: str, placeholders) -> list[bool]:
-    """
-    Check per character if it is a placeholder.
-
-    :param text: Text.
-    :param placeholders: List of placeholders.
-    :return: List of booleans.
-    """
-
-    search_placeholder = list(set(list({i.search_placeholder for i in placeholders})))
-
-    ret = {}
-
-    for search in search_placeholder:
-        if search is None:
-            continue
-        indices = {text[i.span()[0] : i.span()[1]]: i.span()[0] for i in re.finditer(search, text)}
-        ret.update(indices)
-
-    names = [i.placeholder for i in placeholders]
-    ret = {key: value for key, value in ret.items() if key in names}
-
-    is_comment = np.zeros(len(text), dtype=bool)
-    for i in ret:
-        is_comment[ret[i] : ret[i] + len(i)] = True
-
-    return is_comment
-
-
-# TODO: type ``comment_placeholders`` = list[Placeholder]
-def _begin_end_one_separate_line(text: str, comment_placeholders) -> str:
-    r"""
-    Put ``\begin{...}`` and ``\\end{...}``, and ``\[`` and ``\]`` on separate lines.
-
-    :param text: Text.
-    :param comment_placeholder:
-        List of :py:class:`Placeholder` for comments.
-        Assumes that all comments are replaced by placeholders.
-
-    :return: Formatted text.
-    """
-
-    # begin all ``\begin{...}``and ``\end{...}`` on newline
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\begin\{)", r"\n\2", text)
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\end\{)", r"\n\2", text)
-
-    # begin all ``\[`` and ``\]`` on newline
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\\[)", r"\n\2", text)
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\\])", r"\n\2", text)
-
-    # end all ``\end{...}`` on newline
-    text = re.sub(r"(?<!\\)(\\end\{[^\s]*)(\ *\n?)", r"\1\n", text)
-
-    # end all ``\[`` and ``\]`` on newline
-    text = re.sub(r"(?<!\\)(\\\[)(\ *\n?)", r"\1\n", text)
-    text = re.sub(r"(?<!\\)(\\\])(\ *\n?)", r"\1\n", text)
-
-    # end all ``\begin{...}[...]{...}`` on newline
-    is_comment = _is_placeholder(text, comment_placeholders)
-
-    for env in environments(text):
-        if env in ["equation", "equation*", "align", "align*", "alignat", "alignat*", "split"]:
-            # math environments cannot have arguments
-            commands = [[i.span()] for i in re.finditer(rf"(?<!\\)(\\)(begin{{{env}}})", text)]
-        else:
-            commands = find_command(
-                text, regex=rf"(?<!\\)(\\)(begin{{{env}}})", is_comment=is_comment
-            )
-
-        commands = commands + [[[None, None]]]
-        split = [text[0 : commands[0][0][0]]]
-
-        for i in range(len(commands) - 1):
-            split += [
-                text[commands[i][0][0] : commands[i][-1][1]],
-                re.sub(r"^(\ *\n?)(.*)", r"\n\2", text[commands[i][-1][1] : commands[i + 1][0][0]]),
-            ]
-
-        text = "".join(split)
-
-    return text
-
-
-def indent(text: str, indent: str = "    ") -> str:
-    """
-    Indent text.
-
-    :param text: The text to indent.
-    :param indent: The indentation to use.
-    :return: The indented text.
-    """
-
-    # known limitation
-    if re.match(r"(?<!\\)(\$)(?<!\\)(\$)", text):
-        raise NotImplementedError("Panic: don't know to deal with double dollar signs")
-
-    # remove leading/trailing newlines, and trailing whitespace
-    text = _rstrip_lines(text.strip())
-
-    # "noindent" blocks are kept exactly as they are
-    text, placeholders_noindent = text_to_placeholders(
-        text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
-    )
-    # remove leading/trailing duplicate newlines
-    for placeholder in placeholders_noindent:
-        placeholder.space_front = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_front)
-        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
-        placeholder.space_back = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_back)
-        placeholder.space_back = re.sub(r"\ +", r" ", placeholder.space_back)
-
-    # comments: exclude from formatting
-    text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
-    text, placeholders_inline_comment = text_to_placeholders(text, [PlaceholderType.inline_comment])
-
-    # line comments: remove leading whitespace
-    for placeholder in placeholders_comment:
-        placeholder.space_front = re.sub(r"(\n*)(\ *)", r"\1", placeholder.space_front)
-        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
-
-    # inline comments: remove duplicate leading spaces
-    for placeholder in placeholders_inline_comment:
-        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
-
-    # remove multiple newlines, duplicate spaces, and any leading whitespace
-    text = re.sub(r"(\n\n+)", r"\n\n", text)
-    text = _dedent(text, partial=[PlaceholderType.tabular])
-    text = _squashspaces(text, skip=[PlaceholderType.tabular])
-
-    # fold inline math
-    text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
-    # inline math: always on one line
-    for placeholder in placeholders_inline_math:
-        placeholder.content = placeholder.content.replace("\n", " ")
-        placeholder.content = re.sub(r"(\ +)", r" ", placeholder.content)
-        placeholder.space_front = None
-        placeholder.space_back = None
-
-    # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
-    text = _begin_end_one_separate_line(text, placeholders_comment + placeholders_inline_comment)
-
-    # apply one sentence per line
-    text, placeholders_ignore = text_to_placeholders(
-        text, [PlaceholderType.math, PlaceholderType.tabular]
-    )
-    text, placeholders_commands = text_to_placeholders(
-        text,
-        [PlaceholderType.command],
-        placeholders_comments=placeholders_comment + placeholders_inline_comment,
-    )
-    text = _one_sentence_per_line(text)
-    for placeholder in placeholders_commands:
-        placeholder.content = _format_command(
-            placeholder.content, placeholders_comment + placeholders_inline_comment
-        )
-    text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
-
-    # place comment placeholders where they belong to do indentation
-    text = text_from_placeholders(text, placeholders_comment + placeholders_inline_comment)
-    text, placeholders_comment = text_to_placeholders(
-        text, [PlaceholderType.comment, PlaceholderType.inline_comment]
-    )
-
-    # fold math lines to simplify implementation
-    text, pl = text_to_placeholders(text, [PlaceholderType.math_line])
-    placeholders_comment += pl
-
-    # get line number of each character
-    lineno = np.empty(len(text), dtype=int)
-    i = 0
-    line = 0
-    for line, match in enumerate(re.finditer(r"\n", text)):
-        lineno[i : match.span()[0]] = line
-        i = match.span()[0]
-        lineno[i] = line
-        i += 1
-    lineno[i:] = line + 1
-
-    # initialize indentation level
-    indent_level = np.zeros(lineno[-1] + 1, dtype=int)
-
-    # add indentation to all lines between ``\begin{...}`` and ``\end{...}``
-    for env in environments(text) + [PlaceholderType.math]:
-        if env == PlaceholderType.math:
-            opening = r"\\\["
-            closing = r"\\\]"
-        elif env == "document":
-            continue
-        else:
-            opening = r"\\begin{" + env + r"}"
-            closing = r"\\end{" + env + r"}"
-        indices = find_matching(
-            text,
-            opening,
-            closing,
-            escape=False,
-            opening_match=1,
-            closing_match=0,
-            ignore_escaped=True,
-        )
-        for opening, closing in indices.items():
-            indent_level[np.unique(lineno[opening:closing])[1:]] += 1
-
-    # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
-    indices = find_matching(text, "{", "}", ignore_escaped=True, return_array=True)
-    for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
-        indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
-
-    # add indentation to all command options ``[`` and ``]`` containing at least one ``\n``
-    commands = find_command(text, is_comment=_is_placeholder(text, placeholders_comment))
-    indices = []
-    for command in commands:
-        if len(command) < 2:
-            continue
-        if text[command[1][0]] == "[":
-            indices += [command[1]]
-    indices = np.array(indices)
-    if indices.size > 0:
-        for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
-            indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
-
-    # apply indentation
-    text = text_from_placeholders(text, placeholders_comment)
-    text = text.splitlines()
-    for i in range(len(text)):
-        text[i] = indent_level[i] * indent + text[i]
-    text = "\n".join(text)
-
-    text = text_from_placeholders(text, placeholders_inline_math + placeholders_noindent)
-    return _rstrip_lines(text)
-
-
-def _detail_one_sentence_per_line(text: str) -> str:
-    """
-    ??
-    TODO: optional split characters such as ``;`` and ``:``
-    """
-
-    text = re.split(r"(?<=[\.\!\?])\s+", text)
-
-    for i in range(len(text)):
-        text[i] = re.sub("(\n[\\ \t]*)([\\w\\$\\(\\[\\`])", r" \2", text[i])
-
-    return "\n".join(text)
-
-
-def _one_sentence_per_line(
-    text: str,
-    fold: list[PlaceholderType] = [],
-    base: str = "TEXONEPERLINE",
-) -> str:
-    """
-    ??
-
-    TODO: Read and keep indentation level.
-
-    TODO: Store indentation level in commands replaced with placeholders.
-    Apply it to reformatting of multi-line commands.
-
-    TODO: Format multi-line commands recursively.
-    """
-
-    text, placeholders = text_to_placeholders(text, fold, base=base)
-
-    # format in blocks separated by blocks between ``(start, end)`` in ``skip``
-    skip = []
-
-    # \begin{...}
-    skip += [i.span() for i in re.finditer(r"(?<!\\)(\\)(begin\{\w*\}\s*)", text)]
-
-    # \end{...}
-    skip += [i.span() for i in re.finditer(r"(?<!\\)(\\)(end\{\w*\}\s*)", text)]
-
-    # multiple newlines
-    skip += [i.span() for i in re.finditer(r"(\n\n+)", text)]
-
-    if len(skip) == 0:
-        ret = _detail_one_sentence_per_line(text)
-    else:
-        skip = np.array(skip)
-        skip = _filter_nested(skip[skip[:, 0].argsort()])
-        keep = np.ones(skip.shape[0], dtype=bool)
-        for i in range(skip.shape[0] - 1):
-            if skip[i, 1] == skip[i + 1, 0]:
-                skip[i + 1, 0] = skip[i, 0]
-                keep[i] = False
-        skip = skip[keep]
-
-        ret = ""
-        start = 0
-        for s, e in skip:
-            ret += _detail_one_sentence_per_line(text[start:s])
-            ret += text[s:e]
-            start = e
-        ret += _detail_one_sentence_per_line(text[start:])
-
-    return text_from_placeholders(ret, placeholders)
-
-
-def _format_command(text: str, placeholders_comments, level: int = 0) -> str:
-    if not re.match(r".*\n.*", text):
-        return text
-
-    is_comment = _is_placeholder(text, placeholders_comments)
-    commands = find_command(text, is_comment=is_comment)
-    commands = [i for i in commands if len(i) > 1]
-
-    if len(commands) == 0:
-        return text
-
-    braces = []
-    for i in commands:
-        for j in i[1:]:
-            braces += [j]
-
-    braces = list(_filter_nested(np.array(braces))) + [[None, None]]
-
-    parts = [text[: braces[0][0]]]
-    for i in range(len(braces) - 1):
-        o, c = braces[i]
-        parts += [text[o:c], text[c : braces[i + 1][0]]]
-
-    for i, part in enumerate(parts):
-        if i % 2 == 1:
-            if not re.match(r".*\n.*", part):
-                continue
-            body = part[1:-1].strip()
-            body, placeholders = text_to_placeholders(
-                body, [PlaceholderType.command], f"TEXONEPERLINENESTED{level}"
-            )
-            body = _one_sentence_per_line(body, [])
-            for placeholder in placeholders:
-                placeholder.content = _format_command(
-                    placeholder.content, placeholders_comments, level + 1
-                )
-            body = text_from_placeholders(body, placeholders)
-            parts[i] = "\n".join([parts[i][0], body, parts[i][-1]])
-
-    return "".join(parts)
-
-
 class Placeholder:
     """
     Placeholder for text.
@@ -1278,6 +877,417 @@ def text_from_placeholders(
         text = placeholder.to_text(text)
 
     return text
+
+
+def _rstrip_lines(text: str) -> str:
+    """
+    ``.rstrip()`` for each line.
+
+    :param text: Text.
+    :return: Formatted text.
+    """
+    return "\n".join([line.rstrip() for line in text.splitlines()])
+
+
+def _lstrip_lines(text: str) -> str:
+    """
+    ``.rstrip()`` for each line.
+
+    :param text: Text.
+    :return: Formatted text.
+    """
+    return "\n".join([line.lstrip() for line in text.splitlines()])
+
+
+def _dedent(text: str, partial: list[PlaceholderType]) -> str:
+    """
+    Remove indentation.
+
+    :param text: Text.
+    :param partial:
+        List of :py:class:`PlaceholderType` to dedent partially.
+        If the number of lines is less than 3, ``textwrap.dedent`` is applied to all lines.
+        Otherwise, ``textwrap.dedent`` is applied to ``lines[1:-1]``;
+        the first and last lines are stripped.
+
+    :return: Formatted text.
+    """
+
+    text, placholders = text_to_placeholders(text, partial, base="TEXDEDENT")
+
+    text = _lstrip_lines(text)
+
+    # keep common indentation table
+    #TODO: make more clever
+    for placeholder in placholders:
+        tmp = placeholder.content.splitlines()
+        if len(tmp) <= 2:
+            placeholder.content = "\n".join(textwrap.dedent(tmp))
+        else:
+            placeholder.content = "\n".join([
+                tmp[0].lstrip(), textwrap.dedent("\n".join(tmp[1:-1])), tmp[-1].lstrip()
+            ])
+        placeholder.space_front = "\n"
+
+    text = text_from_placeholders(text, placholders)
+
+    return text
+
+
+def _squashspaces(text: str, skip: list[PlaceholderType]) -> str:
+    """
+    Squash spaces.
+
+    :param text: Text.
+    :param skip: List of :py:class:`PlaceholderType` to skip.
+    :return: Formatted text.
+    """
+
+    text, placholders = text_to_placeholders(text, skip, base="TEXSQUASH")
+    text = re.sub(r"(\ +)", r" ", text)
+    text = text_from_placeholders(text, placholders)
+    return text
+
+
+# TODO: type ``placeholders`` = list[Placeholder]
+def _is_placeholder(text: str, placeholders) -> list[bool]:
+    """
+    Check per character if it is a placeholder.
+
+    :param text: Text.
+    :param placeholders: List of placeholders.
+    :return: List of booleans.
+    """
+
+    search_placeholder = list(set(list({i.search_placeholder for i in placeholders})))
+
+    ret = {}
+
+    for search in search_placeholder:
+        if search is None:
+            continue
+        indices = {text[i.span()[0] : i.span()[1]]: i.span()[0] for i in re.finditer(search, text)}
+        ret.update(indices)
+
+    names = [i.placeholder for i in placeholders]
+    ret = {key: value for key, value in ret.items() if key in names}
+
+    is_comment = np.zeros(len(text), dtype=bool)
+    for i in ret:
+        is_comment[ret[i] : ret[i] + len(i)] = True
+
+    return is_comment
+
+
+# TODO: type ``comment_placeholders`` = list[Placeholder]
+def _begin_end_one_separate_line(text: str, comment_placeholders) -> str:
+    r"""
+    Put ``\begin{...}`` and ``\\end{...}``, and ``\[`` and ``\]`` on separate lines.
+
+    :param text: Text.
+    :param comment_placeholder:
+        List of :py:class:`Placeholder` for comments.
+        Assumes that all comments are replaced by placeholders.
+
+    :return: Formatted text.
+    """
+
+    # begin all ``\begin{...}``and ``\end{...}`` on newline
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\begin\{)", r"\n\2", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\end\{)", r"\n\2", text)
+
+    # begin all ``\[`` and ``\]`` on newline
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\\[)", r"\n\2", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\\])", r"\n\2", text)
+
+    # end all ``\end{...}`` on newline
+    text = re.sub(r"(?<!\\)(\\end\{[^\s]*)(\ *\n?)", r"\1\n", text)
+
+    # end all ``\[`` and ``\]`` on newline
+    text = re.sub(r"(?<!\\)(\\\[)(\ *\n?)", r"\1\n", text)
+    text = re.sub(r"(?<!\\)(\\\])(\ *\n?)", r"\1\n", text)
+
+    # end all ``\begin{...}[...]{...}`` on newline
+    is_comment = _is_placeholder(text, comment_placeholders)
+
+    for env in environments(text):
+        if env in ["equation", "equation*", "align", "align*", "alignat", "alignat*", "split"]:
+            # math environments cannot have arguments
+            commands = [[i.span()] for i in re.finditer(rf"(?<!\\)(\\)(begin{{{env}}})", text)]
+        else:
+            commands = find_command(
+                text, regex=rf"(?<!\\)(\\)(begin{{{env}}})", is_comment=is_comment
+            )
+
+        commands = commands + [[[None, None]]]
+        split = [text[0 : commands[0][0][0]]]
+
+        for i in range(len(commands) - 1):
+            split += [
+                text[commands[i][0][0] : commands[i][-1][1]],
+                re.sub(r"^(\ *\n?)(.*)", r"\n\2", text[commands[i][-1][1] : commands[i + 1][0][0]]),
+            ]
+
+        text = "".join(split)
+
+    return text
+
+
+def indent(text: str, indent: str = "    ") -> str:
+    """
+    Indent text.
+
+    :param text: The text to indent.
+    :param indent: The indentation to use.
+    :return: The indented text.
+    """
+
+    # known limitation
+    if re.match(r"(?<!\\)(\$)(?<!\\)(\$)", text):
+        raise NotImplementedError("Panic: don't know to deal with double dollar signs")
+
+    # remove leading/trailing newlines, and trailing whitespace
+    text = _rstrip_lines(text.strip())
+
+    # "noindent" blocks are kept exactly as they are
+    text, placeholders_noindent = text_to_placeholders(
+        text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
+    )
+    # remove leading/trailing duplicate newlines
+    for placeholder in placeholders_noindent:
+        placeholder.space_front = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_front)
+        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+        placeholder.space_back = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_back)
+        placeholder.space_back = re.sub(r"\ +", r" ", placeholder.space_back)
+
+    # comments: exclude from formatting
+    text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
+    text, placeholders_inline_comment = text_to_placeholders(text, [PlaceholderType.inline_comment])
+
+    # line comments: remove leading whitespace
+    for placeholder in placeholders_comment:
+        placeholder.space_front = re.sub(r"(\n*)(\ *)", r"\1", placeholder.space_front)
+        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+
+    # inline comments: remove duplicate leading spaces
+    for placeholder in placeholders_inline_comment:
+        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+
+    # remove multiple newlines, duplicate spaces, and any leading whitespace
+    text = re.sub(r"(\n\n+)", r"\n\n", text)
+    text = _dedent(text, partial=[PlaceholderType.tabular])
+    text = _squashspaces(text, skip=[PlaceholderType.tabular])
+
+    # fold inline math
+    text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
+    # inline math: always on one line
+    for placeholder in placeholders_inline_math:
+        placeholder.content = placeholder.content.replace("\n", " ")
+        placeholder.content = re.sub(r"(\ +)", r" ", placeholder.content)
+        placeholder.space_front = None
+        placeholder.space_back = None
+
+    # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
+    text = _begin_end_one_separate_line(text, placeholders_comment + placeholders_inline_comment)
+
+    # apply one sentence per line
+    text, placeholders_ignore = text_to_placeholders(
+        text, [PlaceholderType.math, PlaceholderType.tabular]
+    )
+    text, placeholders_commands = text_to_placeholders(
+        text,
+        [PlaceholderType.command],
+        placeholders_comments=placeholders_comment + placeholders_inline_comment,
+    )
+    text = _one_sentence_per_line(text)
+    for placeholder in placeholders_commands:
+        placeholder.content = _format_command(
+            placeholder.content, placeholders_comment + placeholders_inline_comment
+        )
+    text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
+
+    # place comment placeholders where they belong to do indentation
+    text = text_from_placeholders(text, placeholders_comment + placeholders_inline_comment)
+    text, placeholders_comment = text_to_placeholders(
+        text, [PlaceholderType.comment, PlaceholderType.inline_comment]
+    )
+
+    # fold math lines to simplify implementation
+    text, pl = text_to_placeholders(text, [PlaceholderType.math_line])
+    placeholders_comment += pl
+
+    # get line number of each character
+    lineno = np.empty(len(text), dtype=int)
+    i = 0
+    line = 0
+    for line, match in enumerate(re.finditer(r"\n", text)):
+        lineno[i : match.span()[0]] = line
+        i = match.span()[0]
+        lineno[i] = line
+        i += 1
+    lineno[i:] = line + 1
+
+    # initialize indentation level
+    indent_level = np.zeros(lineno[-1] + 1, dtype=int)
+
+    # add indentation to all lines between ``\begin{...}`` and ``\end{...}``
+    for env in environments(text) + [PlaceholderType.math]:
+        if env == PlaceholderType.math:
+            opening = r"\\\["
+            closing = r"\\\]"
+        elif env == "document":
+            continue
+        else:
+            opening = r"\\begin{" + env + r"}"
+            closing = r"\\end{" + env + r"}"
+        indices = find_matching(
+            text,
+            opening,
+            closing,
+            escape=False,
+            opening_match=1,
+            closing_match=0,
+            ignore_escaped=True,
+        )
+        for opening, closing in indices.items():
+            indent_level[np.unique(lineno[opening:closing])[1:]] += 1
+
+    # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
+    indices = find_matching(text, "{", "}", ignore_escaped=True, return_array=True)
+    for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
+        indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
+
+    # add indentation to all command options ``[`` and ``]`` containing at least one ``\n``
+    commands = find_command(text, is_comment=_is_placeholder(text, placeholders_comment))
+    indices = []
+    for command in commands:
+        if len(command) < 2:
+            continue
+        if text[command[1][0]] == "[":
+            indices += [command[1]]
+    indices = np.array(indices)
+    if indices.size > 0:
+        for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
+            indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
+
+    # apply indentation
+    text = text_from_placeholders(text, placeholders_comment)
+    text = text.splitlines()
+    for i in range(len(text)):
+        text[i] = indent_level[i] * indent + text[i]
+    text = "\n".join(text)
+
+    text = text_from_placeholders(text, placeholders_inline_math + placeholders_noindent)
+    return _rstrip_lines(text)
+
+
+def _detail_one_sentence_per_line(text: str) -> str:
+    """
+    ??
+    TODO: optional split characters such as ``;`` and ``:``
+    """
+
+    text = re.split(r"(?<=[\.\!\?])\s+", text)
+
+    for i in range(len(text)):
+        text[i] = re.sub("(\n[\\ \t]*)([\\w\\$\\(\\[\\`])", r" \2", text[i])
+
+    return "\n".join(text)
+
+
+def _one_sentence_per_line(
+    text: str,
+    fold: list[PlaceholderType] = [],
+    base: str = "TEXONEPERLINE",
+) -> str:
+    """
+    ??
+
+    TODO: Read and keep indentation level.
+
+    TODO: Store indentation level in commands replaced with placeholders.
+    Apply it to reformatting of multi-line commands.
+
+    TODO: Format multi-line commands recursively.
+    """
+
+    text, placeholders = text_to_placeholders(text, fold, base=base)
+
+    # format in blocks separated by blocks between ``(start, end)`` in ``skip``
+    skip = []
+
+    # \begin{...}
+    skip += [i.span() for i in re.finditer(r"(?<!\\)(\\)(begin\{\w*\}\s*)", text)]
+
+    # \end{...}
+    skip += [i.span() for i in re.finditer(r"(?<!\\)(\\)(end\{\w*\}\s*)", text)]
+
+    # multiple newlines
+    skip += [i.span() for i in re.finditer(r"(\n\n+)", text)]
+
+    if len(skip) == 0:
+        ret = _detail_one_sentence_per_line(text)
+    else:
+        skip = np.array(skip)
+        skip = _filter_nested(skip[skip[:, 0].argsort()])
+        keep = np.ones(skip.shape[0], dtype=bool)
+        for i in range(skip.shape[0] - 1):
+            if skip[i, 1] == skip[i + 1, 0]:
+                skip[i + 1, 0] = skip[i, 0]
+                keep[i] = False
+        skip = skip[keep]
+
+        ret = ""
+        start = 0
+        for s, e in skip:
+            ret += _detail_one_sentence_per_line(text[start:s])
+            ret += text[s:e]
+            start = e
+        ret += _detail_one_sentence_per_line(text[start:])
+
+    return text_from_placeholders(ret, placeholders)
+
+
+def _format_command(text: str, placeholders_comments, level: int = 0) -> str:
+    if not re.match(r".*\n.*", text):
+        return text
+
+    is_comment = _is_placeholder(text, placeholders_comments)
+    commands = find_command(text, is_comment=is_comment)
+    commands = [i for i in commands if len(i) > 1]
+
+    if len(commands) == 0:
+        return text
+
+    braces = []
+    for i in commands:
+        for j in i[1:]:
+            braces += [j]
+
+    braces = list(_filter_nested(np.array(braces))) + [[None, None]]
+
+    parts = [text[: braces[0][0]]]
+    for i in range(len(braces) - 1):
+        o, c = braces[i]
+        parts += [text[o:c], text[c : braces[i + 1][0]]]
+
+    for i, part in enumerate(parts):
+        if i % 2 == 1:
+            if not re.match(r".*\n.*", part):
+                continue
+            body = part[1:-1].strip()
+            body, placeholders = text_to_placeholders(
+                body, [PlaceholderType.command], f"TEXONEPERLINENESTED{level}"
+            )
+            body = _one_sentence_per_line(body, [])
+            for placeholder in placeholders:
+                placeholder.content = _format_command(
+                    placeholder.content, placeholders_comments, level + 1
+                )
+            body = text_from_placeholders(body, placeholders)
+            parts[i] = "\n".join([parts[i][0], body, parts[i][-1]])
+
+    return "".join(parts)
 
 
 def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
