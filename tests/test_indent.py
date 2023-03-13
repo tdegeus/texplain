@@ -52,7 +52,7 @@ class TestComment(unittest.TestCase):
 % b
  % c
 % d
-\begin{figure}
+\begin{figure}[htbp]
   %% e
  % f
 \end{figure}
@@ -64,7 +64,7 @@ class TestComment(unittest.TestCase):
 % b
 % c
 % d
-\begin{figure}
+\begin{figure}[htbp]
     %% e
     % f
 \end{figure}
@@ -712,6 +712,27 @@ Some text \emph{with some highlighting}. And two sentences.
         \end{something}
     }
 }
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+class TestIndentMath(unittest.TestCase):
+
+    def test_environment_a(self):
+        text = r"""
+Some text \[ a = b \] \[c = d\] some more text.
+        """
+
+        formatted = r"""
+Some text
+\[
+    a = b
+\]
+\[
+    c = d
+\]
+some more text.
         """
 
         ret = texplain.indent(text)

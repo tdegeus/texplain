@@ -458,44 +458,80 @@ def _squashspaces(text: str, skip: list[PlaceholderType]) -> str:
     return text
 
 
-def _begin_end_one_separate_line(text: str) -> str:
+# TODO: type ``placeholders`` = list[Placeholder]
+def _is_placeholder(text: str, placeholders) -> list[bool]:
+    """
+    Check per character if it is a placeholder.
+
+    :param text: Text.
+    :param placeholders: List of placeholders.
+    :return: List of booleans.
+    """
+
+    search_placeholder = list(set(list({i.search_placeholder for i in placeholders})))
+
+    ret = {}
+
+    for search in search_placeholder:
+        if search is None:
+            continue
+        indices = {text[i.span()[0] : i.span()[1]]: i.span()[0] for i in re.finditer(search, text)}
+        ret.update(indices)
+
+    names = [i.placeholder for i in placeholders]
+    ret = {key: value for key, value in ret.items() if key in names}
+
+    is_comment = np.zeros(len(text), dtype=bool)
+    for i in ret:
+        is_comment[ret[i] : ret[i] + len(i)] = True
+
+    return is_comment
+
+
+# TODO: type ``comment_placeholders`` = list[Placeholder]
+def _begin_end_one_separate_line(text: str, comment_placeholders) -> str:
     r"""
     Put ``\begin{...}`` and ``\\end{...}``, and ``\[`` and ``\]`` on separate lines.
 
     :param text: Text.
+    :param comment_placeholder: List of :py:class:`Placeholder` for comments.
     :return: Formatted text.
     """
 
     # begin all ``\begin{...}``and ``\end{...}`` on newline
-    # text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
     text = re.sub(r"(\n?\ *)(?<!\\)(\\begin\{)", r"\n\2", text)
     text = re.sub(r"(\n?\ *)(?<!\\)(\\end\{)", r"\n\2", text)
+
+    # begin all ``\[`` and ``\]`` on newline
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\\[)", r"\n\2", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\\])", r"\n\2", text)
+
     # end all ``\end{...}`` on newline
     text = re.sub(r"(?<!\\)(\\end\{[^\s]*)(\ *\n?)", r"\1\n", text)
-    # end all ``\begin{...}[...]{...}`` on newline
-    # - math
-    text, placeholders_math = text_to_placeholders(text, [PlaceholderType.math], base="TEXBEGINEND")
-    for placeholder in placeholders_math:
-        placeholder.content = re.sub(
-            r"(?<!\\)(\\begin{[^}]*})(\ *\n?)", r"\1\n", placeholder.content
-        )
-    # - non-math
-    for i in re.finditer(r"\\begin{[^}]*}.+", text):
-        start = i.span()[0] + 6
-        tmp = text[start:].split("\n", 1)[0]
-        start += _find_arguments(tmp)
-        if text[start] != "\n":
-            text = text[:start] + "\n" + text[start:]
-    # - replace math
-    text = text_from_placeholders(text, placeholders_math)
 
-    # place all ``\[`` and ``\]`` on a new line
-    text = re.sub(r"(\ +)(\\\[)", r"\n\2", text)
-    text = re.sub(r"(\w)(\\\[)", r"\1\n\2", text)
-    text = re.sub(r"(\\\[)(\ +)", r"\1\n", text)
-    text = re.sub(r"(\ +)(\\\])", r"\n\2", text)
-    text = re.sub(r"(\w)(\\\])", r"\1\n\2", text)
-    text = re.sub(r"(\\\])(\ +)", r"\1\n", text)
+    # end all ``\[`` and ``\]`` on newline
+    text = re.sub(r"(?<!\\)(\\\[)(\ *\n?)", r"\1\n", text)
+    text = re.sub(r"(?<!\\)(\\\])(\ *\n?)", r"\1\n", text)
+
+    # end all ``\begin{...}[...]{...}`` on newline
+    is_comment = _is_placeholder(text, comment_placeholders)
+
+    for env in environments(text):
+        if env in ["equation", "equation*", "align", "align*", "alignat", "alignat*", "split"]:
+            commands = [[i.span()] for i in re.finditer(rf"(?<!\\)(\\)(begin{{{env}}})", text)]
+        else:
+            commands = find_command(text, regex=rf"(?<!\\)(\\)(begin{{{env}}})", is_comment=is_comment)
+
+        commands = commands + [[[None, None]]]
+        split = [text[0: commands[0][0][0]]]
+
+        for i in range(len(commands) - 1):
+            split += [
+                text[commands[i][0][0]: commands[i][-1][1]],
+                re.sub(r"^(\ *\n?)(.*)", r"\n\2", text[commands[i][-1][1]: commands[i + 1][0][0]]),
+            ]
+
+        text = "".join(split)
 
     return text
 
@@ -520,7 +556,6 @@ def indent(text: str, indent: str = "    ") -> str:
     text, placeholders_noindent = text_to_placeholders(
         text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
     )
-
     # remove leading/trailing duplicate newlines
     for placeholder in placeholders_noindent:
         placeholder.space_front = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_front)
@@ -536,7 +571,7 @@ def indent(text: str, indent: str = "    ") -> str:
     for placeholder in placeholders_comment:
         placeholder.space_front = "\n"
 
-    # inline comments: remove duplicate spaces
+    # inline comments: remove duplicate leading spaces
     for placeholder in placeholders_inline_comment:
         placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
@@ -562,7 +597,7 @@ def indent(text: str, indent: str = "    ") -> str:
     # TODO: the latter can be combined with folding the has to be done for ``_begin_end_one_separate_line`` anyway
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
-    text = _begin_end_one_separate_line(text)
+    text = _begin_end_one_separate_line(text, placeholders_comment + placeholders_inline_comment)
 
     # apply one sentence per line
     # TODO: use partial command placeholders to do the formatting inside the command
@@ -1199,7 +1234,7 @@ def text_from_placeholders(
     search_placeholder = []
 
     if len(placeholders) > 1:
-        search_placeholder = list({i.search_placeholder for i in placeholders})
+        search_placeholder = list(set(list({i.search_placeholder for i in placeholders})))
 
     placeholders = {i.placeholder: i for i in placeholders}
 
