@@ -813,5 +813,26 @@ some more text.
         self.assertEqual(ret.strip(), formatted.strip())
 
 
+class TestCode(unittest.TestCase):
+    def test_code_d(self):
+        text = r"""
+% a comment
+\if foo \else bar \fi
+        """
+
+        formatted = r"""
+% a comment
+\if
+    foo
+\else
+    bar
+\fi
+        """
+
+        ret = texplain.indent(text)
+        print("ret = ", ret)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+
 if __name__ == "__main__":
     unittest.main()

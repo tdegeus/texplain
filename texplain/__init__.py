@@ -728,7 +728,7 @@ def text_to_placeholders(
     text: str,
     ptypes: list[PlaceholderType],
     base: str = "TEXINDENT",
-    placeholders_comments=None,
+    placeholders_comments: list[Placeholder] = None,
 ) -> tuple[str, list[Placeholder]]:
     r"""
     Replace text with placeholders.
@@ -742,6 +742,12 @@ def text_to_placeholders(
             ...
             % \end{noindent}
 
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-NOINDENT-1-
+
     -   :py:class:`PlaceholderType.verbatim`:
 
         .. code-block:: latex
@@ -750,17 +756,83 @@ def text_to_placeholders(
             ...
             \end{verbatim}
 
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-VERBATIM-1-
+
     -   :py:class:`PlaceholderType.comment`:
+
+        A comment on a line that contains no other text.
 
         .. code-block:: latex
 
             % ...
+
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-COMMENT-1-
+
+    -   :py:class:`PlaceholderType.inline_comment`:
+
+        A comment following some other text on the same line.
+
+        .. code-block:: latex
+
+            xxx % ...
+
+        is replaced with
+
+        .. code-block:: latex
+
+            xxx -BASE-INLINE-COMMENT-1-
 
     -   :py:class:`PlaceholderType.inline_math`:
 
         .. code-block:: latex
 
             $...$
+
+        (and other inline math environments) is replaced with
+
+        .. code-block:: latex
+
+            -BASE-INLINE-MATH-1-
+
+    -   :py:class:`PlaceholderType.math`:
+
+        .. code-block:: latex
+
+            \begin{equation}
+            ...
+            \end{equation}
+
+        (and other math environments) is replaced with
+
+        .. code-block:: latex
+
+            -BASE-MATH-1-
+
+    -   :py:class:`PlaceholderType.math_line`:
+
+        .. code-block:: latex
+
+            \begin{equation}
+            ...
+            ...
+            \end{equation}
+
+        (and other math environments) is replaced with
+
+        .. code-block:: latex
+
+            \begin{equation}
+            -BASE-MATH-LINE-1-
+            -BASE-MATH-LINE-2-
+            \end{equation}
 
     -   :py:class:`PlaceholderType.environment`:
 
@@ -769,6 +841,47 @@ def text_to_placeholders(
             \begin{...}
             ...
             \end{...}
+
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-ENVIRONMENT-1-
+
+    -   :py:class:`PlaceholderType.tabular`:
+
+        .. code-block:: latex
+
+            \begin{tabular}
+            ...
+            \end{tabular}
+
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-TABULAR-1-
+
+    -   :py:class:`PlaceholderType.command`:
+
+        .. code-block:: latex
+
+            \foo[...]{...}
+
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-COMMAND-1-
+
+    :param text: Text.
+    :param ptypes: List of placeholder types to replace
+    :param base: Base string for placeholders
+    :param placeholders_comments: List of placeholders that are comments (needed to search commands)
+    :return:
+        ``(text, placeholders)`` with
+        -  ``text``: Text with placeholders
+        -  ``placeholders``: List of placeholders
     """
 
     ret = []
@@ -786,6 +899,12 @@ def text_from_placeholders(
 ) -> str:
     """
     Replace placeholders with original text.
+    The whitespace before and after the placeholder is modified to the match
+    :py:attr:`Placeholder.space_front` and :py:attr:`Placeholder.space_back`.
+
+    :param text: Text with placeholders.
+    :param placeholders: List of placeholders.
+    :return: Text with content of the placeholders.
     """
 
     if len(placeholders) == 0:
@@ -922,7 +1041,11 @@ def _is_placeholder(text: str, placeholders: list[Placeholder]) -> list[bool]:
 
 def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placeholder]) -> str:
     r"""
-    Put ``\begin{...}`` and ``\\end{...}``, and ``\[`` and ``\]`` on separate lines.
+    Put :
+    -   ``\begin{...}`` and ``\\end{...}``
+    -   ``\[`` and ``\]``
+    -   ``\if`` and ``\else`` and ``\fi``
+    on separate lines.
 
     :param text: Text.
     :param comment_placeholder:
@@ -933,19 +1056,25 @@ def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placehold
     """
 
     # begin all ``\begin{...}``and ``\end{...}`` on newline
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\begin\{)", r"\n\2", text)
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\end\{)", r"\n\2", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\(begin|end)\{)", r"\n\2", text)
 
     # begin all ``\[`` and ``\]`` on newline
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\\[)", r"\n\2", text)
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\\])", r"\n\2", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\(\[|\]))", r"\n\2", text)
+
+    # begin all ``\if`` and ``\else`` and ``\fi`` on newline
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\if[\@\w]*)(\s|\n|$)", r"\n\2\3", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\fi)(\s|\n|$)", r"\n\2\3", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\else)(\s|\n|$)", r"\n\2\3", text)
 
     # end all ``\end{...}`` on newline
     text = re.sub(r"(?<!\\)(\\end\{[^\s]*)(\ *\n?)", r"\1\n", text)
 
     # end all ``\[`` and ``\]`` on newline
-    text = re.sub(r"(?<!\\)(\\\[)(\ *\n?)", r"\1\n", text)
-    text = re.sub(r"(?<!\\)(\\\])(\ *\n?)", r"\1\n", text)
+    text = re.sub(r"(?<!\\)(\\(\[|\]))(\ *\n?)", r"\1\n", text)
+
+    # end all ``\if`` and ``\else`` and ``\fi`` on newline
+    text = re.sub(r"(?<!\\)(\\if)([\@]*)(\ +\n?)", r"\1\2\n", text)
+    text = re.sub(r"(?<!\\)(\\(fi|else))(\ +\n?)", r"\1\n", text)
 
     # end all ``\begin{...}[...]{...}`` on newline
     for env in environments(text):
@@ -1110,6 +1239,15 @@ def indent(text: str, indent: str = "    ") -> str:
     indices = np.array(indices, dtype=int).reshape(-1, 2)
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
+
+    # add indentation for ``\if``, ``\else``, ``\fi``
+    indices = find_matching(text, r"(^|\n)(?<!\\)(\\if)([\@]*)(\n|$)", r"(^|\n)(?<!\\)(\\fi)(\n|$)", escape=False, opening_match=1,
+            closing_match=0,
+            ignore_escaped=True)
+    for opening, closing in indices.items():
+        indent_level[np.unique(lineno[opening-1:closing])[1:]] += 1
+    for match in re.finditer(r"(^|\n)(?<!\\)(\\else)(\n|$)", text):
+        indent_level[lineno[match.span(2)[0]]] -= 1
 
     # apply indentation
     text = text_from_placeholders(text, placeholders_comment)
