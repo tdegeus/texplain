@@ -756,8 +756,6 @@ def _detail_text_to_placholders(
         indices = np.array(indices)
         return _apply_placeholders(text, indices, base, "command".upper(), ptype)
 
-    # TODO: add placeholder for partial commands
-
     raise ValueError(f"Unknown placeholder type: {ptype}")
 
 
@@ -928,8 +926,7 @@ def _squashspaces(text: str, skip: list[PlaceholderType]) -> str:
     return text
 
 
-# TODO: type ``placeholders`` = list[Placeholder]
-def _is_placeholder(text: str, placeholders) -> list[bool]:
+def _is_placeholder(text: str, placeholders: list[Placeholder]) -> list[bool]:
     """
     Check per character if it is a placeholder.
 
@@ -958,8 +955,7 @@ def _is_placeholder(text: str, placeholders) -> list[bool]:
     return is_comment
 
 
-# TODO: type ``comment_placeholders`` = list[Placeholder]
-def _begin_end_one_separate_line(text: str, comment_placeholders) -> str:
+def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placeholder]) -> str:
     r"""
     Put ``\begin{...}`` and ``\\end{...}``, and ``\[`` and ``\]`` on separate lines.
 
