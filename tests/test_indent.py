@@ -669,7 +669,7 @@ This is the
 first sentence.
 
 And \footnote{
-A text with a \TG{
+A text with a \TG{ % some comment
     A note in
     a note.
 }
@@ -682,7 +682,38 @@ second sentence.
 This is the first sentence.
 
 And \footnote{
-    A text with a \TG{
+    A text with a \TG{ % some comment
+        A note in a note.
+    }
+    footnote.
+} the second sentence.
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_command_newline_nested_b(self):
+        text = r"""
+This is the
+first sentence.
+
+% some header
+And \footnote{
+A text with a \TG{ % some comment
+    A note in
+    a note.
+}
+footnote.
+} the
+second sentence.
+        """
+
+        formatted = r"""
+This is the first sentence.
+
+% some header
+And \footnote{
+    A text with a \TG{ % some comment
         A note in a note.
     }
     footnote.

@@ -575,7 +575,8 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # line comments: remove leading whitespace
     for placeholder in placeholders_comment:
-        placeholder.space_front = "\n"
+        placeholder.space_front = re.sub(r"(\n*)(\ *)", r"\1", placeholder.space_front)
+        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
     # inline comments: remove duplicate leading spaces
     for placeholder in placeholders_inline_comment:
@@ -599,11 +600,14 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _begin_end_one_separate_line(text, placeholders_comment + placeholders_inline_comment)
 
     # apply one sentence per line
-    # TODO: use partial command placeholders to do the formatting inside the command
-    # check if it should be touched should be very easy as ``{`` and ``[`` are the first character
-    text = _one_sentence_per_line(
-        text, fold=[PlaceholderType.math, PlaceholderType.tabular, PlaceholderType.command]
+    text, placeholders_ignore = text_to_placeholders(
+        text, [PlaceholderType.math, PlaceholderType.tabular]
     )
+    text, placeholders_commands = text_to_placeholders(text, [PlaceholderType.command])
+    text = _one_sentence_per_line(text)
+    for placeholder in placeholders_commands:
+        placeholder.content = _format_command(placeholder.content, placeholders_comment + placeholders_inline_comment)
+    text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
 
     # place comment placeholders where they belong to do indentation
     text = text_from_placeholders(text, placeholders_comment + placeholders_inline_comment)
@@ -690,12 +694,7 @@ def _detail_one_sentence_per_line(text: str) -> str:
 
 def _one_sentence_per_line(
     text: str,
-    fold: list[PlaceholderType] = [
-        PlaceholderType.math,
-        PlaceholderType.tabular,
-        PlaceholderType.inline_math,
-        PlaceholderType.command,
-    ],
+    fold: list[PlaceholderType] = [],
     base: str = "TEXONEPERLINE",
 ) -> str:
     """
@@ -743,38 +742,78 @@ def _one_sentence_per_line(
             start = e
         ret += _detail_one_sentence_per_line(text[start:])
 
-    # apply one sentence per line to multi-line commands
-    for placeholder in placeholders:
-        if placeholder.ptype == PlaceholderType.command:
-            if not re.match(r".*\n.*", placeholder.content):
-                continue
+    # # apply one sentence per line to multi-line commands
+    # for placeholder in placeholders:
+    #     if placeholder.ptype == PlaceholderType.command:
+    #         if not re.match(r".*\n.*", placeholder.content):
+    #             continue
 
-            braces = find_matching(
-                placeholder.content, "{", "}", ignore_escaped=True, return_array=True
-            ).tolist()
-            braces += find_matching(
-                placeholder.content, "[", "]", ignore_escaped=True, return_array=True
-            ).tolist()
-            braces = _filter_nested(np.array(braces))
-            braces[:, 1] += 1
+    #         braces = find_matching(
+    #             placeholder.content, "{", "}", ignore_escaped=True, return_array=True
+    #         ).tolist()
+    #         braces += find_matching(
+    #             placeholder.content, "[", "]", ignore_escaped=True, return_array=True
+    #         ).tolist()
+    #         braces = _filter_nested(np.array(braces))
+    #         braces[:, 1] += 1
 
-            content = [placeholder.content[: braces[0, 0]]]
-            for o, c in braces:
-                content += [placeholder.content[o:c]]
-            content += [placeholder.content[braces[-1, 1] :]]
+    #         content = [placeholder.content[: braces[0, 0]]]
+    #         for o, c in braces:
+    #             content += [placeholder.content[o:c]]
+    #         content += [placeholder.content[braces[-1, 1] :]]
 
-            for i in range(1, len(content) - 1):
-                if not re.match(r".*\n.*", content[i]):
-                    continue
-                body = content[i][1:-1].strip()
-                body = _one_sentence_per_line(
-                    body, [PlaceholderType.command], f"TEXONEPERLINENESTED{i}"
-                )
-                content[i] = content[i][0] + "\n" + body + "\n" + content[i][-1]
+    #         for i in range(1, len(content) - 1):
+    #             if not re.match(r".*\n.*", content[i]):
+    #                 continue
+    #             body = content[i][1:-1].strip()
+    #             body = _one_sentence_per_line(
+    #                 body, [PlaceholderType.command], f"TEXONEPERLINENESTED{i}"
+    #             )
+    #             content[i] = content[i][0] + "\n" + body + "\n" + content[i][-1]
 
-            placeholder.content = "".join(content)
+    #         placeholder.content = "".join(content)
 
     return text_from_placeholders(ret, placeholders)
+
+def _format_command(text: str, placeholders_comments, level: int = 0) -> str:
+
+    if not re.match(r".*\n.*", text):
+        return text
+
+    is_comment = _is_placeholder(text, placeholders_comments)
+    commands = find_command(text, is_comment=is_comment)
+    commands = [i for i in commands if len(i) > 1]
+
+    if len(commands) == 0:
+        return text
+
+    braces = []
+    for i in commands:
+        for j in i[1:]:
+            braces += [j]
+
+    braces = list(_filter_nested(np.array(braces))) + [[None, None]]
+
+    parts = [text[:braces[0][0]]]
+    for i in range(len(braces) - 1):
+        o, c = braces[i]
+        parts += [text[o:c], text[c:braces[i + 1][0]]]
+
+    for i, part in enumerate(parts):
+        if i % 2 == 1:
+            if not re.match(r".*\n.*", part):
+                continue
+            body = part[1:-1].strip()
+            body, placeholders = text_to_placeholders(body, [PlaceholderType.command], f"TEXONEPERLINENESTED{level}")
+            body = _one_sentence_per_line(body, [])
+            for placeholder in placeholders:
+                placeholder.content = _format_command(placeholder.content, placeholders_comments, level + 1)
+            body = text_from_placeholders(body, placeholders)
+            parts[i] = "\n".join([parts[i][0], body, parts[i][-1]])
+
+    return "".join(parts)
+
+
 
 
 class Placeholder:
