@@ -661,11 +661,18 @@ def indent(text: str, indent: str = "    ") -> str:
     for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
         indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
 
-    # add indentation to all lines between ``[`` and ``]`` containing at least one ``\n``
-    # TODO: use find_command to only consider ``[`` and ``]`` that are command options
-    indices = find_matching(text, "[", "]", ignore_escaped=True, return_array=True)
-    for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
-        indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
+    # add indentation to all command options ``[`` and ``]`` containing at least one ``\n``
+    commands = find_command(text, is_comment=_is_placeholder(text, placeholders_comment))
+    indices = []
+    for command in commands:
+        if len(command) < 2:
+            continue
+        if text[command[1][0]] == "[":
+            indices += [command[1]]
+    indices = np.array(indices)
+    if indices.size > 0:
+        for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
+            indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
 
     # apply indentation
     text = text_from_placeholders(text, placeholders_comment)
