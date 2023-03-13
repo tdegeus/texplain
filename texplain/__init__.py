@@ -119,8 +119,7 @@ def find_matching(
     :param escape: If ``True``,  ``opening`` and ``closing`` are escaped.
     :param opening_match: Select index of begin (``0``) or end (``1``) of opening bracket match.
     :param closing_match: Select index of begin (``0``) or end (``1``) of closing bracket match.
-    :param return_array: If ``True``, return array of indices instead of dictionary.
-    TODO: change to list(ret.items())
+    :param return_array: If ``True``, return NumPy-array of indices instead of dictionary.
     :return: Dictionary with ``{index_opening: index_closing}``
     """
 
@@ -656,9 +655,8 @@ def indent(text: str, indent: str = "    ") -> str:
             opening_match=1,
             closing_match=0,
             ignore_escaped=True,
-            return_array=True,
         )
-        for opening, closing in indices:
+        for opening, closing in indices.items():
             indent_level[np.unique(lineno[opening:closing])[1:]] += 1
 
     # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
@@ -955,7 +953,7 @@ def _filter_nested(indices: ArrayLike) -> ArrayLike:
 
 def _apply_placeholders(
     text: str,
-    indices: ArrayLike,
+    indices: NDArray[np.int_],
     base: str,
     name: str,
     ptype: PlaceholderType,
