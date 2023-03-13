@@ -30,7 +30,6 @@ class PlaceholderType(enum.Enum):
     math_line = enum.auto()
     environment = enum.auto()
     command = enum.auto()
-    command_component = enum.auto()
     noindent_block = enum.auto()
     verbatim = enum.auto()
 
