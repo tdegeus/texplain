@@ -918,15 +918,15 @@ def _dedent(text: str, partial: list[PlaceholderType]) -> str:
     text = _lstrip_lines(text)
 
     # keep common indentation table
-    #TODO: make more clever
+    # TODO: make more clever
     for placeholder in placholders:
         tmp = placeholder.content.splitlines()
         if len(tmp) <= 2:
             placeholder.content = "\n".join(textwrap.dedent(tmp))
         else:
-            placeholder.content = "\n".join([
-                tmp[0].lstrip(), textwrap.dedent("\n".join(tmp[1:-1])), tmp[-1].lstrip()
-            ])
+            placeholder.content = "\n".join(
+                [tmp[0].lstrip(), textwrap.dedent("\n".join(tmp[1:-1])), tmp[-1].lstrip()]
+            )
         placeholder.space_front = "\n"
 
     text = text_from_placeholders(text, placholders)
@@ -1493,7 +1493,15 @@ class TeX:
         """
         Return document.
         """
-        return "\n\n".join([self.preamble.strip(), self.start.strip(), self.main.strip(), self.postamble.strip()]) + "\n"
+        ret = "\n\n".join(
+            [
+                self.preamble.strip(),
+                self.start.strip(),
+                self.main.strip(),
+                self.postamble.strip(),
+            ]
+        )
+        return ret + "\n"
 
     def __str__(self):
         return self.get()
