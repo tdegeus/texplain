@@ -1140,10 +1140,9 @@ def indent(text: str, indent: str = "    ") -> str:
             continue
         if text[command[1][0]] == "[":
             indices += [command[1]]
-    indices = np.array(indices)
-    if indices.size > 0:
-        for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
-            indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
+    indices = np.array(indices, dtype=int).reshape(-1, 2)
+    for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
+        indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
 
     # apply indentation
     text = text_from_placeholders(text, placeholders_comment)
