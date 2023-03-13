@@ -723,6 +723,49 @@ And \footnote{
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_command_multi_nested(self):
+        text = r"""
+This is the
+first sentence.
+
+% some header
+\TG{ This is
+a sentence.
+} %
+{ And another
+sentence.
+\TG{with
+some}
+{
+more
+formatting
+to
+do
+}
+}
+        """
+
+        formatted = r"""
+This is the first sentence.
+
+% some header
+\TG{
+    This is a sentence.
+} %
+{
+    And another sentence.
+    \TG{
+        with some
+    }
+    {
+        more formatting to do
+    }
+}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_nested_environment(self):
         text = r"""
 \some{

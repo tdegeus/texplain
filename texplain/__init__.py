@@ -603,7 +603,7 @@ def indent(text: str, indent: str = "    ") -> str:
     text, placeholders_ignore = text_to_placeholders(
         text, [PlaceholderType.math, PlaceholderType.tabular]
     )
-    text, placeholders_commands = text_to_placeholders(text, [PlaceholderType.command])
+    text, placeholders_commands = text_to_placeholders(text, [PlaceholderType.command], placeholders_comments=placeholders_comment + placeholders_inline_comment)
     text = _one_sentence_per_line(text)
     for placeholder in placeholders_commands:
         placeholder.content = _format_command(placeholder.content, placeholders_comment + placeholders_inline_comment)
@@ -741,37 +741,6 @@ def _one_sentence_per_line(
             ret += text[s:e]
             start = e
         ret += _detail_one_sentence_per_line(text[start:])
-
-    # # apply one sentence per line to multi-line commands
-    # for placeholder in placeholders:
-    #     if placeholder.ptype == PlaceholderType.command:
-    #         if not re.match(r".*\n.*", placeholder.content):
-    #             continue
-
-    #         braces = find_matching(
-    #             placeholder.content, "{", "}", ignore_escaped=True, return_array=True
-    #         ).tolist()
-    #         braces += find_matching(
-    #             placeholder.content, "[", "]", ignore_escaped=True, return_array=True
-    #         ).tolist()
-    #         braces = _filter_nested(np.array(braces))
-    #         braces[:, 1] += 1
-
-    #         content = [placeholder.content[: braces[0, 0]]]
-    #         for o, c in braces:
-    #             content += [placeholder.content[o:c]]
-    #         content += [placeholder.content[braces[-1, 1] :]]
-
-    #         for i in range(1, len(content) - 1):
-    #             if not re.match(r".*\n.*", content[i]):
-    #                 continue
-    #             body = content[i][1:-1].strip()
-    #             body = _one_sentence_per_line(
-    #                 body, [PlaceholderType.command], f"TEXONEPERLINENESTED{i}"
-    #             )
-    #             content[i] = content[i][0] + "\n" + body + "\n" + content[i][-1]
-
-    #         placeholder.content = "".join(content)
 
     return text_from_placeholders(ret, placeholders)
 
@@ -977,7 +946,6 @@ def _apply_placeholders(
     name: str,
     ptype: PlaceholderType,
     filter_nested: bool = True,
-    contains_comments: bool = True,
 ) -> tuple[str, list[Placeholder]]:
     """
     Replace text with placeholders.
@@ -989,7 +957,6 @@ def _apply_placeholders(
     :param name: The name of the placeholder, see :py:class:`GeneratePlaceholder`.
     :param ptype: The type of placeholder, see :py:class:`PlaceholderType`.
     :param filter_nested: If ``True``, nested placeholders are skipped.
-    :param contains_comments: If ``False``, the use ensures that the text does not contain comments.
     :return:
         ``(text, placeholders)`` where:
         - ``text`` is the text with the placeholders.
@@ -1041,7 +1008,7 @@ def _find_arguments(text: str, start: int = 0, braces: dict = None) -> tuple[int
 
 
 def _detail_text_to_placholders(
-    text: str, ptype: PlaceholderType, base: str, contains_comments: bool
+    text: str, ptype: PlaceholderType, base: str, placeholders_comments
 ) -> tuple[str, list[Placeholder]]:
     """
     ??
@@ -1183,7 +1150,12 @@ def _detail_text_to_placholders(
         return text, ret
 
     if ptype == PlaceholderType.command:
-        components = find_command(text)
+        if placeholders_comments is not None:
+            is_comment = _is_placeholder(text, placeholders_comments)
+            components = find_command(text, is_comment=is_comment)
+        else:
+            components = find_command(text)
+
         indices = []
 
         for component in components:
@@ -1203,7 +1175,7 @@ def text_to_placeholders(
     text: str,
     ptypes: list[PlaceholderType],
     base: str = "TEXINDENT",
-    contains_comments: bool = True,
+    placeholders_comments = None,
 ) -> tuple[str, list[Placeholder]]:
     r"""
     Replace text with placeholders.
@@ -1244,15 +1216,12 @@ def text_to_placeholders(
             \begin{...}
             ...
             \end{...}
-
-
-    :param contains_comments: If ``False`` the user ensures that the text does not contain comments.
     """
 
     ret = []
 
     for ptype in ptypes:
-        text, placeholders = _detail_text_to_placholders(text, ptype, base, contains_comments)
+        text, placeholders = _detail_text_to_placholders(text, ptype, base, placeholders_comments)
         ret += placeholders
 
     return text, ret
