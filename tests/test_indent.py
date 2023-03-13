@@ -717,8 +717,8 @@ Some text \emph{with some highlighting}. And two sentences.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
-class TestIndentMath(unittest.TestCase):
 
+class TestIndentMath(unittest.TestCase):
     def test_environment_a(self):
         text = r"""
 Some text \[ a = b \] \[c = d\] some more text.

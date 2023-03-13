@@ -520,15 +520,17 @@ def _begin_end_one_separate_line(text: str, comment_placeholders) -> str:
         if env in ["equation", "equation*", "align", "align*", "alignat", "alignat*", "split"]:
             commands = [[i.span()] for i in re.finditer(rf"(?<!\\)(\\)(begin{{{env}}})", text)]
         else:
-            commands = find_command(text, regex=rf"(?<!\\)(\\)(begin{{{env}}})", is_comment=is_comment)
+            commands = find_command(
+                text, regex=rf"(?<!\\)(\\)(begin{{{env}}})", is_comment=is_comment
+            )
 
         commands = commands + [[[None, None]]]
-        split = [text[0: commands[0][0][0]]]
+        split = [text[0 : commands[0][0][0]]]
 
         for i in range(len(commands) - 1):
             split += [
-                text[commands[i][0][0]: commands[i][-1][1]],
-                re.sub(r"^(\ *\n?)(.*)", r"\n\2", text[commands[i][-1][1]: commands[i + 1][0][0]]),
+                text[commands[i][0][0] : commands[i][-1][1]],
+                re.sub(r"^(\ *\n?)(.*)", r"\n\2", text[commands[i][-1][1] : commands[i + 1][0][0]]),
             ]
 
         text = "".join(split)
