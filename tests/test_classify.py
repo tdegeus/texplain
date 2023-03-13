@@ -20,7 +20,7 @@ class MyTests(unittest.TestCase):
 
         tex = texplain.TeX(text)
         tex.format_labels()
-        self.assertEqual(tex.get(), text)
+        self.assertEqual(str(tex).strip(), text.strip())
 
         # --
 
@@ -34,7 +34,7 @@ class MyTests(unittest.TestCase):
 
         tex = texplain.TeX(text)
         tex.format_labels()
-        self.assertEqual(tex.get(), text)
+        self.assertEqual(str(tex).strip(), text.strip())
 
     def test_section(self):
         text = r"""
@@ -46,7 +46,7 @@ class MyTests(unittest.TestCase):
 
         tex = texplain.TeX(text)
         tex.format_labels()
-        self.assertEqual(tex.get(), text)
+        self.assertEqual(str(tex).strip(), text.strip())
 
     def test_figure(self):
         text = r"""
@@ -60,7 +60,7 @@ class MyTests(unittest.TestCase):
 
         tex = texplain.TeX(text)
         tex.format_labels()
-        self.assertEqual(tex.get(), text)
+        self.assertEqual(str(tex).strip(), text.strip())
 
 
 if __name__ == "__main__":

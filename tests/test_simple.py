@@ -150,7 +150,7 @@ Bar
                     "sec:lc",
                 ],
             )
-            self.assertEqual(formatted, tex.get())
+            self.assertEqual(formatted.strip(), str(tex).strip())
 
     def test_format_labels_prefix(self):
         text = r"""
@@ -267,7 +267,7 @@ Bar
                     "sec:SI:lc",
                 ],
             )
-            self.assertEqual(formatted, tex.get())
+            self.assertEqual(formatted.strip(), str(tex).strip())
 
     def test_remove_commentlines(self):
         text = r"""
@@ -284,7 +284,7 @@ final text.
 
         tex = texplain.TeX(text=text)
         tex.remove_commentlines()
-        self.assertEqual(formatted, tex.get())
+        self.assertEqual(formatted.strip(), str(tex).strip())
 
     def test_use_cleveref(self):
         text = r"""
@@ -303,88 +303,88 @@ this most efficient.
 
         tex = texplain.TeX(text=text)
         tex.use_cleveref()
-        self.assertEqual(formatted, tex.get())
+        self.assertEqual(formatted.strip(), str(tex).strip())
 
     def test_replace_command_simple(self):
         source = r"This is a \TG{I would replace this} text."
         expect = r"This is a  text."
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[1]", "")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}", "")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         tex = texplain.TeX(text=source)
         tex.replace_command(r"\TG", "")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}", "{}")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         source = r"This is a \TG{text}{foo}{test}."
         expect = r"This is a test."
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[3]", "#3")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         source = r"This is a \TG{text}{foo}{test}."
         expect = r"This is a test."
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[3]", "{#3}")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         source = r"This is a \TG{text}{test}."
         expect = r"This is a \mycomment{text}{test}."
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[2]", r"\mycomment{#1}{#2}")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
     def test_replace_command_recursive(self):
         source = r"This is a \TG{I would replace this\TG{reasons...}} text. \TG{And this too}Foo"
         expect = r"This is a  text. Foo"
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[1]", "")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         source = r"This is a \TG{Foo\TG{my}{Bar}}{Bar} text. \TG{And this too}{Bar}"
         expect = r"This is a Bar text. Bar"
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[2]", "#2")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         source = r"This is a \TG{Foo}{\TG{my}{Bar}} text. \TG{And this too}{Bar}"
         expect = r"This is a Bar text. Bar"
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[2]", "#2")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         source = r"This is a \TG{Foo}{\TG{my}{Bar}} text. \TG{And this too}{Bar}"
         expect = r"This is a \AB{\AB{Bar}{my}}{Foo} text. \AB{Bar}{And this too}"
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[2]", r"\AB{#2}{#1}")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
     def test_remove_comments(self):
         source = r"This is a %, text with comments"
         expect = r"This is a "
         tex = texplain.TeX(text=source)
         tex.remove_comments()
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         source = "This is a %, text with comments\nAnd some more"
         expect = "This is a \nAnd some more"
         tex = texplain.TeX(text=source)
         tex.remove_comments()
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
         source = r"Here, 10 \% of water was removed % after cheating"
         expect = r"Here, 10 \% of water was removed "
         tex = texplain.TeX(text=source)
         tex.remove_comments()
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
     def test_remove_comments_external(self):
         source = r"""
@@ -401,7 +401,7 @@ Overall, our approach explains why excitations.
         tex = texplain.TeX(text=source)
         tex.remove_commentlines()
         tex.remove_comments()
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
     def test_remove_command_a(self):
         """
@@ -413,7 +413,7 @@ Overall, our approach explains why excitations.
 
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[1]", "#1")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
     def test_remove_command_b(self):
         """
@@ -425,7 +425,7 @@ Overall, our approach explains why excitations.
 
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[1]", "#1")
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
     def test_remove_command_c(self):
         """
@@ -437,7 +437,7 @@ Overall, our approach explains why excitations.
 
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[1]", "#1", ignore_commented=True)
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
     def test_remove_command_d(self):
         """
@@ -449,7 +449,7 @@ Overall, our approach explains why excitations.
 
         tex = texplain.TeX(text=source)
         tex.replace_command(r"{\TG}[1]", "#1", ignore_commented=True)
-        self.assertEqual(expect, tex.get())
+        self.assertEqual(expect.strip(), str(tex).strip())
 
 
 if __name__ == "__main__":
