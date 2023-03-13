@@ -603,10 +603,16 @@ def indent(text: str, indent: str = "    ") -> str:
     text, placeholders_ignore = text_to_placeholders(
         text, [PlaceholderType.math, PlaceholderType.tabular]
     )
-    text, placeholders_commands = text_to_placeholders(text, [PlaceholderType.command], placeholders_comments=placeholders_comment + placeholders_inline_comment)
+    text, placeholders_commands = text_to_placeholders(
+        text,
+        [PlaceholderType.command],
+        placeholders_comments=placeholders_comment + placeholders_inline_comment,
+    )
     text = _one_sentence_per_line(text)
     for placeholder in placeholders_commands:
-        placeholder.content = _format_command(placeholder.content, placeholders_comment + placeholders_inline_comment)
+        placeholder.content = _format_command(
+            placeholder.content, placeholders_comment + placeholders_inline_comment
+        )
     text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
 
     # place comment placeholders where they belong to do indentation
@@ -751,8 +757,8 @@ def _one_sentence_per_line(
 
     return text_from_placeholders(ret, placeholders)
 
-def _format_command(text: str, placeholders_comments, level: int = 0) -> str:
 
+def _format_command(text: str, placeholders_comments, level: int = 0) -> str:
     if not re.match(r".*\n.*", text):
         return text
 
@@ -770,26 +776,28 @@ def _format_command(text: str, placeholders_comments, level: int = 0) -> str:
 
     braces = list(_filter_nested(np.array(braces))) + [[None, None]]
 
-    parts = [text[:braces[0][0]]]
+    parts = [text[: braces[0][0]]]
     for i in range(len(braces) - 1):
         o, c = braces[i]
-        parts += [text[o:c], text[c:braces[i + 1][0]]]
+        parts += [text[o:c], text[c : braces[i + 1][0]]]
 
     for i, part in enumerate(parts):
         if i % 2 == 1:
             if not re.match(r".*\n.*", part):
                 continue
             body = part[1:-1].strip()
-            body, placeholders = text_to_placeholders(body, [PlaceholderType.command], f"TEXONEPERLINENESTED{level}")
+            body, placeholders = text_to_placeholders(
+                body, [PlaceholderType.command], f"TEXONEPERLINENESTED{level}"
+            )
             body = _one_sentence_per_line(body, [])
             for placeholder in placeholders:
-                placeholder.content = _format_command(placeholder.content, placeholders_comments, level + 1)
+                placeholder.content = _format_command(
+                    placeholder.content, placeholders_comments, level + 1
+                )
             body = text_from_placeholders(body, placeholders)
             parts[i] = "\n".join([parts[i][0], body, parts[i][-1]])
 
     return "".join(parts)
-
-
 
 
 class Placeholder:
@@ -1182,7 +1190,7 @@ def text_to_placeholders(
     text: str,
     ptypes: list[PlaceholderType],
     base: str = "TEXINDENT",
-    placeholders_comments = None,
+    placeholders_comments=None,
 ) -> tuple[str, list[Placeholder]]:
     r"""
     Replace text with placeholders.
