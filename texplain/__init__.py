@@ -494,7 +494,10 @@ def _begin_end_one_separate_line(text: str, comment_placeholders) -> str:
     Put ``\begin{...}`` and ``\\end{...}``, and ``\[`` and ``\]`` on separate lines.
 
     :param text: Text.
-    :param comment_placeholder: List of :py:class:`Placeholder` for comments.
+    :param comment_placeholder:
+        List of :py:class:`Placeholder` for comments.
+        Assumes that all comments are replaced by placeholders.
+
     :return: Formatted text.
     """
 
@@ -518,6 +521,7 @@ def _begin_end_one_separate_line(text: str, comment_placeholders) -> str:
 
     for env in environments(text):
         if env in ["equation", "equation*", "align", "align*", "alignat", "alignat*", "split"]:
+            # math environments cannot have arguments
             commands = [[i.span()] for i in re.finditer(rf"(?<!\\)(\\)(begin{{{env}}})", text)]
         else:
             commands = find_command(
@@ -590,13 +594,6 @@ def indent(text: str, indent: str = "    ") -> str:
         placeholder.content = re.sub(r"(\ +)", r" ", placeholder.content)
         placeholder.space_front = None
         placeholder.space_back = None
-
-    # TODO: use find_command to place on a new line:
-    # - ``\begin{...}``/ ``\end{...}``
-    # - ``\[`` / ``\]``
-    # - ``{`` /  ``}`` separated by at least one a new line
-    # - ``[`` / ``]`` that are command options separated by at least one a new line
-    # TODO: the latter can be combined with folding the has to be done for ``_begin_end_one_separate_line`` anyway
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
     text = _begin_end_one_separate_line(text, placeholders_comment + placeholders_inline_comment)
