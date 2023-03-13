@@ -166,7 +166,7 @@ def find_matching(
         raise IndexError(f"No opening {opening} at {stack.pop():d}")
 
     if return_array:
-        return _indices2array(ret)
+        return np.array(list(ret.items()), dtype=int).reshape(-1, 2)
 
     return ret
 
@@ -175,11 +175,12 @@ def _detail_find_option(
     character: NDArray[np.bool_], index: int, braces: ArrayLike, ret: list[tuple[int]]
 ) -> list[tuple[int]]:
     """
-    Find the matching brace and recursively, until the closing brace is followed by any character
+    Find the matching brace.
+    This function is recursively called until the closing brace is followed by any character
     that is not a space (or a comment).
 
     :param character:
-        Per character of ``text``, if ``True`` the character is not a space (nor a comment).
+        Per character, ``True`` if the character is not a space (nor a comment).
 
     :param index:
         Index from where to start searching.
@@ -226,7 +227,7 @@ def _find_option(
     Find indices of command options/arguments.
 
     :param character:
-        Per character of ``text``, if ``True`` the character is not a space (nor a comment).
+        Per character, ``True`` if the character is not a space (nor a comment).
 
     :param index:
         Index from where to start searching.
@@ -253,13 +254,13 @@ def find_command(
     is_comment: list[bool] = None,
 ) -> list[list[tuple[int]]]:
     """
-    Find indices of command, and their options, and arguments.
+    Find indices of commands, and their options, and arguments.
 
     :param text: Text.
     :param name: Name of command without backslash (e.g. ``"textbf"``).
     :param regex: Regex to match search the command name.
     :param is_comment:
-        Per character of ``text``, if ``True``, the character is part of a comment.
+        Per character of ``text``, ``True`` if the character is part of a comment.
         Default: search for comments using :py:func:`is_commented`.
 
     :return: List of indices of commands and their arguments:
@@ -347,21 +348,6 @@ def find_command(
 
         ret += [item]
 
-    return ret
-
-
-def _indices2array(indices: dict[int]):
-    """
-    Convert indices for :py:func:`find_matching` to array.
-
-    :param indices: Dictionary of indices ``{a: b, ...}``
-    :return: Array of indices ``[[a, b], ...]``
-    """
-
-    ret = np.zeros((len(indices), 2), dtype=int)
-    for i, opening in enumerate(indices):
-        ret[i, 0] = opening
-        ret[i, 1] = indices[opening]
     return ret
 
 
@@ -551,7 +537,7 @@ def _filter_nested(indices: ArrayLike) -> ArrayLike:
 
 def _apply_placeholders(
     text: str,
-    indices: NDArray[np.int_],
+    indices: NDArray[np.int_] | list[tuple[int, int]],
     base: str,
     name: str,
     ptype: PlaceholderType,
@@ -559,9 +545,8 @@ def _apply_placeholders(
 ) -> tuple[str, list[Placeholder]]:
     """
     Replace text with placeholders.
-    Note: nested placeholders are skipped.
 
-    :param text: The text to consider.
+    :param text: Text to consider.
     :param indices: A list of start and end indices of the text to be replaced by a placeholder.
     :param base: The base of the placeholder, see :py:class:`GeneratePlaceholder`.
     :param name: The name of the placeholder, see :py:class:`GeneratePlaceholder`.
@@ -578,6 +563,8 @@ def _apply_placeholders(
 
     if len(indices) == 0:
         return text, []
+
+    indices = np.array(indices, dtype=int).reshape(-1, 2)
 
     if filter_nested:
         indices = _filter_nested(indices)
@@ -601,7 +588,16 @@ def _detail_text_to_placholders(
     text: str, ptype: PlaceholderType, base: str, placeholders_comments
 ) -> tuple[str, list[Placeholder]]:
     """
-    ??
+    Replace text with a specific placeholder type.
+
+    :param text: Text to consider.
+    :param ptype: The type of placeholder, see :py:class:`PlaceholderType`.
+    :param base: The base of the placeholder, see :py:class:`GeneratePlaceholder`.
+    :param placeholders_comments: A list comment placeholders.
+    :return:
+        ``(text, placeholders)`` where:
+        - ``text`` is the text with the placeholders.
+        - ``placeholders`` is a list of the placeholders that includes their original content.
     """
 
     if ptype == PlaceholderType.noindent_block:
@@ -639,16 +635,10 @@ def _detail_text_to_placholders(
 
     if ptype == PlaceholderType.inline_comment:
         indices = [i.span(2) for i in re.finditer(r"([^\ ][\ ]*)(?<!\\)(%.*)", text)]
-        if len(indices) == 0:
-            return text, []
-        indices = np.array(indices)
         return _apply_placeholders(text, indices, base, "inline-comment".upper(), ptype, False)
 
     if ptype == PlaceholderType.comment:
         indices = [i.span(3) for i in re.finditer(r"(^|\n)(\ *)(?<!\\)(%.*)", text)]
-        if len(indices) == 0:
-            return text, []
-        indices = np.array(indices)
         return _apply_placeholders(text, indices, base, "comment".upper(), ptype, False)
 
     if ptype == PlaceholderType.environment:
@@ -666,14 +656,10 @@ def _detail_text_to_placholders(
                 r"\\end{" + env + "}",
                 escape=False,
                 closing_match=1,
-                return_array=True,
-            ).tolist()
-        indices += find_matching(
-            text, r"\\\[", r"\\\]", escape=False, closing_match=1, return_array=True
-        ).tolist()
+            ).items()
+        indices += find_matching(text, r"\\\[", r"\\\]", escape=False, closing_match=1).items()
 
         if ptype == PlaceholderType.math:
-            indices = np.array(indices)
             return _apply_placeholders(text, indices, base, "math".upper(), ptype)
 
         all_indices = []
@@ -690,26 +676,7 @@ def _detail_text_to_placholders(
                 if not skip:
                     all_indices += [[starting, starting + n]]
                 starting += n + 1
-        indices = np.array(all_indices)
-        return _apply_placeholders(text, indices, base, "math-line".upper(), ptype)
-
-    if ptype == PlaceholderType.math_line:
-        consider = []
-        for env in ["equation", "equation*", "align", "align*"]:
-            consider += find_matching(
-                text,
-                r"\\begin{" + env + "}",
-                r"\\end{" + env + "}",
-                escape=False,
-                closing_match=1,
-                return_array=True,
-            ).tolist()
-        consider += find_matching(
-            text, r"\\\[", r"\\\]", escape=False, closing_match=1, return_array=True
-        ).tolist()
-
-        indices = np.array(indices)
-        return _apply_placeholders(text, indices, base, "math".upper(), ptype, False)
+        return _apply_placeholders(text, all_indices, base, "math-line".upper(), ptype)
 
     if ptype == PlaceholderType.inline_math:
         ret = []
@@ -717,7 +684,7 @@ def _detail_text_to_placholders(
         indices = []
         for i in re.finditer(pattern, text):
             indices.append(i.span()[0])
-        indices = np.array(indices).reshape((-1, 2))
+        indices = np.array(indices, dtype=int).reshape((-1, 2))
         indices[:, 1] += 1
         text, placeholders = _apply_placeholders(text, indices, base, "inlinemath".upper(), ptype)
         for placeholder in placeholders:
@@ -747,13 +714,11 @@ def _detail_text_to_placholders(
             components = find_command(text)
 
         indices = []
-
         for component in components:
             if text[component[0][0] : component[0][1]] in [r"\\begin", r"\\end"]:
                 continue
             indices += [[component[0][0], component[-1][1]]]
 
-        indices = np.array(indices)
         return _apply_placeholders(text, indices, base, "command".upper(), ptype)
 
     raise ValueError(f"Unknown placeholder type: {ptype}")
