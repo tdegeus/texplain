@@ -81,7 +81,7 @@ def find_commented(text: str) -> list[list[int]]:
     return ret
 
 
-def is_commented(text: str) -> NDArray[bool]:
+def is_commented(text: str) -> NDArray[np.bool_]:
     """
     Return array that lists per character if it corresponds to commented text.
 
@@ -983,13 +983,12 @@ def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placehold
     text = re.sub(r"(?<!\\)(\\\])(\ *\n?)", r"\1\n", text)
 
     # end all ``\begin{...}[...]{...}`` on newline
-    is_comment = _is_placeholder(text, comment_placeholders)
-
     for env in environments(text):
         if env in ["equation", "equation*", "align", "align*", "alignat", "alignat*", "split"]:
             # math environments cannot have arguments
             commands = [[i.span()] for i in re.finditer(rf"(?<!\\)(\\)(begin{{{env}}})", text)]
         else:
+            is_comment = _is_placeholder(text, comment_placeholders)
             commands = find_command(
                 text, regex=rf"(?<!\\)(\\)(begin{{{env}}})", is_comment=is_comment
             )
@@ -1016,6 +1015,9 @@ def indent(text: str, indent: str = "    ") -> str:
     :param indent: The indentation to use.
     :return: The indented text.
     """
+
+    if len(text) == 0:
+        return text
 
     # known limitation
     if re.match(r"(?<!\\)(\$)(?<!\\)(\$)", text):
