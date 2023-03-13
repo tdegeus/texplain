@@ -1492,26 +1492,11 @@ class TeX:
     def get(self):
         """
         Return document.
-        #TODO: improve
         """
-        tmp_start = self.start
-        tmp_main = self.main
+        return "\n\n".join([self.preamble.strip(), self.start.strip(), self.main.strip(), self.postamble.strip()]) + "\n"
 
-        if len(tmp_start) > 0:
-            if tmp_start[-1] != "\n":
-                tmp_start += "\n"
-
-            if tmp_start[-2] != "\n":
-                tmp_start += "\n"
-
-        if len(self.postamble) > 0:
-            if tmp_main[-1] != "\n":
-                tmp_main += "\n"
-
-            if tmp_main[-2] != "\n":
-                tmp_main += "\n"
-
-        return self.preamble + tmp_start + tmp_main + self.postamble
+    def __str__(self):
+        return self.get()
 
     def changed(self):
         """
@@ -2138,7 +2123,7 @@ def texcleanup(args: list[str]):
 
         if tex.changed():
             with open(file, "w") as file:
-                file.write(tex.get())
+                file.write(str(tex))
 
 
 def _texcleanup_cli():
@@ -2236,7 +2221,7 @@ def texplain(args: list[str]):
         output = os.path.join(new.dirname, new.filename)
 
     with open(output, "w") as file:
-        file.write(new.get())
+        file.write(str(new))
 
 
 def _texplain_cli():
@@ -2271,8 +2256,10 @@ def texindent_cli(args: list[str]):
         orig = filepath.read_text()
 
         tex = TeX(orig)
+        tex.preamble = indent(tex.preamble)
         tex.main = indent(tex.main)
-        formatted = tex.get()
+        tex.postamble = indent(tex.postamble)
+        formatted = str(tex)
 
         if formatted != orig:
             filepath.write_text(formatted)
