@@ -52,37 +52,37 @@ class TestPlaceholders(unittest.TestCase):
         """
 
         text = r"""
-        This is a text
-        %\begin{noindent}
-        should be ignored
-        %\end{noindent}
-        More text.
+This is a text
+%\begin{noindent}
+should be ignored
+%\end{noindent}
+More text.
 
-        Bla bla bla.
-        % \begin{noindent}
-        should also be ignored
-        % \end{noindent}
-        A last sentence.
+Bla bla bla.
+% \begin{noindent}
+should also be ignored
+% \end{noindent}
+A last sentence.
         """
 
         expect = r"""
-        This is a text
-        -TEXINDENT-NOINDENT-1-
-        More text.
+This is a text
+-TEXINDENT-NOINDENT-1-
+More text.
 
-        Bla bla bla.
-        -TEXINDENT-NOINDENT-2-
-        A last sentence.
+Bla bla bla.
+-TEXINDENT-NOINDENT-2-
+A last sentence.
         """
 
         change_indent = r"""
-        This is a text -TEXINDENT-NOINDENT-1- More text.
+This is a text -TEXINDENT-NOINDENT-1- More text.
 
-        Bla bla bla. -TEXINDENT-NOINDENT-2- A last sentence.
+Bla bla bla. -TEXINDENT-NOINDENT-2- A last sentence.
         """
 
         ret, placeholders = texplain.text_to_placeholders(
-            text, [texplain.PlacholderType.noindent_block]
+            text, [texplain.PlaceholderType.noindent_block]
         )
         self.assertEqual(ret, expect)
         self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
@@ -100,12 +100,14 @@ class TestPlaceholders(unittest.TestCase):
         """
 
         expect = """
-        This is a text-TEXINDENT-COMMENT-1-
+        This is a text-TEXINDENT-INLINE-COMMENT-1-
         More text.
-        -TEXINDENT-COMMENT-2-
+        -TEXINDENT-COMMENT-1-
         """
 
-        ret, placeholders = texplain.text_to_placeholders(text, [texplain.PlacholderType.comment])
+        ret, placeholders = texplain.text_to_placeholders(
+            text, [texplain.PlaceholderType.comment, texplain.PlaceholderType.inline_comment]
+        )
         self.assertEqual(ret, expect)
         self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
 
@@ -148,7 +150,7 @@ class TestPlaceholders(unittest.TestCase):
         """
 
         ret, placeholders = texplain.text_to_placeholders(
-            text, [texplain.PlacholderType.environment]
+            text, [texplain.PlaceholderType.environment]
         )
         self.assertEqual(ret, expect)
         self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
@@ -168,18 +170,18 @@ class TestPlaceholders(unittest.TestCase):
 
         expect = """
         This is a text
-        -TEXINDENT-MATH-1-.
+        -TEXINDENT-INLINEMATH-1-.
         More text.
-        -TEXINDENT-MATH-2-.
+        -TEXINDENT-INLINEMATH-2-.
         Even more text.
-        -TEXINDENT-MATH-3-.
+        -TEXINDENT-INLINEMATH-3-.
         Bla bla bla.
-        -TEXINDENT-MATH-4-.
+        -TEXINDENT-INLINEMATH-4-.
         A last sentence.
         """
 
         ret, placeholders = texplain.text_to_placeholders(
-            text, [texplain.PlacholderType.inline_math]
+            text, [texplain.PlaceholderType.inline_math]
         )
         self.assertEqual(ret, expect)
         self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
@@ -203,7 +205,20 @@ class TestPlaceholders(unittest.TestCase):
         some -TEXINDENT-COMMAND-4-
         """
 
-        ret, placeholders = texplain.text_to_placeholders(text, [texplain.PlacholderType.command])
+        ret, placeholders = texplain.text_to_placeholders(text, [texplain.PlaceholderType.command])
+        self.assertEqual(ret, expect)
+        self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
+
+    def test_command_a(self):
+        text = r"""
+        \section*{Foo} bar
+        """
+
+        expect = """
+        -TEXINDENT-COMMAND-1- bar
+        """
+
+        ret, placeholders = texplain.text_to_placeholders(text, [texplain.PlaceholderType.command])
         self.assertEqual(ret, expect)
         self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
 

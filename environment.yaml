@@ -3,10 +3,8 @@ channels:
 dependencies:
 - click
 - furo
-- latexindent.pl
 - numpy
 - python
-- pyyaml
 - setuptools_scm
 - sphinx
 - sphinx-argparse
