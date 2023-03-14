@@ -3,7 +3,7 @@ import unittest
 import texplain
 
 
-class TestLatexIndent(unittest.TestCase):
+class TestLatexIndentOneSentencePerLine(unittest.TestCase):
     """
     From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
     """
@@ -2329,6 +2329,262 @@ a verbatim environment; and beyond!
 This is the fourth sentence!
 This is the fifth sentence?
 This is the sixth sentence.
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+
+class TestLatexIndentCommands(unittest.TestCase):
+    """
+    https://github.com/cmhughes/latexindent.pl/blob/main/test-cases/commands
+    """
+
+    @unittest.SkipTest
+    def test_stars_from_documentation(self):
+        """
+        TDOO: allow special formatting or use latexindent.pl as plugin
+        """
+
+        text = r"""
+\newtcolorbox{stars}{%
+enhanced jigsaw,
+breakable, % allow page breaks
+left=0cm,
+top=0cm,
+before skip=0.2cm,
+boxsep=0cm,
+frame style={draw=none,fill=none}, % hide the default frame
+colback=white,
+overlay={
+\draw[inner sep=0,minimum size=rnd*15pt+2pt]
+decorate[decoration={stars,segment length=2cm}] {
+decorate[decoration={zigzag,segment length=2cm,amplitude=0.3cm}] {
+([xshift=-.5cm,yshift=0.1cm]frame.south west) --  ([xshift=-.5cm,yshift=0.4cm]frame.north west)
+}};
+\draw[inner sep=0,minimum size=rnd*15pt+2pt]
+decorate[decoration={stars,segment length=2cm}] {
+decorate[decoration={zigzag,segment length=2cm,amplitude=0.3cm}] {
+([xshift=.75cm,yshift=0.1cm]frame.south east) --  ([xshift=.75cm,yshift=0.6cm]frame.north east)
+}};
+\node[anchor=north west,outer sep=2pt,opacity=0.25] at ([xshift=-4.25cm]frame.north west) {\resizebox{3cm}{!}{\faGithub}};
+},
+% paragraph skips obeyed within tcolorbox
+parbox=false,
+}
+        """
+
+        formatted = r"""
+\newtcolorbox{stars}{%
+    enhanced jigsaw,
+    breakable, % allow page breaks
+    left=0cm,
+    top=0cm,
+    before skip=0.2cm,
+    boxsep=0cm,
+    frame style={draw=none,fill=none}, % hide the default frame
+    colback=white,
+    overlay={
+            \draw[inner sep=0,minimum size=rnd*15pt+2pt]
+            decorate[decoration={stars,segment length=2cm}] {
+                    decorate[decoration={zigzag,segment length=2cm,amplitude=0.3cm}] {
+                            ([xshift=-.5cm,yshift=0.1cm]frame.south west) --  ([xshift=-.5cm,yshift=0.4cm]frame.north west)
+                        }};
+            \draw[inner sep=0,minimum size=rnd*15pt+2pt]
+            decorate[decoration={stars,segment length=2cm}] {
+                    decorate[decoration={zigzag,segment length=2cm,amplitude=0.3cm}] {
+                            ([xshift=.75cm,yshift=0.1cm]frame.south east) --  ([xshift=.75cm,yshift=0.6cm]frame.north east)
+                        }};
+            \node[anchor=north west,outer sep=2pt,opacity=0.25] at ([xshift=-4.25cm]frame.north west) {\resizebox{3cm}{!}{\faGithub}};
+        },
+    % paragraph skips obeyed within tcolorbox
+    parbox=false,
+}
+        """
+
+        ret = texplain.indent(text)
+        # import pathlib
+        # pathlib.Path('tmp_ret.tex').write_text(ret)
+        # pathlib.Path('tmp_formatted.tex').write_text(formatted)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    @unittest.SkipTest
+    def test_pstrics1(self):
+        """
+        TODO: determine what the proper formatting should be
+        """
+
+        text = r"""
+% arara: indent: {overwrite: true, silent: on}
+\documentclass[pstricks]{standalone}
+\usepackage{pstricks,multido}
+
+\def\Bottle#1{{\pscustom[linewidth=2pt]{%
+                \rotate{#1}
+                \psline(-1,3.5)(-1,4)(1,4)(1,3.5)
+                \pscurve(3,2)(1,0)\psline(-1,0)
+                \pscurve(-3,2)(-1,3.5)}}}
+
+\def\BottleWithWater(#1)#2{%
+    \rput[c]{#2}(#1){%
+        \rput{*0}(0,0){%
+            \psclip{\Bottle{#2}}
+            \psframe*[linecolor=gray](-6,-2)(6,2)
+            \endpsclip}\rput{*0}(0,0){\Bottle{#2}}}}
+
+\begin{document}
+
+\multido{\iA=-45+5}{19}{%
+    \begin{pspicture}(-2.5,-0.5)(6,5.5)
+        \BottleWithWater(1.5,1){\iA}
+    \end{pspicture}
+}
+
+\end{document}
+        """
+
+        formatted = r"""
+% arara: indent: {overwrite: true, silent: on}
+\documentclass[pstricks]{standalone}
+\usepackage{pstricks,multido}
+
+\def\Bottle#1{{\pscustom[linewidth=2pt]{%
+                \rotate{#1}
+                \psline(-1,3.5)(-1,4)(1,4)(1,3.5)
+                \pscurve(3,2)(1,0)\psline(-1,0)
+                \pscurve(-3,2)(-1,3.5)}}}
+
+\def\BottleWithWater(#1)#2{%
+    \rput[c]{#2}(#1){%
+        \rput{*0}(0,0){%
+            \psclip{\Bottle{#2}}
+            \psframe*[linecolor=gray](-6,-2)(6,2)
+            \endpsclip}\rput{*0}(0,0){\Bottle{#2}}}}
+
+\begin{document}
+
+\multido{\iA=-45+5}{19}{%
+    \begin{pspicture}(-2.5,-0.5)(6,5.5)
+        \BottleWithWater(1.5,1){\iA}
+    \end{pspicture}
+}
+
+\end{document}
+        """
+
+        ret = texplain.indent(text)
+        # import pathlib
+        # pathlib.Path('tmp_ret.tex').write_text(ret)
+        # pathlib.Path('tmp_formatted.tex').write_text(formatted)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_multipleBraces(self):
+        text = r"""
+% arara: indent: {overwrite: yes, trace: on}
+\xapptocmd{\tableofcontents}{%
+    \end{singlespace}%
+    \pagestyle{plain}%
+    \clearpage}{}{}
+
+\xapptocmd{\tableofcontents}{%
+    \end{singlespace}%
+    \pagestyle{plain}%
+    \clearpage}{}{}
+
+\xapptocmd{\tableofcontents}{%
+    \end{singlespace}%
+    \pagestyle{plain}%
+    \clearpage}{}{}
+        """
+
+        formatted = r"""
+% arara: indent: {overwrite: yes, trace: on}
+\xapptocmd{\tableofcontents}{%
+    \end{singlespace}%
+    \pagestyle{plain}%
+    \clearpage
+}{}{}
+
+\xapptocmd{\tableofcontents}{%
+    \end{singlespace}%
+    \pagestyle{plain}%
+    \clearpage
+}{}{}
+
+\xapptocmd{\tableofcontents}{%
+    \end{singlespace}%
+    \pagestyle{plain}%
+    \clearpage
+}{}{}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_issue_379(self):
+        text = r"""
+\foreach \i/\j in {0.5/$H_{0}$, 1.5/$H_{0}$ } {
+        \node at (4.5, -\i) {\j};
+    }
+    \node[PR] at (3.48, -0.5) {};
+         \node[PR] at (3.48, -1.5) {};
+    \node[PR] at (3.48, -3.5) {};
+        \node[PR] at (3.48, -1.5) {};
+        """
+
+        formatted = r"""
+\foreach \i/\j in {0.5/$H_{0}$, 1.5/$H_{0}$ } {
+    \node at (4.5, -\i) {\j};
+}
+\node[PR] at (3.48, -0.5) {};
+\node[PR] at (3.48, -1.5) {};
+\node[PR] at (3.48, -3.5) {};
+\node[PR] at (3.48, -1.5) {};
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    @unittest.SkipTest
+    def test_isnextchar(self):
+        """
+                TODO
+
+        Traceback (most recent call last):
+          File "/Users/tdegeus/data/prog/src/texplain/tests/test_indent_long.py", line 2565, in test_isnextchar
+            ret = texplain.indent(text)
+                  ^^^^^^^^^^^^^^^^^^^^^
+          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 1169, in indent
+            text, placeholders_commands = text_to_placeholders(
+                                          ^^^^^^^^^^^^^^^^^^^^^
+          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 891, in text_to_placeholders
+            text, placeholders = _detail_text_to_placholders(text, ptype, base, placeholders_comments)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 713, in _detail_text_to_placholders
+            components = find_command(text, is_comment=is_comment)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 337, in find_command
+            opts = _find_option(character, index, i_square_open, i_square_closing)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 248, in _find_option
+            return _detail_find_option(character, index, braces, [])
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 204, in _detail_find_option
+            if np.any(character[index : braces[0]]) and braces[0] - index > 1:
+                      ~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+        TypeError: slice indices must be integers or None or have an __index__ method
+        """
+
+        text = r"""
+\parbox{
+\@ifnextchar[{\@assignmentwithcutoff}{\@assignmentnocutoff}
+}
+        """
+
+        formatted = r"""
+\parbox{
+    \@ifnextchar[{\@assignmentwithcutoff}{\@assignmentnocutoff}
+}
         """
 
         ret = texplain.indent(text)
