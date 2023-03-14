@@ -2591,6 +2591,61 @@ parbox=false,
         self.assertEqual(ret.strip(), formatted.strip())
 
 
+class TestNested(unittest.TestCase):
+    def test_nested(self):
+
+        text = r"""
+\renewcommand{\maketitle}{%
+    \newpage
+    \null
+    \vskip 2em%
+    \begin{center}%
+        \let \footnote \thanks
+        {\Large\bfseries \@title \par}%
+        \vskip 1.5em%
+        {\normalsize
+            \lineskip .5em%
+            \begin{tabular}[t]{c}%
+                \@author
+        \end{tabular}\par}%
+        \vskip 0.5em%
+        {\small \@date}%
+    \end{center}%
+    \par
+    \vskip 1.5em
+    \thispagestyle{fancy}
+}
+        """
+
+        formatted = r"""
+\renewcommand{\maketitle}{%
+    \newpage
+    \null
+    \vskip 2em%
+    \begin{center}%
+        \let \footnote \thanks
+        {\Large\bfseries \@title \par}%
+        \vskip 1.5em%
+        {
+            \normalsize
+            \lineskip .5em%
+            \begin{tabular}[t]{c}%
+                \@author
+            \end{tabular}
+            \par
+        }%
+        \vskip 0.5em%
+        {\small \@date}%
+    \end{center}%
+    \par
+    \vskip 1.5em
+    \thispagestyle{fancy}
+}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
 class TestVerbatim(unittest.TestCase):
     def test_verbatim(self):
         text = r"""
