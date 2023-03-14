@@ -31,6 +31,7 @@ class PlaceholderType(enum.Enum):
     environment = enum.auto()
     command = enum.auto()
     curly_braced = enum.auto()
+    command_like = enum.auto()
     noindent_block = enum.auto()
     verbatim = enum.auto()
     let = enum.auto()
@@ -736,7 +737,7 @@ def _detail_text_to_placholders(
 
         return text, ret
 
-    if ptype == PlaceholderType.command:
+    if ptype == PlaceholderType.command or ptype == PlaceholderType.command_like:
         if placeholders_comments is not None:
             is_comment = _is_placeholder(text, placeholders_comments)
             components = find_command(text, is_comment=is_comment)
@@ -748,6 +749,11 @@ def _detail_text_to_placholders(
             if text[component[0][0] : component[0][1]] in [r"\\begin", r"\\end"]:
                 continue
             indices += [[component[0][0], component[-1][1]]]
+
+        if ptype == PlaceholderType.command_like:
+            indices += find_matching(
+                text, "{", "}", ignore_escaped=True, closing_match=1
+            ).items()
 
         return _apply_placeholders(text, indices, base, "command".upper(), ptype)
 
@@ -1237,13 +1243,13 @@ def indent(text: str, indent: str = "    ") -> str:
     )
     text, placeholders_commands = text_to_placeholders(
         text,
-        [PlaceholderType.command, PlaceholderType.curly_braced],
+        [PlaceholderType.command_like],
         placeholders_comments=placeholders_comments,
     )
     text = _one_sentence_per_line(text)
     for placeholder in placeholders_commands:
         placeholder.content = _format_command(
-            placeholder.content, placeholders_comments, placeholders_commands, placeholder.ptype
+            placeholder.content, placeholders_comments
         )
     text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
 
@@ -1422,8 +1428,6 @@ def _one_sentence_per_line(
 def _format_command(
     text: str,
     placeholders_comments: list[Placeholder],
-    placeholders_commands: list[Placeholder],
-    ptype: PlaceholderType = PlaceholderType.command,
     level: int = 0,
 ) -> str:
     """
@@ -1445,13 +1449,19 @@ def _format_command(
 
     :param text: Text.
     :param placeholders_comments: List of placeholders for comments.
-    :param level: Level of nestedness, used to define unique placeholder names.
+    :param ptype: Placeholder type.
+    :param level: Level of nested-ness, used to define unique placeholder names.
     :return: Formatted text.
     """
     if not re.match(r".*\n.*", text):
         return text
 
-    if ptype == PlaceholderType.command:
+    if text[0] == "{":
+
+        parts = ["", text, ""]
+
+    else:
+
         is_comment = _is_placeholder(text, placeholders_comments)
         commands = find_command(text, is_comment=is_comment)
         commands = [i for i in commands if len(i) > 1]
@@ -1471,13 +1481,6 @@ def _format_command(
             o, c = braces[i]
             parts += [text[o:c], text[c : braces[i + 1][0]]]
 
-    elif ptype == PlaceholderType.curly_braced:
-        parts = ["", text, ""]
-    else:
-        raise ValueError(f"Unknown placeholder type {ptype}")
-
-    search_placeholder = list(set(list({i.search_placeholder for i in placeholders_commands})))
-
     for i, part in enumerate(parts):
         if i % 2 == 1:
             if not re.match(r".*\n.*", part):
@@ -1485,34 +1488,15 @@ def _format_command(
             body = part[1:-1].strip()
             body, placeholders_cmd = text_to_placeholders(
                 body,
-                [PlaceholderType.command, PlaceholderType.curly_braced],
+                [PlaceholderType.command_like],
                 f"TEXONEPERLINE-L{level}",
             )
             body = _one_sentence_per_line(body, [], command=True)
-
-            # make sure that the newline is kept
-            # TODO this is a hack, find a better solution
-            for search in search_placeholder:
-                for match in re.finditer(search, body):
-                    if match.span()[0] == 0:
-                        pl = match.group()
-                        for ipl in range(len(placeholders_commands)):
-                            if placeholders_commands[ipl].placeholder == pl:
-                                placeholders_commands[ipl].space_front = None
-                                break
-                    if match.span()[1] == len(body):
-                        pl = match.group()
-                        for ipl in range(len(placeholders_commands)):
-                            if placeholders_commands[ipl].placeholder == pl:
-                                placeholders_commands[ipl].space_back = None
-                                break
 
             for placeholder in placeholders_cmd:
                 placeholder.content = _format_command(
                     placeholder.content,
                     placeholders_comments,
-                    placeholders_cmd,
-                    placeholder.ptype,
                     level + 1,
                 )
             body = text_from_placeholders(body, placeholders_cmd)
