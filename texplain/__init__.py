@@ -1124,7 +1124,7 @@ def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placehold
     text = re.sub(r"(\n?\ *)(?<!\\)(\\else)(\s|\n|$)", r"\n\2\3", text)
 
     # end all ``\end{...}`` on newline
-    text = re.sub(r"(?<!\\)(\\end\{[^\s]*)(\ *\n?)", r"\1\n", text)
+    text = re.sub(r"(?<!\\)(\\end\{[^\}]*\})(\ *\n?)", r"\1\n", text)
 
     # end all ``\[`` and ``\]`` on newline
     text = re.sub(r"(?<!\\)(\\(\[|\]))(\ *\n?)", r"\1\n", text)
@@ -1481,7 +1481,6 @@ def _format_command(text: str, placeholders_comments: list[Placeholder], placeho
                         for ipl in range(len(placeholders_commands)):
                             if placeholders_commands[ipl].placeholder == pl:
                                 placeholders_commands[ipl].space_back = None
-                                print(placeholders_commands[ipl].space_back)
                                 break
 
             for placeholder in placeholders_cmd:
