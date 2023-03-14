@@ -2591,6 +2591,106 @@ parbox=false,
         self.assertEqual(ret.strip(), formatted.strip())
 
 
+class TestVerbatim(unittest.TestCase):
+    @unittest.SkipTest
+    def test_verbatim(self):
+        """
+        TODO: decide on correct formatting
+        """
+
+        text = r"""
+\begin{strategy}[H]
+    \begin{oframed}
+        \caption{Machine-readable names}
+        \label{note:misc:strat:names}
+        Consider making your file- and folder-names machine readable.
+        For example:
+ \begin{verbatim}
+dimension=2/n=10_dt=0,1/datetime=2023-01-01,12:00:00.h5
+        \end{verbatim}
+is a completely legal name, but you can also read it automatically and interpret it easily by splitting first on the underscore and the slash to separate variables, and then on the equals sign to separate the name from the value.
+    \end{oframed}
+\end{strategy}
+        """
+
+        formatted = r"""
+\begin{strategy}[H]
+    \begin{oframed}
+        \caption{Machine-readable names}
+        \label{note:misc:strat:names}
+        Consider making your file- and folder-names machine readable.
+        For example:
+\begin{verbatim}
+dimension=2/n=10_dt=0,1/datetime=2023-01-01,12:00:00.h5
+\end{verbatim}
+        is a completely legal name, but you can also read it automatically and interpret it easily by splitting first on the underscore and the slash to separate variables, and then on the equals sign to separate the name from the value.
+    \end{oframed}
+\end{strategy}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    @unittest.SkipTest
+    def test_verbatim_a(self):
+        """
+        TODO: decide on correct formatting
+        """
+
+        text = r'''
+\begin{example}[H]
+    \begin{oframed}
+        \caption{Self-explanatory vs documentation intensive}
+        \label{sec:misc:ex:self-explenatory}
+        A self-explanatory function might be:
+\begin{verbatim}
+def area(width: float, height: float) -> float:
+    return width * height
+\end{verbatim}
+The same function but written in a documentation intensive style might be:
+\begin{verbatim}
+def property_1(a, b):
+    """
+    Compute the area of a rectangle.
+    :param a: width (scalar)
+    :param b: height (scalar)
+    :return: area (scalar)
+    """
+    return a * b
+\end{verbatim}
+    \end{oframed}
+\end{example}
+        '''
+
+        formatted = r'''
+\begin{example}[H]
+    \begin{oframed}
+        \caption{Self-explanatory vs documentation intensive}
+        \label{sec:misc:ex:self-explenatory}
+        A self-explanatory function might be:
+\begin{verbatim}
+def area(width: float, height: float) -> float:
+    return width * height
+\end{verbatim}
+        The same function but written in a documentation intensive style might be:
+\begin{verbatim}
+def property_1(a, b):
+    """
+    Compute the area of a rectangle.
+    :param a: width (scalar)
+    :param b: height (scalar)
+    :return: area (scalar)
+    """
+    return a * b
+\end{verbatim}
+    \end{oframed}
+\end{example}
+        '''
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+
 class TestCode(unittest.TestCase):
     def test_code(self):
         text = r"""
