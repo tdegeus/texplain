@@ -376,6 +376,22 @@ some more text.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_environment_nested(self):
+        text = r"""
+This is { \normalsize
+Some text}
+        """
+
+        formatted = r"""
+This is {
+    \normalsize
+    Some text
+}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
 
 class TestIndentCommand(unittest.TestCase):
     def test_command_punctuation(self):
@@ -875,7 +891,6 @@ some text
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
-    @unittest.SkipTest  # TODO
     def test_code_b(self):
         text = r"""
 \newif\if@namecite
@@ -896,6 +911,59 @@ some text
 \else
     bar
 \fi
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_nested(self):
+
+        text = r"""
+\renewcommand{\maketitle}{%
+    \newpage
+    \null
+    \vskip 2em%
+    \begin{center}%
+        \let \footnote \thanks
+        {\Large\bfseries \@title \par}%
+        \vskip 1.5em%
+        {\normalsize
+            \lineskip .5em%
+            \begin{tabular}[t]{c}%
+                \@author
+        \end{tabular}\par}%
+        \vskip 0.5em%
+        {\small \@date}%
+    \end{center}%
+    \par
+    \vskip 1.5em
+    \thispagestyle{fancy}
+}
+        """
+
+        formatted = r"""
+\renewcommand{\maketitle}{%
+    \newpage
+    \null
+    \vskip 2em%
+    \begin{center}%
+        \let \footnote \thanks
+        {\Large\bfseries \@title \par}%
+        \vskip 1.5em%
+        {
+            \normalsize
+            \lineskip .5em%
+            \begin{tabular}[t]{c}%
+                \@author
+            \end{tabular}\par
+        }%
+        \vskip 0.5em%
+        {\small \@date}%
+    \end{center}%
+    \par
+    \vskip 1.5em
+    \thispagestyle{fancy}
+}
         """
 
         ret = texplain.indent(text)

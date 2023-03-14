@@ -30,8 +30,11 @@ class PlaceholderType(enum.Enum):
     math_line = enum.auto()
     environment = enum.auto()
     command = enum.auto()
+    curly_braced = enum.auto()
     noindent_block = enum.auto()
     verbatim = enum.auto()
+    let = enum.auto()
+    newif = enum.auto()
 
 
 def find_opening(
@@ -95,6 +98,54 @@ def is_commented(text: str) -> NDArray[np.bool_]:
         ret[i:j] = True
     return ret
 
+def find_matching_index(
+    opening: ArrayLike,
+    closing: ArrayLike,
+    return_array: bool = False,
+) -> dict:
+    r"""
+    Find matching 'brackets'.
+
+    :param opening: Indices of the opening brackets.
+    :param closing: Indices of the closing brackets.
+    :param return_array: If ``True``, return NumPy-array of indices instead of dictionary.
+    :return: Dictionary with ``{index_opening: index_closing}``
+    """
+
+    if len(opening) == 0:
+        if return_array:
+            return np.zeros((0, 2), dtype=int)
+        return {}
+
+    if len(opening) > len(closing):
+        raise IndexError(f"Unmatching opening...closing found")
+
+    opening = np.array(opening, dtype=int)
+    closing = np.array(closing, dtype=int) * -1
+    brackets = np.concatenate([opening, closing])
+    brackets = brackets[np.argsort(np.abs(brackets))]
+
+    ret = {}
+    stack = []
+
+    for i in brackets:
+        if i >= 0:
+            stack.append(i)
+        else:
+            if len(stack) == 0:
+                raise IndexError(f"No closing {closing} at: {i:d}")
+            j = stack.pop()
+            ret[j] = -1 * i
+
+    if len(stack) > 0:
+        i = stack.pop()
+        raise IndexError(f"No opening {opening} at: {i:d}")
+
+    if return_array:
+        return np.array(list(ret.items()), dtype=int).reshape(-1, 2)
+
+    return ret
+
 
 def find_matching(
     text: str,
@@ -131,45 +182,16 @@ def find_matching(
         closing = r"(?<!\\)" + closing
 
     a = [i.span()[opening_match] for i in re.finditer(opening, text)]
-    b = [-1 * i.span()[closing_match] for i in re.finditer(closing, text)]
-
-    if len(a) == 0 and len(b) == 0:
-        if return_array:
-            return np.zeros((0, 2), dtype=int)
-        return {}
+    b = [i.span()[closing_match] for i in re.finditer(closing, text)]
 
     if ignore_commented:
         is_comment = is_commented(text)
         a = np.array(a)
-        b = -np.array(b)
-        a = list(a[~is_comment[a]])
-        b = list(-b[~is_comment[b]])
+        b = np.array(b)
+        a = a[~is_comment[a]]
+        b = b[~is_comment[b]]
 
-    if len(a) != len(b):
-        raise IndexError(f"Unmatching {opening}...{closing} found")
-
-    brackets = sorted(a + b, key=lambda i: abs(i))
-
-    ret = {}
-    stack = []
-
-    for i in brackets:
-        if i >= 0:
-            stack.append(i)
-        else:
-            if len(stack) == 0:
-                raise IndexError(f"No closing {closing} at: {text[i - 20 : i + 20]}")
-            j = stack.pop()
-            ret[j] = -1 * i
-
-    if len(stack) > 0:
-        i = stack.pop()
-        raise IndexError(f"No opening {opening} at: {text[i - 20 : i + 20]}")
-
-    if return_array:
-        return np.array(list(ret.items()), dtype=int).reshape(-1, 2)
-
-    return ret
+    return find_matching_index(a, b, return_array=return_array)
 
 
 def _detail_find_option(
@@ -700,7 +722,7 @@ def _detail_text_to_placholders(
         ret += placeholders
 
         indices = find_matching(
-            text, r"\\begin{math}", r"\\end{math}", escape=False, closing_match=1, return_array=True
+            text, r"\\begin{math}", r"\\end{math}", escape=False, ignore_escaped=True, closing_match=1, return_array=True
         )
         text, placeholders = _apply_placeholders(text, indices, base, "inlinemath".upper(), ptype)
         ret += placeholders
@@ -721,6 +743,40 @@ def _detail_text_to_placholders(
             indices += [[component[0][0], component[-1][1]]]
 
         return _apply_placeholders(text, indices, base, "command".upper(), ptype)
+
+    if ptype == PlaceholderType.curly_braced:
+        indices = find_matching(
+            text, "{", "}", ignore_escaped=True, closing_match=1, return_array=True
+        )
+        return _apply_placeholders(text, indices, base, "nested".upper(), ptype)
+
+    if ptype == PlaceholderType.let:
+        regex = r"(?<!\\)(\\let)((\\[\w\@\*]*))*"
+        if placeholders_comments is not None:
+            is_comment = _is_placeholder(text, placeholders_comments)
+            components = find_command(text, is_comment=is_comment, regex=regex)
+        else:
+            components = find_command(text, regex=regex)
+
+        indices = []
+        for component in components:
+            indices += [[component[0][0], component[-1][1]]]
+
+        return _apply_placeholders(text, indices, base, "let".upper(), ptype)
+
+    if ptype == PlaceholderType.newif:
+        regex = r"(?<!\\)(\\newif)((\\[\w\@\*]*))*"
+        if placeholders_comments is not None:
+            is_comment = _is_placeholder(text, placeholders_comments)
+            components = find_command(text, is_comment=is_comment, regex=regex)
+        else:
+            components = find_command(text, regex=regex)
+
+        indices = []
+        for component in components:
+            indices += [[component[0][0], component[-1][1]]]
+
+        return _apply_placeholders(text, indices, base, "newif".upper(), ptype)
 
     raise ValueError(f"Unknown placeholder type: {ptype}")
 
@@ -1145,6 +1201,8 @@ def indent(text: str, indent: str = "    ") -> str:
     for placeholder in placeholders_inline_comment:
         placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
+    placeholders_comments = placeholders_comment + placeholders_inline_comment
+
     # remove multiple newlines, duplicate spaces, and any leading whitespace
     text = re.sub(r"(\n\n+)", r"\n\n", text)
     text = _dedent(text, partial=[PlaceholderType.tabular])
@@ -1160,7 +1218,9 @@ def indent(text: str, indent: str = "    ") -> str:
         placeholder.space_back = None
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
-    text = _begin_end_one_separate_line(text, placeholders_comment + placeholders_inline_comment)
+    text, placeholders_let = text_to_placeholders(text, [PlaceholderType.let, PlaceholderType.newif])
+    text = _begin_end_one_separate_line(text, placeholders_comments)
+    text = text_from_placeholders(text, placeholders_let)
 
     # apply one sentence per line
     text, placeholders_ignore = text_to_placeholders(
@@ -1168,18 +1228,18 @@ def indent(text: str, indent: str = "    ") -> str:
     )
     text, placeholders_commands = text_to_placeholders(
         text,
-        [PlaceholderType.command],
-        placeholders_comments=placeholders_comment + placeholders_inline_comment,
+        [PlaceholderType.command, PlaceholderType.curly_braced],
+        placeholders_comments=placeholders_comments,
     )
     text = _one_sentence_per_line(text)
     for placeholder in placeholders_commands:
         placeholder.content = _format_command(
-            placeholder.content, placeholders_comment + placeholders_inline_comment
+            placeholder.content, placeholders_comments, placeholders_commands, placeholder.ptype
         )
     text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
 
     # place comment placeholders where they belong to do indentation
-    text = text_from_placeholders(text, placeholders_comment + placeholders_inline_comment)
+    text = text_from_placeholders(text, placeholders_comments)
     text, placeholders_comment = text_to_placeholders(
         text, [PlaceholderType.comment, PlaceholderType.inline_comment]
     )
@@ -1344,7 +1404,7 @@ def _one_sentence_per_line(
     return text_from_placeholders(ret, placeholders)
 
 
-def _format_command(text: str, placeholders_comments, level: int = 0) -> str:
+def _format_command(text: str, placeholders_comments: list[Placeholder], placeholders_commands: list[Placeholder], ptype: PlaceholderType = PlaceholderType.command, level: int = 0) -> str:
     """
     Format a command.
     This function loops over all options and arguments and places them on a separate line if
@@ -1370,39 +1430,65 @@ def _format_command(text: str, placeholders_comments, level: int = 0) -> str:
     if not re.match(r".*\n.*", text):
         return text
 
-    is_comment = _is_placeholder(text, placeholders_comments)
-    commands = find_command(text, is_comment=is_comment)
-    commands = [i for i in commands if len(i) > 1]
+    if ptype == PlaceholderType.command:
+        is_comment = _is_placeholder(text, placeholders_comments)
+        commands = find_command(text, is_comment=is_comment)
+        commands = [i for i in commands if len(i) > 1]
 
-    if len(commands) == 0:
-        return text
+        if len(commands) == 0:
+            return text
 
-    braces = []
-    for i in commands:
-        for j in i[1:]:
-            braces += [j]
+        braces = []
+        for i in commands:
+            for j in i[1:]:
+                braces += [j]
 
-    braces = list(_filter_nested(np.array(braces))) + [[None, None]]
+        braces = list(_filter_nested(np.array(braces))) + [[None, None]]
 
-    parts = [text[: braces[0][0]]]
-    for i in range(len(braces) - 1):
-        o, c = braces[i]
-        parts += [text[o:c], text[c : braces[i + 1][0]]]
+        parts = [text[: braces[0][0]]]
+        for i in range(len(braces) - 1):
+            o, c = braces[i]
+            parts += [text[o:c], text[c : braces[i + 1][0]]]
+
+    elif ptype == PlaceholderType.curly_braced:
+        parts = ["", text, ""]
+    else:
+        raise ValueError(f"Unknown placeholder type {ptype}")
+
+    search_placeholder = list(set(list({i.search_placeholder for i in placeholders_commands})))
 
     for i, part in enumerate(parts):
         if i % 2 == 1:
             if not re.match(r".*\n.*", part):
                 continue
             body = part[1:-1].strip()
-            body, placeholders = text_to_placeholders(
-                body, [PlaceholderType.command], f"TEXONEPERLINENESTED{level}"
+            body, placeholders_cmd = text_to_placeholders(
+                body, [PlaceholderType.command, PlaceholderType.curly_braced], f"TEXONEPERLINE-L{level}"
             )
             body = _one_sentence_per_line(body, [])
-            for placeholder in placeholders:
+
+            # make sure that the newline is kept
+            for search in search_placeholder:
+                for match in re.finditer(search, body):
+                    if match.span()[0] == 0:
+                        pl = match.group()
+                        for ipl in range(len(placeholders_commands)):
+                            if placeholders_commands[ipl].placeholder == pl:
+                                placeholders_commands[ipl].space_front = None
+                                break
+                    if match.span()[1] == len(body):
+                        pl = match.group()
+                        for ipl in range(len(placeholders_commands)):
+                            if placeholders_commands[ipl].placeholder == pl:
+                                placeholders_commands[ipl].space_back = None
+                                print(placeholders_commands[ipl].space_back)
+                                break
+
+            for placeholder in placeholders_cmd:
                 placeholder.content = _format_command(
-                    placeholder.content, placeholders_comments, level + 1
+                    placeholder.content, placeholders_comments, placeholders_cmd, placeholder.ptype, level + 1
                 )
-            body = text_from_placeholders(body, placeholders)
+            body = text_from_placeholders(body, placeholders_cmd)
             parts[i] = "\n".join([parts[i][0], body, parts[i][-1]])
 
     return "".join(parts)
