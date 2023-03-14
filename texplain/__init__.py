@@ -752,9 +752,7 @@ def _detail_text_to_placholders(
             indices += [[component[0][0], component[-1][1]]]
 
         if ptype == PlaceholderType.command_like:
-            indices += find_matching(
-                text, "{", "}", ignore_escaped=True, closing_match=1
-            ).items()
+            indices += find_matching(text, "{", "}", ignore_escaped=True, closing_match=1).items()
 
         return _apply_placeholders(text, indices, base, "command".upper(), ptype)
 
@@ -1301,9 +1299,7 @@ def indent(text: str, indent: str = "    ") -> str:
     )
     text = _one_sentence_per_line(text)
     for placeholder in placeholders_commands:
-        placeholder.content = _format_command(
-            placeholder.content, placeholders_comments
-        )
+        placeholder.content = _format_command(placeholder.content, placeholders_comments)
     text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
 
     # place comment placeholders where they belong to do indentation
@@ -1510,11 +1506,9 @@ def _format_command(
         return text
 
     if text[0] == "{":
-
         parts = ["", text, ""]
 
     else:
-
         is_comment = _is_placeholder(text, placeholders_comments)
         commands = find_command(text, is_comment=is_comment)
         commands = [i for i in commands if len(i) > 1]
