@@ -158,13 +158,13 @@ def find_matching(
             stack.append(i)
         else:
             if len(stack) == 0:
-                raise IndexError(f"No closing {closing} at: {text[i-20:i+20]}")
+                raise IndexError(f"No closing {closing} at: {text[i - 20 : i + 20]}")
             j = stack.pop()
             ret[j] = -1 * i
 
     if len(stack) > 0:
         i = stack.pop()
-        raise IndexError(f"No opening {opening} at: {text[i-20:i+20]}")
+        raise IndexError(f"No opening {opening} at: {text[i - 20 : i + 20]}")
 
     if return_array:
         return np.array(list(ret.items()), dtype=int).reshape(-1, 2)
