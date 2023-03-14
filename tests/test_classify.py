@@ -62,6 +62,20 @@ class MyTests(unittest.TestCase):
         tex.format_labels()
         self.assertEqual(str(tex).strip(), text.strip())
 
+    def test_custom(self):
+        text = r"""
+\begin{example}[H]
+    \begin{oframed}
+        \caption{Self-explanatory vs documentation intensive}
+        \label{misc:self-explenatory}
+    \end{oframed}
+\end{example}
+        """
+
+        tex = texplain.TeX(text)
+        tex.format_labels()
+        self.assertEqual(str(tex).strip(), text.strip())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1546,7 +1546,9 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
         if classification[j + 1] < 0:
             classification[classification == classification[j + 1]] = r
 
-    return categories, classification
+    # ---
+
+    return categories, np.where(classification < 0, categories.index("misc"), classification)
 
 
 class TeX:
