@@ -1269,7 +1269,11 @@ def indent(text: str, indent: str = "    ") -> str:
 
 def _detail_one_sentence_per_line(text: str) -> str:
     """
-    ??
+    Split text into sentences.
+
+    :param text: Text.
+    :return: Formatted text.
+
     TODO: optional split characters such as ``;`` and ``:``
     """
 
@@ -1287,14 +1291,14 @@ def _one_sentence_per_line(
     base: str = "TEXONEPERLINE",
 ) -> str:
     """
-    ??
+    Split text into sentences.
 
-    TODO: Read and keep indentation level.
+    TODO: describe formatting rules
 
-    TODO: Store indentation level in commands replaced with placeholders.
-    Apply it to reformatting of multi-line commands.
-
-    TODO: Format multi-line commands recursively.
+    :param text: Text.
+    :param fold: List of placeholder types to fold before formatting (and restore after).
+    :param base: Base name for placeholders.
+    :return: Formatted text.
     """
 
     text, placeholders = text_to_placeholders(text, fold, base=base)
@@ -1335,6 +1339,28 @@ def _one_sentence_per_line(
 
 
 def _format_command(text: str, placeholders_comments, level: int = 0) -> str:
+    """
+    Format a command.
+    This function loops over all options and arguments and places them on a separate line if
+    they contain at least one ``\n``.
+    In that case :py:func:`_one_sentence_per_line` is applied to the option/argument.
+
+    For example::
+
+        \foo[bar]{This is
+        sentence.}
+
+    becomes::
+
+        \foo[bar]{
+            This is sentence.
+        }
+
+    :param text: Text.
+    :param placeholders_comments: List of placeholders for comments.
+    :param level: Level of nestedness, used to define unique placeholder names.
+    :return: Formatted text.
+    """
     if not re.match(r".*\n.*", text):
         return text
 
