@@ -1491,6 +1491,7 @@ def _format_command(
             body = _one_sentence_per_line(body, [], command=True)
 
             # make sure that the newline is kept
+            # TODO this is a hack, find a better solution
             for search in search_placeholder:
                 for match in re.finditer(search, body):
                     if match.span()[0] == 0:
