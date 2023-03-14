@@ -158,12 +158,13 @@ def find_matching(
             stack.append(i)
         else:
             if len(stack) == 0:
-                raise IndexError(f"No closing {closing} at: {i:d}")
+                raise IndexError(f"No closing {closing} at: {text[i-20:i+20]}")
             j = stack.pop()
             ret[j] = -1 * i
 
     if len(stack) > 0:
-        raise IndexError(f"No opening {opening} at {stack.pop():d}")
+        i = stack.pop()
+        raise IndexError(f"No opening {opening} at: {text[i-20:i+20]}")
 
     if return_array:
         return np.array(list(ret.items()), dtype=int).reshape(-1, 2)
@@ -250,7 +251,7 @@ def _find_option(
 def find_command(
     text: str,
     name: str = None,
-    regex: str = r"(?<!\\)(\\)([a-zA-Z]+)(\*?)",
+    regex: str = r"(?<!\\)(\\)([a-zA-Z\@]+)(\*?)",
     is_comment: list[bool] = None,
 ) -> list[list[tuple[int]]]:
     """
@@ -1073,7 +1074,7 @@ def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placehold
     text = re.sub(r"(?<!\\)(\\(\[|\]))(\ *\n?)", r"\1\n", text)
 
     # end all ``\if`` and ``\else`` and ``\fi`` on newline
-    text = re.sub(r"(?<!\\)(\\if)([\@]*)(\ +\n?)", r"\1\2\n", text)
+    text = re.sub(r"(?<!\\)(\\if)([\@\w]*)(\ +\n?)", r"\1\2\n", text)
     text = re.sub(r"(?<!\\)(\\(fi|else))(\ +\n?)", r"\1\n", text)
 
     # end all ``\begin{...}[...]{...}`` on newline
@@ -1241,11 +1242,17 @@ def indent(text: str, indent: str = "    ") -> str:
         indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
 
     # add indentation for ``\if``, ``\else``, ``\fi``
-    indices = find_matching(text, r"(^|\n)(?<!\\)(\\if)([\@]*)(\n|$)", r"(^|\n)(?<!\\)(\\fi)(\n|$)", escape=False, opening_match=1,
-            closing_match=0,
-            ignore_escaped=True)
+    indices = find_matching(
+        text,
+        r"(^|\n)(?<!\\)(\\if)([\@\w]*)(\n|$)",
+        r"(^|\n)(?<!\\)(\\fi)(\n|$)",
+        escape=False,
+        opening_match=1,
+        closing_match=0,
+        ignore_escaped=True,
+    )
     for opening, closing in indices.items():
-        indent_level[np.unique(lineno[opening-1:closing])[1:]] += 1
+        indent_level[np.unique(lineno[opening - 1 : closing])[1:]] += 1
     for match in re.finditer(r"(^|\n)(?<!\\)(\\else)(\n|$)", text):
         indent_level[lineno[match.span(2)[0]]] -= 1
 

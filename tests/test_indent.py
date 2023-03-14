@@ -814,7 +814,7 @@ some more text.
 
 
 class TestCode(unittest.TestCase):
-    def test_code_d(self):
+    def test_code(self):
         text = r"""
 % a comment
 \if foo \else bar \fi
@@ -830,7 +830,51 @@ class TestCode(unittest.TestCase):
         """
 
         ret = texplain.indent(text)
-        print("ret = ", ret)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_code_a(self):
+        text = r"""
+% a comment
+some text \if@namecite foo \else bar \fi
+        """
+
+        formatted = r"""
+% a comment
+some text
+\if@namecite
+    foo
+\else
+    bar
+\fi
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    @unittest.SkipTest  # TODO
+    def test_code_b(self):
+        text = r"""
+\newif\if@namecite
+\let\if@namecite\iffalse
+\DeclareOption{namecite}{\let\if@namecite\iftrue}
+
+some text \if@namecite foo \else bar \fi
+        """
+
+        formatted = r"""
+\newif\if@namecite
+\let\if@namecite\iffalse
+\DeclareOption{namecite}{\let\if@namecite\iftrue}
+
+some text
+\if@namecite
+    foo
+\else
+    bar
+\fi
+        """
+
+        ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
 

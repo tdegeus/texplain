@@ -2335,5 +2335,71 @@ This is the sixth sentence.
         self.assertEqual(ret.strip(), formatted.strip())
 
 
+class TestCode(unittest.TestCase):
+    def test_code(self):
+        text = r"""
+\if@namecite
+    \RequirePackage{natbib}
+    \let\oldbibliography\bibliography
+    \renewcommand{\bibliography}[1]{%
+        \setlength{\bibsep}{3pt plus 0.3ex}
+        \def\bibfont{\scriptsize}
+        \if@twocolumnbib
+            \begin{multicols}{2}\raggedright\oldbibliography{#1}\justifying\end{multicols}
+        \else
+            \raggedright\oldbibliography{#1}\justifying
+        \fi
+    }
+\else
+    \RequirePackage[square,sort&compress,numbers,comma]{natbib}
+    \let\oldbibliography\bibliography
+    \renewcommand{\bibliography}[1]{%
+        \setlength{\bibsep}{3pt plus 0.3ex}
+        \def\bibfont{\scriptsize}
+        \if@twocolumnbib
+            \begin{multicols}{2}\raggedright\oldbibliography{#1}\justifying\end{multicols}
+        \else
+            \raggedright\oldbibliography{#1}\justifying
+        \fi
+    }
+\fi
+        """
+
+        formatted = r"""
+\if@namecite
+    \RequirePackage{natbib}
+    \let\oldbibliography\bibliography
+    \renewcommand{\bibliography}[1]{%
+        \setlength{\bibsep}{3pt plus 0.3ex}
+        \def\bibfont{\scriptsize}
+        \if@twocolumnbib
+            \begin{multicols}{2}
+                \raggedright\oldbibliography{#1}\justifying
+            \end{multicols}
+        \else
+            \raggedright\oldbibliography{#1}\justifying
+        \fi
+    }
+\else
+    \RequirePackage[square,sort&compress,numbers,comma]{natbib}
+    \let\oldbibliography\bibliography
+    \renewcommand{\bibliography}[1]{%
+        \setlength{\bibsep}{3pt plus 0.3ex}
+        \def\bibfont{\scriptsize}
+        \if@twocolumnbib
+            \begin{multicols}{2}
+                \raggedright\oldbibliography{#1}\justifying
+            \end{multicols}
+        \else
+            \raggedright\oldbibliography{#1}\justifying
+        \fi
+    }
+\fi
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+
 if __name__ == "__main__":
     unittest.main()
