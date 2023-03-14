@@ -98,6 +98,7 @@ def is_commented(text: str) -> NDArray[np.bool_]:
         ret[i:j] = True
     return ret
 
+
 def find_matching_index(
     opening: ArrayLike,
     closing: ArrayLike,
@@ -118,7 +119,7 @@ def find_matching_index(
         return {}
 
     if len(opening) > len(closing):
-        raise IndexError(f"Unmatching opening...closing found")
+        raise IndexError("Unmatching opening...closing found")
 
     opening = np.array(opening, dtype=int)
     closing = np.array(closing, dtype=int) * -1
@@ -722,7 +723,13 @@ def _detail_text_to_placholders(
         ret += placeholders
 
         indices = find_matching(
-            text, r"\\begin{math}", r"\\end{math}", escape=False, ignore_escaped=True, closing_match=1, return_array=True
+            text,
+            r"\\begin{math}",
+            r"\\end{math}",
+            escape=False,
+            ignore_escaped=True,
+            closing_match=1,
+            return_array=True,
         )
         text, placeholders = _apply_placeholders(text, indices, base, "inlinemath".upper(), ptype)
         ret += placeholders
@@ -1218,7 +1225,9 @@ def indent(text: str, indent: str = "    ") -> str:
         placeholder.space_back = None
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
-    text, placeholders_let = text_to_placeholders(text, [PlaceholderType.let, PlaceholderType.newif])
+    text, placeholders_let = text_to_placeholders(
+        text, [PlaceholderType.let, PlaceholderType.newif]
+    )
     text = _begin_end_one_separate_line(text, placeholders_comments)
     text = text_from_placeholders(text, placeholders_let)
 
@@ -1404,7 +1413,13 @@ def _one_sentence_per_line(
     return text_from_placeholders(ret, placeholders)
 
 
-def _format_command(text: str, placeholders_comments: list[Placeholder], placeholders_commands: list[Placeholder], ptype: PlaceholderType = PlaceholderType.command, level: int = 0) -> str:
+def _format_command(
+    text: str,
+    placeholders_comments: list[Placeholder],
+    placeholders_commands: list[Placeholder],
+    ptype: PlaceholderType = PlaceholderType.command,
+    level: int = 0,
+) -> str:
     """
     Format a command.
     This function loops over all options and arguments and places them on a separate line if
@@ -1463,7 +1478,9 @@ def _format_command(text: str, placeholders_comments: list[Placeholder], placeho
                 continue
             body = part[1:-1].strip()
             body, placeholders_cmd = text_to_placeholders(
-                body, [PlaceholderType.command, PlaceholderType.curly_braced], f"TEXONEPERLINE-L{level}"
+                body,
+                [PlaceholderType.command, PlaceholderType.curly_braced],
+                f"TEXONEPERLINE-L{level}",
             )
             body = _one_sentence_per_line(body, [])
 
@@ -1485,7 +1502,11 @@ def _format_command(text: str, placeholders_comments: list[Placeholder], placeho
 
             for placeholder in placeholders_cmd:
                 placeholder.content = _format_command(
-                    placeholder.content, placeholders_comments, placeholders_cmd, placeholder.ptype, level + 1
+                    placeholder.content,
+                    placeholders_comments,
+                    placeholders_cmd,
+                    placeholder.ptype,
+                    level + 1,
                 )
             body = text_from_placeholders(body, placeholders_cmd)
             parts[i] = "\n".join([parts[i][0], body, parts[i][-1]])
