@@ -20,6 +20,7 @@ from ._version import version_tuple  # noqa: F401
 class PlaceholderType(enum.Enum):
     """
     Type of placeholder.
+    See :py:func:`text_to_placeholder` for more information.
     """
 
     inline_comment = enum.auto()
@@ -34,8 +35,8 @@ class PlaceholderType(enum.Enum):
     command_like = enum.auto()
     noindent_block = enum.auto()
     verbatim = enum.auto()
-    let = enum.auto()
-    newif = enum.auto()
+    let_command = enum.auto()
+    newif_command = enum.auto()
 
 
 def find_opening(
@@ -761,9 +762,9 @@ def _detail_text_to_placholders(
         indices = find_matching(
             text, "{", "}", ignore_escaped=True, closing_match=1, return_array=True
         )
-        return _apply_placeholders(text, indices, base, "nested".upper(), ptype)
+        return _apply_placeholders(text, indices, base, "curly-braced".upper(), ptype)
 
-    if ptype == PlaceholderType.let:
+    if ptype == PlaceholderType.let_command:
         regex = r"(?<!\\)(\\let)((\\[\w\@\*]*))*"
         if placeholders_comments is not None:
             is_comment = _is_placeholder(text, placeholders_comments)
@@ -777,7 +778,7 @@ def _detail_text_to_placholders(
 
         return _apply_placeholders(text, indices, base, "let".upper(), ptype)
 
-    if ptype == PlaceholderType.newif:
+    if ptype == PlaceholderType.newif_command:
         regex = r"(?<!\\)(\\newif)((\\[\w\@\*]*))*"
         if placeholders_comments is not None:
             is_comment = _is_placeholder(text, placeholders_comments)
@@ -943,6 +944,58 @@ def text_to_placeholders(
         .. code-block:: latex
 
             -BASE-COMMAND-1-
+
+    -   :py:class:`PlaceholderType.command_like`:
+
+        .. code-block:: latex
+
+            {...}
+            \foo[...]{...}
+            {\foo[...]{...}}
+
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-COMMAND-1-
+            -BASE-COMMAND-2-
+            -BASE-COMMAND-3-
+
+    -   :py:class:`PlaceholderType.curly_braced`:
+
+        .. code-block:: latex
+
+            {...}
+
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-CURLY-BRACED-1-
+
+    -   :py:class:`PlaceholderType.let_command`:
+
+        .. code-block:: latex
+
+            \let\iffoo
+
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-LET-1-
+
+    -   :py:class:`PlaceholderType.newif_command`:
+
+        .. code-block:: latex
+
+            \newif\iffoo
+
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-NEWIF-1-
 
     :param text: Text.
     :param ptypes: List of placeholder types to replace
@@ -1232,7 +1285,7 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
     text, placeholders_let = text_to_placeholders(
-        text, [PlaceholderType.let, PlaceholderType.newif]
+        text, [PlaceholderType.let_command, PlaceholderType.newif_command]
     )
     text = _begin_end_one_separate_line(text, placeholders_comments)
     text = text_from_placeholders(text, placeholders_let)
