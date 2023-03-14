@@ -294,6 +294,30 @@ some more text.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_environment_nested_d(self):
+        """
+        https://github.com/cmhughes/latexindent.pl/blob/main/test-cases/commands/sub-super-scripts.tex
+        """
+        text = r"""
+\parbox{
+    $\int_{x^2}^{y^2}$
+    \[
+    x^2
+    \]}
+        """
+
+        formatted = r"""
+\parbox{
+    $\int_{x^2}^{y^2}$
+    \[
+        x^2
+    \]
+}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_environment_multiline_a(self):
         text = r"""
 Some text \begin{figure}
