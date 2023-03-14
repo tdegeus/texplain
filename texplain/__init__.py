@@ -1126,9 +1126,9 @@ def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placehold
     text = re.sub(r"(\n?\ *)(?<!\\)(\\(\[|\]))", r"\n\2", text)
 
     # begin all ``\if`` and ``\else`` and ``\fi`` on newline
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\if[\@\w]*)(\s|\n|$)", r"\n\2\3", text)
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\fi)(\s|\n|$)", r"\n\2\3", text)
-    text = re.sub(r"(\n?\ *)(?<!\\)(\\else)(\s|\n|$)", r"\n\2\3", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\if[\@\w]*)(?=\s|\n|$)", r"\n\2", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\fi)(?=\s|\n|$)", r"\n\2", text)
+    text = re.sub(r"(\n?\ *)(?<!\\)(\\else)(?=\s|\n|$)", r"\n\2", text)
 
     # end all ``\end{...}`` on newline
     text = re.sub(r"(?<!\\)(\\end\{[^\}]*\})(\ *\n?)", r"\1\n", text)
@@ -1319,8 +1319,8 @@ def indent(text: str, indent: str = "    ") -> str:
     # add indentation for ``\if``, ``\else``, ``\fi``
     indices = find_matching(
         text,
-        r"(^|\n)(?<!\\)(\\if)([\@\w]*)(\n|$)",
-        r"(^|\n)(?<!\\)(\\fi)(\n|$)",
+        r"(^|\n)(?<!\\)(\\if)([\@\w]*)(?=\n|$)",
+        r"(^|\n)(?<!\\)(\\fi)(?=\n|$)",
         escape=False,
         opening_match=1,
         closing_match=0,
@@ -1364,6 +1364,7 @@ def _one_sentence_per_line(
     text: str,
     fold: list[PlaceholderType] = [],
     base: str = "TEXONEPERLINE",
+    command: bool = False,
 ) -> str:
     """
     Split text into sentences.
@@ -1409,6 +1410,11 @@ def _one_sentence_per_line(
             ret += text[s:e]
             start = e
         ret += _detail_one_sentence_per_line(text[start:])
+
+    if command:
+        match = [i for i in re.finditer(r"(\w*\=.*\,\ )+", ret)]
+        if len(match) > 0:
+            ret = ",\n".join(ret.split(", "))
 
     return text_from_placeholders(ret, placeholders)
 
@@ -1482,7 +1488,7 @@ def _format_command(
                 [PlaceholderType.command, PlaceholderType.curly_braced],
                 f"TEXONEPERLINE-L{level}",
             )
-            body = _one_sentence_per_line(body, [])
+            body = _one_sentence_per_line(body, [], command=True)
 
             # make sure that the newline is kept
             for search in search_placeholder:

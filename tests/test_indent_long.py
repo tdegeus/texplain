@@ -2801,6 +2801,42 @@ class TestCode(unittest.TestCase):
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_code_a(self):
+        text = r"""
+\if@narrow
+    \RequirePackage[left=40mm, right=40mm, top=30mm, bottom=30mm]{geometry}
+\else
+    \if@wwide
+        \RequirePackage[left=10mm, right=10mm, top=20mm, bottom=20mm]{geometry}
+    \else
+        \if@wide
+            \RequirePackage[left=15mm, right=15mm, top=20mm, bottom=20mm]{geometry}
+        \else
+            \RequirePackage[left=25mm, right=25mm, top=30mm, bottom=30mm]{geometry}
+        \fi
+    \fi
+\fi
+        """
+
+        formatted = r"""
+\if@narrow
+    \RequirePackage[left=40mm, right=40mm, top=30mm, bottom=30mm]{geometry}
+\else
+    \if@wwide
+        \RequirePackage[left=10mm, right=10mm, top=20mm, bottom=20mm]{geometry}
+    \else
+        \if@wide
+            \RequirePackage[left=15mm, right=15mm, top=20mm, bottom=20mm]{geometry}
+        \else
+            \RequirePackage[left=25mm, right=25mm, top=30mm, bottom=30mm]{geometry}
+        \fi
+    \fi
+\fi
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
 
 if __name__ == "__main__":
     unittest.main()
