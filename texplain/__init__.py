@@ -1328,6 +1328,7 @@ def indent(text: str, indent: str = "    ") -> str:
         lineno[i] = line
         i += 1
     lineno[i:] = line + 1
+    lineno = np.append(lineno, line + 2)
 
     # initialize indentation level
     indent_level = np.zeros(lineno[-1] + 1, dtype=int)

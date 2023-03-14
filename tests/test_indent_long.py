@@ -2645,6 +2645,87 @@ class TestNested(unittest.TestCase):
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_command_option_only(self):
+        text = r"""
+\documentclass{goose-article}
+
+\title{General \LaTeX trick: reference to dummy subfigure}
+\author{}
+\usepackage{kantlipsum}
+
+\begin{document}
+
+\maketitle
+
+See \url{https://tex.stackexchange.com/a/552811/132350} and
+\url{https://tex.stackexchange.com/q/612642/132350}.
+
+Here are the references:
+to the figure \cref{fig:1}, and to the subfigures \cref{fig:1a} and \cref{fig:1b}.
+
+\begin{figure}[htp]
+    \centering
+    \subfloat{\label{fig:1a}}
+    \subfloat{\label{fig:1b}}
+    \includegraphics[width=.4\linewidth]{example-image-a}
+    \hspace{.02\linewidth}
+    \includegraphics[width=.4\linewidth]{example-image-b}
+    \caption{
+        \protect\subref{fig:1a}
+        First sub caption.
+        \protect\subref{fig:1b}
+        Second sub caption.
+        \kant[8]
+    }
+    \label{fig:1}
+\end{figure}
+
+\kant[1-7]
+
+\end{document}
+        """
+
+        formatted = r"""
+\documentclass{goose-article}
+
+\title{General \LaTeX trick: reference to dummy subfigure}
+\author{}
+\usepackage{kantlipsum}
+
+\begin{document}
+
+\maketitle
+
+See \url{https://tex.stackexchange.com/a/552811/132350} and
+\url{https://tex.stackexchange.com/q/612642/132350}.
+
+Here are the references: to the figure \cref{fig:1}, and to the subfigures \cref{fig:1a} and \cref{fig:1b}.
+
+\begin{figure}[htp]
+    \centering
+    \subfloat{\label{fig:1a}}
+    \subfloat{\label{fig:1b}}
+    \includegraphics[width=.4\linewidth]{example-image-a}
+    \hspace{.02\linewidth}
+    \includegraphics[width=.4\linewidth]{example-image-b}
+    \caption{
+        \protect\subref{fig:1a}
+        First sub caption.
+        \protect\subref{fig:1b}
+        Second sub caption.
+        \kant[8]
+    }
+    \label{fig:1}
+\end{figure}
+
+\kant[1-7]
+
+\end{document}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
 
 class TestVerbatim(unittest.TestCase):
     def test_verbatim(self):
