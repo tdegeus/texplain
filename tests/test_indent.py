@@ -893,6 +893,25 @@ some text
 
     def test_code_b(self):
         text = r"""
+% a comment
+some text \if@namecite \if@foo bar \fi \fi
+        """
+
+        formatted = r"""
+% a comment
+some text
+\if@namecite
+    \if@foo
+        bar
+    \fi
+\fi
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_code_c(self):
+        text = r"""
 \newif\if@namecite
 \let\if@namecite\iffalse
 \DeclareOption{namecite}{\let\if@namecite\iftrue}
