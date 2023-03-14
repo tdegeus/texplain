@@ -1184,6 +1184,12 @@ def indent(text: str, indent: str = "    ") -> str:
         text, [PlaceholderType.comment, PlaceholderType.inline_comment]
     )
 
+    # place noindent and verbatim placeholders where they belong to do indentation
+    text = text_from_placeholders(text, placeholders_noindent)
+    text, placeholders_noindent = text_to_placeholders(
+        text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
+    )
+
     # fold math lines to simplify implementation
     text, pl = text_to_placeholders(text, [PlaceholderType.math_line])
     placeholders_comment += pl
