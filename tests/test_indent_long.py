@@ -2593,7 +2593,6 @@ parbox=false,
 
 class TestNested(unittest.TestCase):
     def test_nested(self):
-
         text = r"""
 \renewcommand{\maketitle}{%
     \newpage
@@ -2645,6 +2644,7 @@ class TestNested(unittest.TestCase):
 
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
+
 
 class TestVerbatim(unittest.TestCase):
     def test_verbatim(self):

@@ -916,5 +916,6 @@ some text
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+
 if __name__ == "__main__":
     unittest.main()
