@@ -1580,12 +1580,17 @@ class TeX:
         Return document.
         """
         ret = "\n\n".join(
-            [
-                self.preamble.strip(),
-                self.start.strip(),
-                self.main.strip(),
-                self.postamble.strip(),
-            ]
+            list(
+                filter(
+                    None,
+                    [
+                        self.preamble.strip(),
+                        self.start.strip(),
+                        self.main.strip(),
+                        self.postamble.strip(),
+                    ],
+                )
+            )
         )
         return ret + "\n"
 
