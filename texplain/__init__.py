@@ -1408,10 +1408,14 @@ def _detail_one_sentence_per_line(text: str) -> str:
     TODO: optional split characters such as ``;`` and ``:``
     """
 
+    start_nl = text[0] == "\n"
     text = re.split(r"(?<=[\.\!\?])\s+", text)
 
     for i in range(len(text)):
-        text[i] = re.sub("(\n[\\ \t]*)([\\w\\$\\(\\[\\`])", r" \2", text[i])
+        text[i] = re.sub(r"(\n[\ \t]*)([\w\$\(\[\`])", r" \2", text[i])
+
+    if start_nl:
+        text[0] = "\n" + text[0].lstrip()
 
     return "\n".join(text)
 
@@ -1444,6 +1448,9 @@ def _one_sentence_per_line(
     # \end{...}
     skip += [i.span() for i in re.finditer(r"(?<!\\)(\\)(end\{\w*\}\s*)", text)]
 
+    # \\
+    skip += [i.span() for i in re.finditer(r"(\\\\)", text)]
+
     # multiple newlines
     skip += [i.span() for i in re.finditer(r"(\n\n+)", text)]
 
@@ -1452,6 +1459,7 @@ def _one_sentence_per_line(
     else:
         skip = np.array(skip)
         skip = _filter_nested(skip[skip[:, 0].argsort()])
+        # merge consecutive blocks
         keep = np.ones(skip.shape[0], dtype=bool)
         for i in range(skip.shape[0] - 1):
             if skip[i, 1] == skip[i + 1, 0]:
