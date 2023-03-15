@@ -577,6 +577,31 @@ With some more words.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_multiline(self):
+        text = r"""
+This is a \\
+long sentence.
+
+With
+some
+more
+words.
+And
+another
+following sentence.
+        """
+
+        formatted = r"""
+This is a \\
+long sentence.
+
+With some more words.
+And another following sentence.
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_environment(self):
         text = r"""
 This is the
