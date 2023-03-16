@@ -4,9 +4,9 @@ sphinx:
 version: 2
 
 build:
-  os: "ubuntu-20.04"
+  os: ubuntu-20.04
   tools:
-    python: "mambaforge-4.10"
+    python: mambaforge-4.10
 
 conda:
   environment: environment.yaml
