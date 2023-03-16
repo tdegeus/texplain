@@ -1411,7 +1411,7 @@ def _detail_one_sentence_per_line(text: str) -> str:
     text = re.split(r"(?<=[\.\!\?])\s+", text)
 
     for i in range(len(text)):
-        text[i] = re.sub(r"(.+)(\n[\ \t]*)([\w\$\(\[\`])", r"\1 \3", text[i])
+        text[i] = re.sub(r"([^\n]+)(\n[\ \t]*)([\w\$\(\[\`])", r"\1 \3", text[i])
 
     return "\n".join(text)
 
