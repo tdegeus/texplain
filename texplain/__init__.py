@@ -12,6 +12,7 @@ from shutil import copyfile
 import numpy as np
 from numpy.typing import ArrayLike
 from numpy.typing import NDArray
+from typing_extensions import deprecated
 
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
@@ -39,6 +40,7 @@ class PlaceholderType(enum.Enum):
     newif_command = enum.auto()
 
 
+@deprecated("Use regex directly")
 def find_opening(
     text: str,
     opening: str,
@@ -73,8 +75,8 @@ def find_commented(text: str) -> list[list[int]]:
     :return: List of of indices of the beginning and end of the comments.
     """
 
-    comments = np.array(find_opening(text, "%", ignore_escaped=True))
-    newlines = np.array(find_opening(text, "\n", ignore_escaped=False) + [len(text)])
+    comments = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(%)", text)])
+    newlines = np.array([i.span()[0] for i in re.finditer(r"\n", text)] + [len(text)])
 
     ret = []
 

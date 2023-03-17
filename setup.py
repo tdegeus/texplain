@@ -21,7 +21,7 @@ setup(
     packages=find_packages(),
     use_scm_version={"write_to": f"{project_name}/_version.py"},
     setup_requires=["setuptools_scm"],
-    install_requires=["click", "numpy"],
+    install_requires=["click", "numpy", "typing_extensions>=4.5.0"],
     entry_points={
         "console_scripts": [
             f"texplain = {project_name}:_texplain_cli",
