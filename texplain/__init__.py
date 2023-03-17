@@ -242,6 +242,9 @@ def _detail_find_option(
 
     :param ret:
         List of tuples of the indices of the opening and closing braces.
+
+    :return:
+        Updated ``ret``.
     """
 
     if len(braces) == 0:
@@ -405,8 +408,8 @@ def remove_comments(text: str) -> str:
     """
     Remove comments from a string.
 
-    :param text: The string to consider.
-    :return: The string without comments.
+    :param text: Text
+    :return: Text without comments.
     """
     text = text.splitlines()
     for i in range(len(text)):
