@@ -9,3 +9,4 @@ dependencies:
 - sphinx
 - sphinx-argparse
 - sphinx-mdinclude
+- typing_extensions >=4.5.0
