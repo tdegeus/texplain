@@ -1261,7 +1261,7 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # comments: exclude from formatting
     text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
-    text, placeholders_inline_comment = text_to_placeholders(text, [PlaceholderType.inline_comment])
+    text, placeholders_rcomment = text_to_placeholders(text, [PlaceholderType.inline_comment])
 
     # line comments: remove leading whitespace
     for placeholder in placeholders_comment:
@@ -1269,10 +1269,10 @@ def indent(text: str, indent: str = "    ") -> str:
         placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
     # inline comments: remove duplicate leading spaces
-    for placeholder in placeholders_inline_comment:
+    for placeholder in placeholders_rcomment:
         placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
-    placeholders_comments = placeholders_comment + placeholders_inline_comment
+    placeholders_comments = placeholders_comment + placeholders_rcomment
 
     # remove multiple newlines, duplicate spaces, and any leading whitespace
     text = re.sub(r"(\n\n+)", r"\n\n", text)
@@ -1309,21 +1309,16 @@ def indent(text: str, indent: str = "    ") -> str:
         placeholder.content = _format_command(placeholder.content, placeholders_comments)
     text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
 
-    # place comment placeholders where they belong to do indentation
-    text = text_from_placeholders(text, placeholders_comments)
-    text, placeholders_comment = text_to_placeholders(
-        text, [PlaceholderType.comment, PlaceholderType.inline_comment]
+    # place placeholders where they belong to do indentation
+    text = text_from_placeholders(
+        text, placeholders_noindent + placeholders_comments, keep_placeholders=True
     )
 
-    # place noindent and verbatim placeholders where they belong to do indentation
-    text = text_from_placeholders(text, placeholders_noindent)
-    text, placeholders_noindent = text_to_placeholders(
-        text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
-    )
-
-    # fold math lines to simplify implementation
-    text, pl = text_to_placeholders(text, [PlaceholderType.math_line])
-    placeholders_comment += pl
+    # placeholders should not be repositioned
+    for placeholder in placeholders_comments + placeholders_inline_math:
+        placeholder.space_front = None
+        placeholder.space_back = None
+    placeholders = placeholders_noindent + placeholders_comments + placeholders_inline_math
 
     # get line number of each character
     lineno = np.empty(len(text), dtype=int)
@@ -1368,7 +1363,7 @@ def indent(text: str, indent: str = "    ") -> str:
         indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
 
     # add indentation to all command options ``[`` and ``]`` containing at least one ``\n``
-    commands = find_command(text, is_comment=_is_placeholder(text, placeholders_comment))
+    commands = find_command(text, is_comment=_is_placeholder(text, placeholders_comments))
     indices = []
     for command in commands:
         if len(command) < 2:
@@ -1395,13 +1390,12 @@ def indent(text: str, indent: str = "    ") -> str:
         indent_level[lineno[match.span(2)[0]]] -= 1
 
     # apply indentation
-    text = text_from_placeholders(text, placeholders_comment)
     text = text.splitlines()
     for i in range(len(text)):
         text[i] = indent_level[i] * indent + text[i]
     text = "\n".join(text)
 
-    text = text_from_placeholders(text, placeholders_inline_math + placeholders_noindent)
+    text = text_from_placeholders(text, placeholders)
     return _rstrip_lines(text)
 
 
