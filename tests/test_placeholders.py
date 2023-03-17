@@ -87,6 +87,7 @@ Bla bla bla. -TEXINDENT-NOINDENT-2- A last sentence.
         self.assertEqual(ret, expect)
         self.assertEqual(text, texplain.text_from_placeholders(ret, placeholders))
         self.assertEqual(text, texplain.text_from_placeholders(change_indent, placeholders))
+        self.assertEqual(expect, texplain.text_from_placeholders(change_indent, placeholders, True))
 
     def test_comments(self):
         """

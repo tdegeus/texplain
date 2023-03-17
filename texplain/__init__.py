@@ -481,29 +481,34 @@ class Placeholder:
             text[:start] + placeholder + text[end:],
         )
 
-    def to_text(self, text: str, index: int = None) -> str:
+    def to_text(self, text: str, index: int = None, keep_placeholder: bool = False) -> str:
         """
         Replace placeholder with content.
         If the whitespace before and after the placeholder is stored, it is restored.
 
-        :param text: The string to consider.
+        :param text: Text.
         :param index: The index of the placeholder.
+        :param keep_placeholder: If ``True`` the placeholder is kept (it is merely positioned).
+        :return: Text with placeholder replaced by content.
         """
+
         if index is None:
             index = text.find(self.placeholder)
 
-        pre = text[:index][::-1]
+        pre = text[:index]
         post = text[index + len(self.placeholder) :]  # noqa: E203
 
         if self.space_front is not None:
+            pre = pre[::-1]
             front = re.search(r"\s*", pre).end()
             pre = pre[front:][::-1] + self.space_front
-        else:
-            pre = pre[::-1]
 
         if self.space_back is not None:
             back = re.search(r"\ *\n?", post).end()
             post = self.space_back + post[back:]
+
+        if keep_placeholder:
+            return pre + self.placeholder + post
 
         return pre + self.content + post
 
@@ -1017,6 +1022,7 @@ def text_to_placeholders(
 def text_from_placeholders(
     text: str,
     placeholders: list[Placeholder],
+    keep_placeholders: bool = False,
 ) -> str:
     """
     Replace placeholders with original text.
@@ -1025,6 +1031,7 @@ def text_from_placeholders(
 
     :param text: Text with placeholders.
     :param placeholders: List of placeholders.
+    :param keep_placeholders: If ``True``, the placeholders are kept (they are merely positioned).
     :return: Text with content of the placeholders.
     """
 
@@ -1048,7 +1055,7 @@ def text_from_placeholders(
             if placeholder is None:
                 continue
             n = len(text)
-            text = placeholder.to_text(text, index + offset)
+            text = placeholder.to_text(text, index + offset, keep_placeholder=keep_placeholders)
             offset += len(text) - n
             if len(placeholders) == 0:
                 return text
@@ -1056,7 +1063,7 @@ def text_from_placeholders(
     for key in placeholders:
         placeholder = placeholders[key]
         n = len(text)
-        text = placeholder.to_text(text)
+        text = placeholder.to_text(text, keep_placeholder=keep_placeholders)
 
     return text
 
