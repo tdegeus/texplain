@@ -90,9 +90,9 @@ def find_commented(text: str) -> list[list[int]]:
     The output is such that one can find the comments text as follows::
 
         for i, j in find_commented(text):
-            print(text[i + 1 : j]) # i is the index of "%"
+            print(text[i : j]) # i is the index of "%"
 
-    :param text: The string to consider.
+    :param text: Text.
     :return: List of of indices of the beginning and end of the comments.
     """
 
@@ -113,8 +113,8 @@ def is_commented(text: str) -> NDArray[np.bool_]:
     """
     Return array that lists per character if it corresponds to commented text.
 
-    :param text: The string to consider.
-    :return: Array of booleans.
+    :param text: Text.
+    :return: Array of booleans of size ``len(text)``.
     """
 
     comments = find_commented(text)
@@ -130,7 +130,8 @@ def find_matching_index(
     return_array: bool = False,
 ) -> dict:
     r"""
-    Find matching 'brackets'.
+    Find matching 'brackets', based on a list of indices corresponding to opening and closing
+    'brackets'.
 
     :param opening: Indices of the opening brackets.
     :param closing: Indices of the closing brackets.
