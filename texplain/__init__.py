@@ -1309,12 +1309,110 @@ def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placehold
     return text
 
 
-def indent(text: str, indent: str = "    ") -> str:
+def indent(
+    text: str,
+    indent: str = "    ",
+    rstrip: bool = True,
+    lstrip: bool = True,
+    squashlines: bool = True,
+    squashspaces: bool = True,
+    symbols: bool = True,
+    environment: bool = True,
+    argument: bool = True,
+    inlinemath: bool = True,
+    linebreak: bool = True,
+    sentence: bool = True,
+    alignment: bool = True,
+    noindent: bool = True,
+) -> str:
     """
     Indent text.
 
     :param text: The text to indent.
-    :param indent: The indentation to use.
+
+    :param indent:
+        Set indentation of lines between:
+
+        -   ``\begin{...}[...]{...}`` and ``\\end{...}``.
+        -   ``\\[`` and ``\\]``.
+        -   ``{`` and ``}``.
+        -   ``[`` and ``]`` (as command option).
+
+        Comment lines follow indentation.
+        Requires: ``lstrip``, ``inlinemath``, ```environment``.
+        To switch off indentation, set ``indent=""``.
+
+    :param rstrip: Remove trailing spaces on all lines.
+    :param lstrip: Remove all leading spaces before applying indentation.
+    :param squashlines: Reduce the maximum number of consecutive blank lines to 2.
+    :param squashspaces: Reduce the maximum number of consecutive spaces to 1.
+    :param symbols: In math-mode: all symbols are separated by a space.
+
+    :param environment:
+        ``\begin{...}[...]{...}`` and ``\\end{...}`` (and ``\\[`` and ``\\]``)
+        are placed on separate lines.
+
+    :param argument:
+        Any option or argument that is more than one line long is placed on separate lines.
+        For example:
+
+        .. code-block:: tex
+
+            xxx { This is a very long argument
+            that is more than one line long. } yyy
+
+        is formatted to:
+
+        .. code-block:: tex
+
+            xxx {
+                This is a very long argument
+                that is more than one line long.
+            } yyy
+
+    :param inlinemath: Inline math is placed on one line.
+    :param linebreak: ``\\`` is followed by a linebreak.
+
+    :param sentence:
+        One sentence per line.
+        Every sentence should be on its own line,
+        and it should be (as much as possible) on a single line.
+        This is a subjective rule, and it is not always possible to follow it.
+        The following rules of thumb are followed:
+
+        -   A sentence ends with:
+            -   A period, question mark, or exclamation mark.
+            -   ``\begin{...}`` or ``\\end{...}``.
+            -   Two white lines.
+            -   ``\\``
+            -   The end of an argument (``}`` or ``]``), see below.
+            -   A command on the next line.
+
+        -   Commands and inline math are treated as a single word.
+            Formatting is applied on the arguments of commands.
+
+        Requires: ``rstrip``, ``lstrip``, ``squashspaces``.
+
+    :param alignment:
+
+        -   If the resulting line is less that 100 characters
+            columns in tabular environments are aligned at ``&`` and also ``\\`` are aligned.
+
+        -   In other cases single spaces are placed around ``&`` and before ``\\``.
+
+        Requires: ``environment``.
+
+    :param noindent:
+        Verbatim environments and everything between
+
+        .. code-block:: tex
+
+            % \begin{noindent}
+            ...
+            % \\end{noindent}
+
+        is not formatted.
+
     :return: The indented text.
     """
 
@@ -1326,76 +1424,94 @@ def indent(text: str, indent: str = "    ") -> str:
         raise NotImplementedError("Panic: don't know to deal with double dollar signs")
 
     # remove leading/trailing newlines, and trailing whitespace on each line
-    text = _rstrip_lines(text.strip())
+    if rstrip:
+        text = _rstrip_lines(text.strip())
 
     # "noindent" blocks are kept exactly as they are
-    text, placeholders_noindent = text_to_placeholders(
-        text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
-    )
-    # remove leading/trailing duplicate newlines
-    for placeholder in placeholders_noindent:
-        placeholder.space_front = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_front)
-        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
-        placeholder.space_back = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_back)
-        placeholder.space_back = re.sub(r"\ +", r" ", placeholder.space_back)
+    if noindent:
+        text, placeholders_noindent = text_to_placeholders(
+            text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
+        )
+        # remove leading/trailing duplicate newlines
+        for placeholder in placeholders_noindent:
+            placeholder.space_front = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_front)
+            placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+            placeholder.space_back = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_back)
+            placeholder.space_back = re.sub(r"\ +", r" ", placeholder.space_back)
+    else:
+        placeholders_noindent = []
 
     # comments: exclude from formatting
     text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
     text, placeholders_rcomment = text_to_placeholders(text, [PlaceholderType.inline_comment])
 
-    # line comments: remove leading whitespace
-    for placeholder in placeholders_comment:
-        placeholder.space_front = re.sub(r"(\n*)(\ *)", r"\1", placeholder.space_front)
-        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+    if lstrip:
+        # line comments: remove leading whitespace
+        for placeholder in placeholders_comment:
+            placeholder.space_front = re.sub(r"(\n*)(\ *)", r"\1", placeholder.space_front)
+            placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
-    # inline comments: remove duplicate leading spaces
-    for placeholder in placeholders_rcomment:
-        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+        # inline comments: remove duplicate leading spaces
+        for placeholder in placeholders_rcomment:
+            placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
     # all comments are equal for the remainder of the implementation
     placeholders_comments = placeholders_comment + placeholders_rcomment
 
     # remove multiple newlines, duplicate spaces, and any leading whitespace
-    text = _lstrip_lines(text)
-    text = re.sub(r"(\n\n+)", r"\n\n", text)
-    text = re.sub(r"(\ +)", r" ", text)
+    if lstrip:
+        text = _lstrip_lines(text)
+    if squashlines:
+        text = re.sub(r"(\n\n+)", r"\n\n", text)
+    if squashspaces:
+        text = re.sub(r"(\ +)", r" ", text)
 
     # fold inline math
     text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
     # inline math: always on one line
-    for placeholder in placeholders_inline_math:
-        placeholder.content = placeholder.content.replace("\n", " ")
-        placeholder.content = re.sub(r"(\ +)", r" ", placeholder.content)
-        placeholder.space_front = None
-        placeholder.space_back = None
+    if inlinemath:
+        for placeholder in placeholders_inline_math:
+            placeholder.content = placeholder.content.replace("\n", " ")
+            placeholder.content = re.sub(r"(\ +)", r" ", placeholder.content)
+            placeholder.space_front = None
+            placeholder.space_back = None
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
-    text, placeholders_let = text_to_placeholders(
-        text, [PlaceholderType.let_command, PlaceholderType.newif_command]
-    )
-    text = _begin_end_one_separate_line(text, placeholders_comments)
-    text = text_from_placeholders(text, placeholders_let)
+    if environment:
+        text, placeholders_let = text_to_placeholders(
+            text, [PlaceholderType.let_command, PlaceholderType.newif_command]
+        )
+        text = _begin_end_one_separate_line(text, placeholders_comments)
+        text = text_from_placeholders(text, placeholders_let)
 
     # \\ ends on line
-    text = re.sub(r"(?<!\\)(\\\\)(\ *\n?)", r"\1\n", text)
+    if linebreak:
+        text = re.sub(r"(?<!\\)(\\\\)(\ *\n?)", r"\1\n", text)
 
     # format tables: align if possible
-    text, placeholders_table = text_to_placeholders(text, [PlaceholderType.tabular])
-    for placeholder in placeholders_table:
-        placeholder.content = _align(placeholder.content)
-    text = text_from_placeholders(text, placeholders_table)
+    if alignment:
+        text, placeholders_table = text_to_placeholders(text, [PlaceholderType.tabular])
+        for placeholder in placeholders_table:
+            placeholder.content = _align(placeholder.content)
+        text = text_from_placeholders(text, placeholders_table)
 
     # apply one sentence per line
-    text, placeholders_ignore = text_to_placeholders(
-        text, [PlaceholderType.math, PlaceholderType.tabular]
-    )
-    text, placeholders_commands = text_to_placeholders(
-        text, [PlaceholderType.command_like], placeholders_comments=placeholders_comments
-    )
-    text = _one_sentence_per_line(text)
-    for placeholder in placeholders_commands:
-        placeholder.content = _format_command(placeholder.content, placeholders_comments)
-    text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
+    if sentence or argument:
+        assert lstrip
+        assert rstrip
+
+        text, placeholders_ignore = text_to_placeholders(
+            text, [PlaceholderType.math, PlaceholderType.tabular]
+        )
+        text, placeholders_commands = text_to_placeholders(
+            text, [PlaceholderType.command_like], placeholders_comments=placeholders_comments
+        )
+        if sentence:
+            text = _one_sentence_per_line(text)
+        if argument:
+            for pl in placeholders_commands:
+                pl.content = _format_command(pl.content, placeholders_comments, sentence)
+        text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
 
     # place placeholders where they belong to do indentation
     # thereafter they should not be repositioned
@@ -1407,80 +1523,85 @@ def indent(text: str, indent: str = "    ") -> str:
         placeholder.space_back = None
     placeholders = placeholders_noindent + placeholders_comments + placeholders_inline_math
 
-    # get line number of each character
-    lineno = np.empty(len(text), dtype=int)
-    i = 0
-    line = 0
-    for line, match in enumerate(re.finditer(r"\n", text)):
-        lineno[i : match.span()[0]] = line
-        i = match.span()[0]
-        lineno[i] = line
-        i += 1
-    lineno[i:] = line + 1
-    lineno = np.append(lineno, line + 2)
+    if indent:
+        assert lstrip
+        assert environment
+        assert inlinemath
 
-    # initialize indentation level
-    indent_level = np.zeros(lineno[-1] + 1, dtype=int)
+        # get line number of each character
+        lineno = np.empty(len(text), dtype=int)
+        i = 0
+        line = 0
+        for line, match in enumerate(re.finditer(r"\n", text)):
+            lineno[i : match.span()[0]] = line
+            i = match.span()[0]
+            lineno[i] = line
+            i += 1
+        lineno[i:] = line + 1
+        lineno = np.append(lineno, line + 2)
 
-    # add indentation to all lines between ``\begin{...}`` and ``\end{...}``
-    for env in environments(text) + [PlaceholderType.math]:
-        if env == PlaceholderType.math:
-            opening = r"\\\["
-            closing = r"\\\]"
-        elif env == "document":
-            continue
-        else:
-            opening = r"\\begin{" + env + r"}"
-            closing = r"\\end{" + env + r"}"
+        # initialize indentation level
+        indent_level = np.zeros(lineno[-1] + 1, dtype=int)
+
+        # add indentation to all lines between ``\begin{...}`` and ``\end{...}``
+        for env in environments(text) + [PlaceholderType.math]:
+            if env == PlaceholderType.math:
+                opening = r"\\\["
+                closing = r"\\\]"
+            elif env == "document":
+                continue
+            else:
+                opening = r"\\begin{" + env + r"}"
+                closing = r"\\end{" + env + r"}"
+            indices = find_matching(
+                text,
+                opening,
+                closing,
+                escape=False,
+                opening_match=1,
+                closing_match=0,
+                ignore_escaped=True,
+            )
+            for opening, closing in indices.items():
+                indent_level[np.unique(lineno[opening:closing])[1:]] += 1
+
+        # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
+        indices = find_matching(text, "{", "}", ignore_escaped=True, return_array=True)
+        for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
+            indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
+
+        # add indentation to all command options ``[`` and ``]`` containing at least one ``\n``
+        commands = find_command(text, is_comment=_is_placeholder(text, placeholders_comments))
+        indices = []
+        for command in commands:
+            if len(command) < 2:
+                continue
+            if text[command[1][0]] == "[":
+                indices += [command[1]]
+        indices = np.array(indices, dtype=int).reshape(-1, 2)
+        for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
+            indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
+
+        # add indentation for ``\if``, ``\else``, ``\fi``
         indices = find_matching(
             text,
-            opening,
-            closing,
+            r"(^|\n)(?<!\\)(\\if)([\@\w]*)(?=\n|$)",
+            r"(^|\n)(?<!\\)(\\fi)(?=\n|$)",
             escape=False,
             opening_match=1,
             closing_match=0,
             ignore_escaped=True,
         )
         for opening, closing in indices.items():
-            indent_level[np.unique(lineno[opening:closing])[1:]] += 1
+            indent_level[np.unique(lineno[opening - 1 : closing])[1:]] += 1
+        for match in re.finditer(r"(^|\n)(?<!\\)(\\else)(\n|$)", text):
+            indent_level[lineno[match.span(2)[0]]] -= 1
 
-    # add indentation to all lines between ``{`` and ``}`` containing at least one ``\n``
-    indices = find_matching(text, "{", "}", ignore_escaped=True, return_array=True)
-    for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
-        indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
-
-    # add indentation to all command options ``[`` and ``]`` containing at least one ``\n``
-    commands = find_command(text, is_comment=_is_placeholder(text, placeholders_comments))
-    indices = []
-    for command in commands:
-        if len(command) < 2:
-            continue
-        if text[command[1][0]] == "[":
-            indices += [command[1]]
-    indices = np.array(indices, dtype=int).reshape(-1, 2)
-    for i in np.argwhere(lineno[indices[:, 0]] != lineno[indices[:, 1]]).ravel():
-        indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
-
-    # add indentation for ``\if``, ``\else``, ``\fi``
-    indices = find_matching(
-        text,
-        r"(^|\n)(?<!\\)(\\if)([\@\w]*)(?=\n|$)",
-        r"(^|\n)(?<!\\)(\\fi)(?=\n|$)",
-        escape=False,
-        opening_match=1,
-        closing_match=0,
-        ignore_escaped=True,
-    )
-    for opening, closing in indices.items():
-        indent_level[np.unique(lineno[opening - 1 : closing])[1:]] += 1
-    for match in re.finditer(r"(^|\n)(?<!\\)(\\else)(\n|$)", text):
-        indent_level[lineno[match.span(2)[0]]] -= 1
-
-    # apply indentation
-    text = text.splitlines()
-    for i in range(len(text)):
-        text[i] = indent_level[i] * indent + text[i]
-    text = "\n".join(text)
+        # apply indentation
+        text = text.splitlines()
+        for i in range(len(text)):
+            text[i] = indent_level[i] * indent + text[i]
+        text = "\n".join(text)
 
     text = text_from_placeholders(text, placeholders)
     return _rstrip_lines(text)
@@ -1570,6 +1691,7 @@ def _one_sentence_per_line(
 def _format_command(
     text: str,
     placeholders_comments: list[Placeholder],
+    sentence: bool = True,
     level: int = 0,
 ) -> str:
     """
@@ -1591,7 +1713,7 @@ def _format_command(
 
     :param text: Text.
     :param placeholders_comments: List of placeholders for comments.
-    :param ptype: Placeholder type.
+    :param sentence: Apply one sentence per line formatting.
     :param level: Level of nested-ness, used to define unique placeholder names.
     :return: Formatted text.
     """
@@ -1631,12 +1753,14 @@ def _format_command(
                 [PlaceholderType.command_like],
                 f"TEXONEPERLINE-L{level}",
             )
-            body = _one_sentence_per_line(body, [], command=True)
+            if sentence:
+                body = _one_sentence_per_line(body, [], command=True)
 
             for placeholder in placeholders_cmd:
                 placeholder.content = _format_command(
                     placeholder.content,
                     placeholders_comments,
+                    sentence,
                     level + 1,
                 )
             body = text_from_placeholders(body, placeholders_cmd)
