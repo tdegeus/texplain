@@ -18,11 +18,32 @@ from ._version import version_tuple  # noqa: F401
 
 
 class PlaceholderType(enum.Enum):
-    """
+    r"""
     Type of placeholder.
-    See :py:func:`text_to_placeholder` for more information.
+    The placeholders' practical definition is in :py:func:`text_to_placeholder`.
+    The intended use is:
+
+    :py:attr:`line`: A single line of content (1 line).
+    :py:attr:`inline_comment`: A comment that is preceded by some content.
+    :py:attr:`comment`: A comment that is the only content on that line.
+    :py:attr:`tabular`: Entire block ``\begin{tabular} ... \end{tabular}``.
+    :py:attr:`math`: Entire block of displaystyle math. E.g. ``\begin{equation} ... \end{equation}``
+    :py:attr:`inline_math`: Entire block of inline math. E.g. ``$ ... $``.
+    :py:attr:`math_line`: A single line of content in math mode.
+    :py:attr:`environment`: Entire block of environment: ``\begin{...} ... \end{...}``.
+    :py:attr:`command`: Entire block of command: ``\command[...]{...}``.
+    :py:attr:`curly_braced`: Entire block of curly braced content: ``{...}``.
+    :py:attr:`command_like`: Entire block of :py:attr:`command` or :py:attr:`curly_braced`.
+    :py:attr:`noindent_block`: Entire block of ``% \begin{noindent} ... % \end{noindent}``.
+    :py:attr:`verbatim`: Entire block of ``\begin{verbatim} ... \end{verbatim}``.
+    :py:attr:`let_command`: Definition ``\let...``.
+    :py:attr:`newif_command`: Definition ``\newif...``.
+
+    Except for :py:attr:`line`, :py:attr:`math_line`, :py:attr:`comment`, :py:attr:`inline_comment`
+    all placeholders can span more than one line.
     """
 
+    line = enum.auto()
     inline_comment = enum.auto()
     comment = enum.auto()
     tabular = enum.auto()
@@ -870,11 +891,13 @@ def text_to_placeholders(
 
             $...$
 
-        (and other inline math environments) is replaced with
+        is replaced with
 
         .. code-block:: latex
 
             -BASE-INLINE-MATH-1-
+
+        Also looks for ``\(...\)`` and ``\begin{math}...\end{math}``.
 
     -   :py:class:`PlaceholderType.math`:
 
@@ -884,13 +907,18 @@ def text_to_placeholders(
             ...
             \end{equation}
 
-        (and other math environments) is replaced with
+        is replaced with
 
         .. code-block:: latex
 
             -BASE-MATH-1-
 
+        Also looks for ``\[...\]``, ``\begin{equation*}...\end{equation*}``,
+        ``\begin{align}...\end{align}``, and ``\begin{align*}...\end{align*}``.
+
     -   :py:class:`PlaceholderType.math_line`:
+
+        A line of display mode math (see :py:class:`PlaceholderType.math`)
 
         .. code-block:: latex
 
@@ -899,7 +927,7 @@ def text_to_placeholders(
             ...
             \end{equation}
 
-        (and other math environments) is replaced with
+        is replaced with
 
         .. code-block:: latex
 
