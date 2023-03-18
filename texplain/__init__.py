@@ -300,6 +300,7 @@ def _find_option(
     return _detail_find_option(character, index, braces, [])
 
 
+# TODO: This function should be able to be limited to a given number of options and arguments.
 def find_command(
     text: str,
     name: str = None,
@@ -358,7 +359,8 @@ def find_command(
     if curly_closing.size > 0:
         curly_closing = curly_closing[~is_comment[curly_closing]]
 
-    # search to what commands brackets might belong
+    # search to which command brackets might belong
+    # this is a rough estimate as commands might be nested
     cmd_square_open = np.searchsorted(cmd_end, square_open, side="right") - 1
     cmd_square_closing = np.searchsorted(cmd_end, square_closing, side="right") - 1
     cmd_curly_open = np.searchsorted(cmd_end, curly_open, side="right") - 1
@@ -580,6 +582,13 @@ class GeneratePlaceholder:
 
 
 def _filter_nested(indices: ArrayLike) -> ArrayLike:
+    """
+    Filter nested indices.
+
+    :param indices: A list of start and end indices.
+    :return: The filtered list of start and end indices.
+    """
+
     indices = indices[np.argsort(indices[:, 0])]
     keep = np.ones(len(indices), dtype=bool)
 
@@ -1122,6 +1131,7 @@ def _lstrip_lines(text: str) -> str:
     return "\n".join([line.lstrip() for line in text.splitlines()])
 
 
+# TODO: move partial to external function
 def _dedent(text: str, partial: list[PlaceholderType]) -> str:
     """
     Remove indentation.
@@ -1157,6 +1167,7 @@ def _dedent(text: str, partial: list[PlaceholderType]) -> str:
     return text
 
 
+# TODO: move partial to external function
 def _squashspaces(text: str, skip: list[PlaceholderType]) -> str:
     """
     Squash spaces.
@@ -1344,11 +1355,10 @@ def indent(text: str, indent: str = "    ") -> str:
     text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
 
     # place placeholders where they belong to do indentation
+    # thereafter they should not be repositioned
     text = text_from_placeholders(
         text, placeholders_noindent + placeholders_comments, keep_placeholders=True
     )
-
-    # placeholders should not be repositioned
     for placeholder in placeholders_comments + placeholders_inline_math:
         placeholder.space_front = None
         placeholder.space_back = None
