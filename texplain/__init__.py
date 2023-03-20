@@ -1194,9 +1194,7 @@ def _detail_align(lines: list[str], align: str, maxwidth: int = 150) -> str:
 def _align(
     placeholders: list[Placeholder],
     placeholders_comments: list[Placeholder],
-    body_as_placeholders: bool = False,
     align: str = "<",
-    base: str = "TEXINDENT-ALIGN",
 ) -> tuple[str, list[Placeholder]]:
     """
     For all placeholders of environments:
@@ -1208,18 +1206,7 @@ def _align(
 
     :param placeholders: List of placeholders (changed in place).
     :param placeholders_comments: List of placeholders that are comments.
-
-    :param body_as_placeholders:
-        If ``True``, each line of the body is replaced by a placeholder.
-
-    :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
-    :param base: Base for the placeholder names (only used if ``body_as_placeholders == True``).
-    :return: Placeholders of all body lines (only if ``body_as_placeholders == True``)
     """
-
-    ret = []
-    gen = GeneratePlaceholder(base, "line".upper())
-    search_placeholder = gen.search_placeholder
 
     for placeholder in placeholders:
         content = placeholder.content.strip()
@@ -1227,17 +1214,7 @@ def _align(
         content = text_from_placeholders(content, placeholders_comments, keep_placeholders=True)
         lines = content.strip().splitlines()
         lines[1:-1] = _detail_align(lines[1:-1], align)
-
-        # replace each line of the body to a placeholder (if requested)
-        if body_as_placeholders:
-            for i in range(1, len(lines) - 1):
-                pl = gen()
-                ret.append(Placeholder(pl, lines[i], search_placeholder=search_placeholder))
-                lines[i] = pl
-
         placeholder.content = "\n".join(lines)
-
-    return ret
 
 
 def align(
@@ -1275,7 +1252,7 @@ def align(
         text, indices, base, environment.upper(), PlaceholderType.environment
     )
 
-    _align(placeholders, placeholders_comments, align=align, base=base)
+    _align(placeholders, placeholders_comments, align=align)
     text = text_from_placeholders(text, placeholders)
     text = text_from_placeholders(text, placeholders_comments)
     return text
@@ -1422,11 +1399,9 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _lstrip_lines(text)
     text = re.sub(r"(\ +)", r" ", text)
 
-    # format tables
+    # format tables: aligns if possible
     text, placeholders_table = text_to_placeholders(text, [PlaceholderType.tabular])
-    placeholders_align = _align(
-        placeholders_table, placeholders_comments, body_as_placeholders=True
-    )
+    _align(placeholders_table, placeholders_comments)
     text = text_from_placeholders(text, placeholders_table)
 
     # fold inline math
@@ -1462,15 +1437,12 @@ def indent(text: str, indent: str = "    ") -> str:
     # place placeholders where they belong to do indentation
     # thereafter they should not be repositioned
     text = text_from_placeholders(
-        text,
-        placeholders_noindent + placeholders_comments + placeholders_align,
-        keep_placeholders=True,
+        text, placeholders_noindent + placeholders_comments, keep_placeholders=True
     )
-    for placeholder in placeholders_comments + placeholders_inline_math + placeholders_align:
+    for placeholder in placeholders_comments + placeholders_inline_math:
         placeholder.space_front = None
         placeholder.space_back = None
-    placeholders = placeholders_noindent + placeholders_comments + placeholders_align
-    placeholders += placeholders_inline_math
+    placeholders = placeholders_noindent + placeholders_comments + placeholders_inline_math
 
     # get line number of each character
     lineno = np.empty(len(text), dtype=int)
