@@ -524,6 +524,10 @@ class Placeholder:
         if index is None:
             index = text.find(self.placeholder)
 
+        # placeholder not found
+        if index == -1:
+            return text
+
         pre = text[:index]
         post = text[index + len(self.placeholder) :]  # noqa: E203
 
@@ -1131,55 +1135,149 @@ def _lstrip_lines(text: str) -> str:
     return "\n".join([line.lstrip() for line in text.splitlines()])
 
 
-# TODO: move partial to external function
-def _dedent(text: str, partial: list[PlaceholderType]) -> str:
-    """
-    Remove indentation.
+def _detail_align(lines: list[str], align: str, maxwidth: int = 150) -> str:
+    r"""
+    Align ``&`` and ``\\`` of all lines that contain those alignment characters.
 
     :param text: Text.
-    :param partial:
-        List of :py:class:`PlaceholderType` to dedent partially.
-        If the number of lines is less than 3, ``textwrap.dedent`` is applied to all lines.
-        Otherwise, ``textwrap.dedent`` is applied to ``lines[1:-1]``;
-        the first and last lines are stripped.
+    :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
+    :param maxwidth:
+        Alignment is applied only if the linewidth after alignment is smaller than ``maxwidth``.
+        Otherwise, spaces are added around ``&`` and before ``\\``.
 
-    :return: Formatted text.
+    :return: Aligned text.
     """
 
-    text, placholders = text_to_placeholders(text, partial, base="TEXDEDENT")
+    lines = [line.strip() for line in lines]
+    width = []
 
-    text = _lstrip_lines(text)
+    if len(lines) <= 1:
+        return lines
 
-    # keep common indentation table
-    # TODO: make more clever
-    for placeholder in placholders:
-        tmp = placeholder.content.splitlines()
-        if len(tmp) <= 2:
-            placeholder.content = "\n".join(textwrap.dedent(tmp))
+    for i, line in enumerate(lines):
+        # split at & and \\, and strip all spaces around
+        line = re.split(r"((?<!\\)&)", line)
+        line = line[:-1] + re.split(r"((?<!\\)\\\\)", line[-1])
+        line = list(filter(None, [i.strip() for i in line]))
+        if line[0] == "&":
+            line = [""] + line
+        lines[i] = line
+
+        # if line contains &: compute the width of each column
+        if "&" in line:
+            if len(width) == 0:
+                width = [len(col) for col in line]
+            else:
+                width += [len(col) for col in line[len(width) :]]
+                for j in range(len(line)):
+                    width[j] = max(width[j], len(line[j]))
+
+    # all lines start with &: remove leading spaces
+    if all([line[0] == "" for line in lines]):
+        lines = [line[1:] for line in lines]
+        width = width[1:]
+
+    if sum(width) < maxwidth:
+        fmt = " ".join("{" + str(i) + ":" + align + str(w) + "}" for i, w in enumerate(width))
+    else:
+        fmt = " ".join("{" + str(i) + "}" for i in range(len(width)))
+
+    for i, line in enumerate(lines):
+        if "&" in line:
+            lines[i] = fmt.format(*(line + [""] * (len(width) - len(line)))).rstrip()
         else:
-            placeholder.content = "\n".join(
-                [tmp[0].lstrip(), textwrap.dedent("\n".join(tmp[1:-1])), tmp[-1].lstrip()]
-            )
-        placeholder.space_front = "\n"
+            lines[i] = " ".join(line)
 
-    text = text_from_placeholders(text, placholders)
-
-    return text
+    return lines
 
 
-# TODO: move partial to external function
-def _squashspaces(text: str, skip: list[PlaceholderType]) -> str:
+def _align(
+    placeholders: list[Placeholder],
+    placeholders_comments: list[Placeholder],
+    body_as_placeholders: bool = False,
+    align: str = "<",
+    base: str = "TEXINDENT-ALIGN",
+) -> tuple[str, list[Placeholder]]:
     """
-    Squash spaces.
+    For all placeholders of environments:
+    -   Place ``\begin{...}[...]{...}`` and ``\\end{...}`` on own line.
+    -   Align ``&`` and ``\\`` of all lines that contain those alignment characters.
+
+    :warning: Assumes that each placeholder contains exactly one environment.
+    :warning: Assumes that all comments are replaced by placeholders.
+
+    :param placeholders: List of placeholders (changed in place).
+    :param placeholders_comments: List of placeholders that are comments.
+
+    :param body_as_placeholders:
+        If ``True``, each line of the body is replaced by a placeholder.
+
+    :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
+    :param base: Base for the placeholder names (only used if ``body_as_placeholders == True``).
+    :return: Placeholders of all body lines (only if ``body_as_placeholders == True``)
+    """
+
+    ret = []
+    gen = GeneratePlaceholder(base, "line".upper())
+    search_placeholder = gen.search_placeholder
+
+    for placeholder in placeholders:
+        content = placeholder.content.strip()
+        content = _begin_end_one_separate_line(content, placeholders_comments)
+        content = text_from_placeholders(content, placeholders_comments, keep_placeholders=True)
+        lines = content.strip().splitlines()
+        lines[1:-1] = _detail_align(lines[1:-1], align)
+
+        # replace each line of the body to a placeholder (if requested)
+        if body_as_placeholders:
+            for i in range(1, len(lines) - 1):
+                pl = gen()
+                ret.append(Placeholder(pl, lines[i], search_placeholder=search_placeholder))
+                lines[i] = pl
+
+        placeholder.content = "\n".join(lines)
+
+    return ret
+
+
+def align(
+    text: str,
+    environment: str,
+    align: str = "<",
+    base: str = "TEXINDENT-ALIGN",
+):
+    r"""
+    For all occurrences of an environment:
+    -   Place ``\begin{...}[...]{...}`` and ``\end{...}`` on own line.
+    -   Align ``&`` and ``\\`` of all lines that contain those alignment characters.
 
     :param text: Text.
-    :param skip: List of :py:class:`PlaceholderType` to skip.
+    :param environment: Name of the environment.
+    :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
+    :param base: Base for temporary placeholders.
     :return: Formatted text.
     """
 
-    text, placholders = text_to_placeholders(text, skip, base="TEXSQUASH")
-    text = re.sub(r"(\ +)", r" ", text)
-    text = text_from_placeholders(text, placholders)
+    text, placeholders_comments = text_to_placeholders(
+        text, [PlaceholderType.comment, PlaceholderType.inline_comment], base=base
+    )
+
+    indices = find_matching(
+        text,
+        r"\\begin{" + environment + r"}",
+        r"\\end{" + environment + r"}",
+        escape=False,
+        closing_match=1,
+        return_array=True,
+    )
+
+    text, placeholders = _apply_placeholders(
+        text, indices, base, environment.upper(), PlaceholderType.environment
+    )
+
+    _align(placeholders, placeholders_comments, align=align, base=base)
+    text = text_from_placeholders(text, placeholders)
+    text = text_from_placeholders(text, placeholders_comments)
     return text
 
 
@@ -1321,8 +1419,15 @@ def indent(text: str, indent: str = "    ") -> str:
 
     # remove multiple newlines, duplicate spaces, and any leading whitespace
     text = re.sub(r"(\n\n+)", r"\n\n", text)
-    text = _dedent(text, partial=[PlaceholderType.tabular])
-    text = _squashspaces(text, skip=[PlaceholderType.tabular])
+    text = _lstrip_lines(text)
+    text = re.sub(r"(\ +)", r" ", text)
+
+    # format tables
+    text, placeholders_table = text_to_placeholders(text, [PlaceholderType.tabular])
+    placeholders_align = _align(
+        placeholders_table, placeholders_comments, body_as_placeholders=True
+    )
+    text = text_from_placeholders(text, placeholders_table)
 
     # fold inline math
     text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
@@ -1357,12 +1462,15 @@ def indent(text: str, indent: str = "    ") -> str:
     # place placeholders where they belong to do indentation
     # thereafter they should not be repositioned
     text = text_from_placeholders(
-        text, placeholders_noindent + placeholders_comments, keep_placeholders=True
+        text,
+        placeholders_noindent + placeholders_comments + placeholders_align,
+        keep_placeholders=True,
     )
-    for placeholder in placeholders_comments + placeholders_inline_math:
+    for placeholder in placeholders_comments + placeholders_inline_math + placeholders_align:
         placeholder.space_front = None
         placeholder.space_back = None
-    placeholders = placeholders_noindent + placeholders_comments + placeholders_inline_math
+    placeholders = placeholders_noindent + placeholders_comments + placeholders_align
+    placeholders += placeholders_inline_math
 
     # get line number of each character
     lineno = np.empty(len(text), dtype=int)
