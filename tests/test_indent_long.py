@@ -2118,8 +2118,8 @@ across lines.
 
 As does
 \begin{tabular}{cc}
-    1 & 2\\
-    3&4
+    1 & 2 \\
+    3 & 4
 \end{tabular}
 this one.
         """
@@ -2721,6 +2721,28 @@ Here are the references: to the figure \cref{fig:1}, and to the subfigures \cref
 \kant[1-7]
 
 \end{document}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+
+class TestAlign(unittest.TestCase):
+    def test_align_long(self):
+        text = r"""
+\begin{tabular}{ccc}
+this is the first column with a long text following impeding alignment& and the second column with a long text following impeding alignment& and the third column with a long text following impeding alignment\\
+1 &2& 3\\
+40 & 50&60
+\end{tabular}
+        """
+
+        formatted = r"""
+\begin{tabular}{ccc}
+    this is the first column with a long text following impeding alignment & and the second column with a long text following impeding alignment & and the third column with a long text following impeding alignment \\
+    1 & 2 & 3 \\
+    40 & 50 & 60
+\end{tabular}
         """
 
         ret = texplain.indent(text)
