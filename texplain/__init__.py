@@ -1217,6 +1217,7 @@ def _align(
         placeholder.content = "\n".join(lines)
 
 
+@deprecated("Use ``indent`` instead.")
 def align(
     text: str,
     environment: str,
@@ -1234,28 +1235,7 @@ def align(
     :param base: Base for temporary placeholders.
     :return: Formatted text.
     """
-
-    text, placeholders_comments = text_to_placeholders(
-        text, [PlaceholderType.comment, PlaceholderType.inline_comment], base=base
-    )
-
-    indices = find_matching(
-        text,
-        r"\\begin{" + environment + r"}",
-        r"\\end{" + environment + r"}",
-        escape=False,
-        closing_match=1,
-        return_array=True,
-    )
-
-    text, placeholders = _apply_placeholders(
-        text, indices, base, environment.upper(), PlaceholderType.environment
-    )
-
-    _align(placeholders, placeholders_comments, align=align)
-    text = text_from_placeholders(text, placeholders)
-    text = text_from_placeholders(text, placeholders_comments)
-    return text
+    return indent(text, indent="")
 
 
 def _is_placeholder(text: str, placeholders: list[Placeholder]) -> list[bool]:
