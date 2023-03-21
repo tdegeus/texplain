@@ -1135,9 +1135,14 @@ def _lstrip_lines(text: str) -> str:
     return "\n".join([line.lstrip() for line in text.splitlines()])
 
 
-def _detail_align(lines: list[str], align: str, maxwidth: int = 150) -> str:
+# TODO: maxwidth should be a parameter that can be configured externally
+def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
     r"""
     Align ``&`` and ``\\`` of all lines that contain those alignment characters.
+
+    :warning:
+        Assumes that the first line contains ``\begin{...}[...]{...}`` and that the last line
+        contains ``\end{...}``. As this function is internal there is no assertion on this.
 
     :param text: Text.
     :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
@@ -1148,15 +1153,15 @@ def _detail_align(lines: list[str], align: str, maxwidth: int = 150) -> str:
     :return: Aligned text.
     """
 
-    lines = [line.strip() for line in lines]
+    lines = [line.strip() for line in text.strip().splitlines()]
     width = []
 
-    if len(lines) <= 1:
-        return lines
+    if len(lines) <= 3:
+        return "\n".join(lines)
 
-    for i, line in enumerate(lines):
+    for i in range(1, len(lines) - 1):
         # split at & and \\, and strip all spaces around
-        line = re.split(r"((?<!\\)&)", line)
+        line = re.split(r"((?<!\\)&)", lines[i])
         line = line[:-1] + re.split(r"((?<!\\)\\\\)", line[-1])
         line = list(filter(None, [i.strip() for i in line]))
         if line[0] == "&":
@@ -1173,45 +1178,23 @@ def _detail_align(lines: list[str], align: str, maxwidth: int = 150) -> str:
                     width[j] = max(width[j], len(line[j]))
 
     # all lines start with &: remove leading spaces
-    if all([line[0] == "" for line in lines]):
-        lines = [line[1:] for line in lines]
+    if all([lines[i][0] == "" for i in range(1, len(lines) - 1)]):
         width = width[1:]
+        for i in range(1, len(lines) - 1):
+            lines[i] = lines[i][1:]
 
     if sum(width) < maxwidth:
         fmt = " ".join("{" + str(i) + ":" + align + str(w) + "}" for i, w in enumerate(width))
     else:
         fmt = " ".join("{" + str(i) + "}" for i in range(len(width)))
 
-    for i, line in enumerate(lines):
-        if "&" in line:
-            lines[i] = fmt.format(*(line + [""] * (len(width) - len(line)))).rstrip()
+    for i in range(1, len(lines) - 1):
+        if "&" in lines[i]:
+            lines[i] = fmt.format(*(lines[i] + [""] * (len(width) - len(lines[i])))).rstrip()
         else:
-            lines[i] = " ".join(line)
+            lines[i] = " ".join(lines[i])
 
-    return lines
-
-
-def _align(
-    placeholders: list[Placeholder],
-    placeholders_comments: list[Placeholder],
-    align: str = "<",
-) -> tuple[str, list[Placeholder]]:
-    """
-    For all placeholders of environments:
-    -   Place ``\begin{...}[...]{...}`` and ``\\end{...}`` on own line.
-    -   Align ``&`` and ``\\`` of all lines that contain those alignment characters.
-
-    :warning: Assumes that each placeholder contains exactly one environment.
-    :warning: Assumes that all comments are replaced by placeholders.
-
-    :param placeholders: List of placeholders (changed in place).
-    :param placeholders_comments: List of placeholders that are comments.
-    """
-
-    for placeholder in placeholders:
-        lines = placeholder.content.strip().splitlines()
-        lines[1:-1] = _detail_align(lines[1:-1], align)
-        placeholder.content = "\n".join(lines)
+    return "\n".join(lines)
 
 
 @deprecated("Use ``indent`` instead.")
@@ -1338,11 +1321,11 @@ def indent(text: str, indent: str = "    ") -> str:
     if len(text) == 0:
         return text
 
-    # known limitation
+    # check for known limitation
     if re.match(r"(?<!\\)(\$)(?<!\\)(\$)", text):
         raise NotImplementedError("Panic: don't know to deal with double dollar signs")
 
-    # remove leading/trailing newlines, and trailing whitespace
+    # remove leading/trailing newlines, and trailing whitespace on each line
     text = _rstrip_lines(text.strip())
 
     # "noindent" blocks are kept exactly as they are
@@ -1369,11 +1352,12 @@ def indent(text: str, indent: str = "    ") -> str:
     for placeholder in placeholders_rcomment:
         placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
 
+    # all comments are equal for the remainder of the implementation
     placeholders_comments = placeholders_comment + placeholders_rcomment
 
     # remove multiple newlines, duplicate spaces, and any leading whitespace
-    text = re.sub(r"(\n\n+)", r"\n\n", text)
     text = _lstrip_lines(text)
+    text = re.sub(r"(\n\n+)", r"\n\n", text)
     text = re.sub(r"(\ +)", r" ", text)
 
     # fold inline math
@@ -1392,9 +1376,10 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _begin_end_one_separate_line(text, placeholders_comments)
     text = text_from_placeholders(text, placeholders_let)
 
-    # format tables: aligns if possible
+    # format tables: align if possible
     text, placeholders_table = text_to_placeholders(text, [PlaceholderType.tabular])
-    _align(placeholders_table, placeholders_comments)
+    for placeholder in placeholders_table:
+        placeholder.content = _align(placeholder.content)
     text = text_from_placeholders(text, placeholders_table)
 
     # apply one sentence per line
@@ -1402,9 +1387,7 @@ def indent(text: str, indent: str = "    ") -> str:
         text, [PlaceholderType.math, PlaceholderType.tabular]
     )
     text, placeholders_commands = text_to_placeholders(
-        text,
-        [PlaceholderType.command_like],
-        placeholders_comments=placeholders_comments,
+        text, [PlaceholderType.command_like], placeholders_comments=placeholders_comments
     )
     text = _one_sentence_per_line(text)
     for placeholder in placeholders_commands:
