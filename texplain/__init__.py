@@ -1209,10 +1209,7 @@ def _align(
     """
 
     for placeholder in placeholders:
-        content = placeholder.content.strip()
-        content = _begin_end_one_separate_line(content, placeholders_comments)
-        content = text_from_placeholders(content, placeholders_comments, keep_placeholders=True)
-        lines = content.strip().splitlines()
+        lines = placeholder.content.strip().splitlines()
         lines[1:-1] = _detail_align(lines[1:-1], align)
         placeholder.content = "\n".join(lines)
 
@@ -1379,11 +1376,6 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _lstrip_lines(text)
     text = re.sub(r"(\ +)", r" ", text)
 
-    # format tables: aligns if possible
-    text, placeholders_table = text_to_placeholders(text, [PlaceholderType.tabular])
-    _align(placeholders_table, placeholders_comments)
-    text = text_from_placeholders(text, placeholders_table)
-
     # fold inline math
     text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
     # inline math: always on one line
@@ -1399,6 +1391,11 @@ def indent(text: str, indent: str = "    ") -> str:
     )
     text = _begin_end_one_separate_line(text, placeholders_comments)
     text = text_from_placeholders(text, placeholders_let)
+
+    # format tables: aligns if possible
+    text, placeholders_table = text_to_placeholders(text, [PlaceholderType.tabular])
+    _align(placeholders_table, placeholders_comments)
+    text = text_from_placeholders(text, placeholders_table)
 
     # apply one sentence per line
     text, placeholders_ignore = text_to_placeholders(
