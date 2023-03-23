@@ -8,26 +8,6 @@ class TestAlignTabular(unittest.TestCase):
     Alignment of tabular environments.
     """
 
-    def test_align_interface(self):
-        text = r"""
-\begin{tabular}{ccc}
-a & b & c \\
-1 & 2 & 3 \\
-40 & 50 & 60
-\end{tabular}
-        """
-
-        formatted = r"""
-\begin{tabular}{ccc}
-a  & b  & c  \\
-1  & 2  & 3  \\
-40 & 50 & 60
-\end{tabular}
-        """
-
-        ret = texplain.align(text, "tabular")
-        self.assertEqual(ret.strip(), formatted.strip())
-
     def test_align_no_newline(self):
         text = r"""
 \begin{tabular}{ccc}

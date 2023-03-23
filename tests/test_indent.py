@@ -630,6 +630,24 @@ And some more words.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_newline_d(self):
+        text = r"""
+\setkomavar{fromaddress}{EPFL\\
+Route de la Sorge\\
+CH-1015 Lausanne, Switzerland}
+        """
+
+        formatted = r"""
+\setkomavar{fromaddress}{
+    EPFL\\
+    Route de la Sorge\\
+    CH-1015 Lausanne, Switzerland
+}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_multiline(self):
         text = r"""
 This is a \\
