@@ -1376,6 +1376,9 @@ def indent(text: str, indent: str = "    ") -> str:
     text = _begin_end_one_separate_line(text, placeholders_comments)
     text = text_from_placeholders(text, placeholders_let)
 
+    # \\ ends on line
+    text = re.sub(r"(?<!\\)(\\\\)(\ *\n?)", r"\1\n", text)
+
     # format tables: align if possible
     text, placeholders_table = text_to_placeholders(text, [PlaceholderType.tabular])
     for placeholder in placeholders_table:
