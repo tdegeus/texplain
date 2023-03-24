@@ -594,10 +594,12 @@ text.
 This is a \\
 long sentence.
 
-With some \\ more.
+With some \\
+more.
 And some more words.
 
-\\ Here is another bit of text.
+\\
+Here is another bit of text.
         """
 
         ret = texplain.indent(text)
@@ -618,13 +620,18 @@ text.
         """
 
         formatted = r"""
-This is a \\ \\
+This is a \\
+\\
 long sentence.
 
-With some \\ \\ more.
+With some \\
+\\
+more.
 And some more words.
 
-\\ \\ Here is another bit of text.
+\\
+\\
+Here is another bit of text.
         """
 
         ret = texplain.indent(text)
@@ -633,8 +640,7 @@ And some more words.
     def test_newline_d(self):
         text = r"""
 \setkomavar{fromaddress}{EPFL\\
-Route de la Sorge\\
-CH-1015 Lausanne, Switzerland}
+Route de la Sorge\\ CH-1015 Lausanne, Switzerland}
         """
 
         formatted = r"""
