@@ -6,7 +6,6 @@ Documentation
 .. toctree::
    :maxdepth: 1
 
-   indent.rst
    tools.rst
    module.rst
 
