@@ -55,6 +55,7 @@ class PlaceholderType(enum.Enum):
     command = enum.auto()
     curly_braced = enum.auto()
     command_like = enum.auto()
+    texindent_block = enum.auto()
     noindent_block = enum.auto()
     verbatim = enum.auto()
     let_command = enum.auto()
@@ -681,6 +682,17 @@ def _detail_text_to_placholders(
             return_array=True,
         )
         return _apply_placeholders(text, indices, base, "noindent".upper(), ptype)
+
+    if ptype == PlaceholderType.texindent_block:
+        indices = find_matching(
+            text,
+            r"%\s*\\begin{texindent}",
+            r"%\s*\\end{texindent}",
+            escape=False,
+            closing_match=1,
+            return_array=True,
+        )
+        return _apply_placeholders(text, indices, base, "texindent".upper(), ptype)
 
     if ptype == PlaceholderType.verbatim:
         indices = find_matching(
@@ -1309,9 +1321,35 @@ def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placehold
     return text
 
 
+def _placeholders_lrsquash(placeholders: list[Placeholder]) -> list[Placeholder]:
+    for placeholder in placeholders:
+        placeholder.space_front = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_front)
+        placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+        placeholder.space_back = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_back)
+        placeholder.space_back = re.sub(r"\ +", r" ", placeholder.space_back)
+    return placeholders
+
+
+def _placeholders_indent(placeholders: list[Placeholder]) -> list[Placeholder]:
+    for placeholder in placeholders:
+        content = placeholder.content.splitlines()
+        header = content[0]
+        footer = content[-1]
+        content = content[1:-1]
+        assert re.match(r"%\s*\\begin{texindent}", header)
+        assert re.match(r"%\s*\\end{texindent}", footer)
+        opts = re.split(r"(%\s*\\begin{texindent}{)(.*)(})", header)[2]
+        opts = {i.split("=")[0]: i.split("=")[1] for i in opts.split(",")}
+        for key in opts:
+            if key not in ["indentation"]:
+                opts[key] = opts[key].lower() in ("yes", "true", "t", "1")
+        placeholder.content = "\n".join([header, indent("\n".join(content), **opts), footer])
+    return placeholders
+
+
 def indent(
     text: str,
-    indent: str = "    ",
+    indentation: str = "    ",
     rstrip: bool = True,
     lstrip: bool = True,
     squashlines: bool = True,
@@ -1323,6 +1361,7 @@ def indent(
     linebreak: bool = True,
     sentence: bool = True,
     alignment: bool = True,
+    texindent: bool = True,
     noindent: bool = True,
 ) -> str:
     """
@@ -1330,7 +1369,7 @@ def indent(
 
     :param text: The text to indent.
 
-    :param indent:
+    :param indentation:
         Set indentation of lines between:
 
         -   ``\begin{...}[...]{...}`` and ``\\end{...}``.
@@ -1340,7 +1379,7 @@ def indent(
 
         Comment lines follow indentation.
         Requires: ``lstrip``, ``inlinemath``, ```environment``.
-        To switch off indentation, set ``indent=""``.
+        To switch off indentation, set ``indentation=""``.
 
     :param rstrip: Remove trailing spaces on all lines.
     :param lstrip: Remove all leading spaces before applying indentation.
@@ -1402,6 +1441,15 @@ def indent(
 
         Requires: ``environment``.
 
+    :param texindent:
+        Custom formatting in blocks:
+
+        .. code-block:: tex
+
+            % \begin{texindent}{...}
+            ...
+            % \\end{texindent}
+
     :param noindent:
         Verbatim environments and everything between
 
@@ -1427,19 +1475,23 @@ def indent(
     if rstrip:
         text = _rstrip_lines(text.strip())
 
+    # custom formatting
+    if texindent:
+        text, placeholders_texindent = text_to_placeholders(text, [PlaceholderType.texindent_block])
+        placeholders_texindent = _placeholders_lrsquash(placeholders_texindent)
+        placeholders_texindent = _placeholders_indent(placeholders_texindent)
+    else:
+        placeholders_texindent = []
+
     # "noindent" blocks are kept exactly as they are
     if noindent:
         text, placeholders_noindent = text_to_placeholders(
             text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
         )
-        # remove leading/trailing duplicate newlines
-        for placeholder in placeholders_noindent:
-            placeholder.space_front = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_front)
-            placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
-            placeholder.space_back = re.sub(r"\n\n+\ *", r"\n\n", placeholder.space_back)
-            placeholder.space_back = re.sub(r"\ +", r" ", placeholder.space_back)
+        placeholders_texindent = _placeholders_lrsquash(placeholders_texindent)
     else:
         placeholders_noindent = []
+    placeholders_noindent += placeholders_texindent
 
     # comments: exclude from formatting
     text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
@@ -1523,7 +1575,7 @@ def indent(
         placeholder.space_back = None
     placeholders = placeholders_noindent + placeholders_comments + placeholders_inline_math
 
-    if indent:
+    if indentation:
         assert lstrip
         assert environment
         assert inlinemath
@@ -1600,7 +1652,7 @@ def indent(
         # apply indentation
         text = text.splitlines()
         for i in range(len(text)):
-            text[i] = indent_level[i] * indent + text[i]
+            text[i] = indent_level[i] * indentation + text[i]
         text = "\n".join(text)
 
     text = text_from_placeholders(text, placeholders)
