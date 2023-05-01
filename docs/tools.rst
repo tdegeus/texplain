@@ -2,6 +2,14 @@
 Command-line tools
 ******************
 
+texindent
+=========
+
+.. argparse::
+    :module: texplain
+    :func: _texindent_parser
+    :prog: texindent
+
 texplain
 ========
 
@@ -17,11 +25,3 @@ texcleanup
     :module: texplain
     :func: _texcleanup_parser
     :prog: texcleanup
-
-texindent
-=========
-
-.. argparse::
-    :module: texplain
-    :func: _texindent_parser
-    :prog: texindent

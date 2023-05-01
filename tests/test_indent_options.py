@@ -70,7 +70,7 @@ This a text \begin{math} a = b \end{math} with \begin{equation} a = b \end{equat
 This a text \begin{math} a = b \end{math} with \begin{equation} a = b \end{equation} some math.
         """
 
-        ret = texplain.indent(text, environment=False, indent=False)
+        ret = texplain.indent(text, environment=False, indentation=False)
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_inline(self):
@@ -88,7 +88,7 @@ a = b
 some math.
         """
 
-        ret = texplain.indent(text, inlinemath=False, indent=False)
+        ret = texplain.indent(text, inlinemath=False, indentation=False)
         self.assertEqual(ret.strip(), formatted.strip())
 
     def test_linebreak(self):

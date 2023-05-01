@@ -18,7 +18,7 @@ Indent LaTeX files
 
 .. autosummary::
 
-    texplain.texindent
+    texplain.indent
 
 Support functions
 -----------------
@@ -33,8 +33,8 @@ Support functions
     texplain.is_commented
     texplain.remove_comments
 
-Documentation
-=============
+Details
+=======
 
 .. automodule:: texplain
     :members:

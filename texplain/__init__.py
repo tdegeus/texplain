@@ -87,7 +87,8 @@ def find_opening(
 
 def find_commented(text: str) -> list[list[int]]:
     """
-    Find comments bits of text.
+    Find comments.
+
     The output is such that one can find the comments text as follows::
 
         for i, j in find_commented(text):
@@ -112,7 +113,7 @@ def find_commented(text: str) -> list[list[int]]:
 
 def is_commented(text: str) -> NDArray[np.bool_]:
     """
-    Return array that lists per character if it corresponds to commented text.
+    Per character if it corresponds to commented text.
 
     :param text: Text.
     :return: Array of booleans of size ``len(text)``.
@@ -422,7 +423,8 @@ def remove_comments(text: str) -> str:
 
 def environments(text: str) -> list[str]:
     r"""
-    Return list with present environments (between ``\begin{...} ... \end{...}``).
+    Return list with present environments.
+    This corresponds to the text between ``\begin{...}`` and ``\end{...}``.
     """
 
     ret = []
@@ -1488,7 +1490,7 @@ def indent(
         text, placeholders_noindent = text_to_placeholders(
             text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
         )
-        placeholders_texindent = _placeholders_lrsquash(placeholders_texindent)
+        placeholders_noindent = _placeholders_lrsquash(placeholders_noindent)
     else:
         placeholders_noindent = []
     placeholders_noindent += placeholders_texindent
@@ -1972,7 +1974,8 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
 
 class TeX:
     """
-    Simple TeX file manipulations.
+    Interpret TeX file to allow simple manipulations.
+    The manipulations are the member functions.
 
     :param text: LaTeX code.
     """
@@ -2553,14 +2556,14 @@ def _texcleanup_parser():
             Most of the options are fully self explanatory, except for:
 
             --replace-command
-                It can replace a command by another command, or simply 'remove' it,
-                keeping just a sequence of arguments.
+                Replace a command by another command.
+                This can also be 'removing' the command and keeping just a sequence of arguments.
                 This option is very much like a LaTeX command, but applied to the source.
                 For example::
 
                     --replace-command "{\\TG}[2]" "#1"
 
-                Applied a change as follows::
+                Applies a change as follows::
 
                     >>> This is a \\TG{text}{test}.
                     <<< This is a test.
@@ -2616,7 +2619,7 @@ def _texcleanup_parser():
         "-F",
         "--prepend-format-labels",
         type=str,
-        help='Automatically prepend labels with "fig:ARG", "eq:ARG", ...; see --format-labels.',
+        help='Add ARG to labels (e.g. "fig:ARG", "eq:ARG", ...; see ``--format-labels``).',
     )
 
     parser.add_argument(
@@ -2627,7 +2630,7 @@ def _texcleanup_parser():
     )
 
     parser.add_argument("-v", "--version", action="version", version=version)
-    parser.add_argument("files", nargs="+", type=str, help="TeX file")
+    parser.add_argument("files", nargs="+", type=str, help="TeX file (changed in-place).")
 
     return parser
 
@@ -2685,8 +2688,8 @@ def _texplain_parser():
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument("-c", "--keep-comments", action="store_true", help="Keep comments")
     parser.add_argument("-v", "--version", action="version", version=version)
-    parser.add_argument("input", type=str, help="TeX file")
-    parser.add_argument("outdir", type=str, help="Output directory")
+    parser.add_argument("file", type=str, help="Main TeX file.")
+    parser.add_argument("outdir", type=str, help="Output directory for formatted/included files.")
     return parser
 
 
@@ -2698,8 +2701,8 @@ def texplain(args: list[str]):
     parser = _texplain_parser()
     args = parser.parse_args(args)
 
-    if not os.path.isfile(args.input):
-        raise OSError(f'"{args.input:s}" does not exist')
+    if not os.path.isfile(args.file):
+        raise OSError(f'"{args.file:s}" does not exist')
 
     if os.path.isdir(args.outdir):
         if os.listdir(args.outdir):
@@ -2707,7 +2710,7 @@ def texplain(args: list[str]):
     else:
         os.makedirs(args.outdir)
 
-    old = TeX.from_file(args.input)
+    old = TeX.from_file(args.file)
     new = deepcopy(old)
     new.dirname = args.outdir
 
@@ -2779,18 +2782,18 @@ def _texindent_parser():
     Return parser for :py:func:`texindent`.
     """
 
-    desc = "Wrapper around ``latexindent.pl`` with some additional rules. ``texplain.texindent``."
+    desc = "Indent code using :py:func:`texplain.indent`."
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument("-v", "--version", action="version", version=version)
-    parser.add_argument("files", nargs="+", type=str, help="TeX file")
+    parser.add_argument("files", nargs="+", type=str, help="TeX file (changed in-place).")
 
     return parser
 
 
 def texindent_cli(args: list[str]):
     """
-    Wrapper around latexindent.pl, see ``--help``.
+    Indent TeX file, see ``--help``.
     """
 
     parser = _texindent_parser()
