@@ -20,27 +20,28 @@ from ._version import version_tuple  # noqa: F401
 class PlaceholderType(enum.Enum):
     r"""
     Type of placeholder.
-    The placeholders' practical definition is in :py:func:`text_to_placeholder`.
+    The placeholders' practical definition is in :py:func:`text_to_placeholders`.
     The intended use is:
 
-    :py:attr:`line`: A single line of content (1 line).
-    :py:attr:`inline_comment`: A comment that is preceded by some content.
-    :py:attr:`comment`: A comment that is the only content on that line.
-    :py:attr:`tabular`: Entire block ``\begin{tabular} ... \end{tabular}``.
-    :py:attr:`math`: Entire block of displaystyle math. E.g. ``\begin{equation} ... \end{equation}``
-    :py:attr:`inline_math`: Entire block of inline math. E.g. ``$ ... $``.
-    :py:attr:`math_line`: A single line of content in math mode.
-    :py:attr:`environment`: Entire block of environment: ``\begin{...} ... \end{...}``.
-    :py:attr:`command`: Entire block of command: ``\command[...]{...}``.
-    :py:attr:`curly_braced`: Entire block of curly braced content: ``{...}``.
-    :py:attr:`command_like`: Entire block of :py:attr:`command` or :py:attr:`curly_braced`.
-    :py:attr:`noindent_block`: Entire block of ``% \begin{noindent} ... % \end{noindent}``.
-    :py:attr:`verbatim`: Entire block of ``\begin{verbatim} ... \end{verbatim}``.
-    :py:attr:`let_command`: Definition ``\let...``.
-    :py:attr:`newif_command`: Definition ``\newif...``.
+    -   :py:attr:`line`: A single line of content (no newline).
+    -   :py:attr:`inline_comment`: A comment that is preceded by some content (no newline).
+    -   :py:attr:`comment`: A comment that is the only content on that line (no newline).
+    -   :py:attr:`tabular`: Block ``\begin{tabular} ... \end{tabular}``.
+    -   :py:attr:`math`: Block of displaymath. E.g. ``\begin{equation} ... \end{equation}``.
+    -   :py:attr:`inline_math`: Block of inline math. E.g. ``$ ... $``.
+    -   :py:attr:`math_line`: A single line of content in math mode (no newline).
+    -   :py:attr:`environment`: Block of environment: ``\begin{...} ... \end{...}``.
+    -   :py:attr:`command`: Block of command: ``\command[...]{...}``.
+    -   :py:attr:`curly_braced`: Block of curly braced content: ``{...}``.
+    -   :py:attr:`command_like`: Block of :py:attr:`command` or :py:attr:`curly_braced`.
+    -   :py:attr:`texindent_block`: Block of ``% \begin{texindent} ... % \end{texindent}``.
+    -   :py:attr:`noindent_block`: Block of ``% \begin{noindent} ... % \end{noindent}``.
+    -   :py:attr:`verbatim`: Block of ``\begin{verbatim} ... \end{verbatim}``.
+    -   :py:attr:`let_command`: Definition ``\let...``.
+    -   :py:attr:`newif_command`: Definition ``\newif...``.
 
-    Except for :py:attr:`line`, :py:attr:`math_line`, :py:attr:`comment`, :py:attr:`inline_comment`
-    all placeholders can span more than one line.
+    Except for :py:attr:`line`, :py:attr:`math_line`, :py:attr:`comment`, :py:attr:`inline_comment`,
+    and :py:attr:`math_line` all placeholders can span more than one line.
     """
 
     line = enum.auto()
@@ -425,7 +426,7 @@ class Placeholder:
     :param content: The text replaced by the placeholder.
     :param space_front: The whitespace before the placeholder.
     :param space_back: The whitespace after the placeholder.
-    :param ptype: The type of placeholder.
+    :param ptype: The type of placeholder, see :py:class:`PlaceholderType`.
     :param search_placeholder:
         The regex used to search for the placeholder
         (optional, but speeds up greatly for batch searches).
@@ -469,7 +470,7 @@ class Placeholder:
         :param text: The text to consider.
         :param start: The start index of ``text`` to be replaced by the placeholder.
         :param end: The end index of ``text`` to be replaced by the placeholder.
-        :param ptype: The type of placeholder.
+        :param ptype: The type of placeholder, see :py:class:`PlaceholderType`.
         :param search_placeholder: The regex used to search the placeholder.
         :return: ``(Placeholder, text)`` where in ``text`` the placeholder is inserted.
         """
@@ -496,7 +497,7 @@ class Placeholder:
 
         :param text: Text.
         :param index: The index of the placeholder.
-        :param keep_placeholder: If ``True`` the placeholder is kept (it is merely positioned).
+        :param keep_placeholder: If ``True`` keep the placeholder, change only the whitespace.
         :return: Text with placeholder replaced by content.
         """
 
@@ -2230,26 +2231,38 @@ class TeX:
         r"""
         Replace command. For example:
 
-        *   Remove the command::
+        *   Remove the command:
+
+            .. code-block:: python
 
                 replace_command(r"{\TG}[1]", "")
 
-                    >>> This is a \TG{I would replace this} text.
-                    <<< This is a  text.
+            .. code-block:: none
 
-        *   Select a part of the command::
+                >>> This is a \TG{I would replace this} text.
+                <<< This is a  text.
+
+        *   Select a part of the command:
+
+            .. code-block:: python
 
                 replace_command(r"{\TG}[2]", "#1")
 
-                    >>> This is a \TG{text}{test}.
-                    <<< This is a test.
+            .. code-block:: none
 
-        *   Change the command::
+                >>> This is a \TG{text}{test}.
+                <<< This is a test.
+
+        *   Change the command:
+
+            .. code-block:: python
 
                 replace_command(r"{\TG}[2]", "\mycomment{#1}{#2}")
 
-                    >>> This is a \TG{text}{test}.
-                    <<< This is a \mycomment{text}{test}.
+            .. code-block:: none
+
+                >>> This is a \TG{text}{test}.
+                <<< This is a \mycomment{text}{test}.
 
         :param cmd:
             The command's definition. Given ``\newcommand{cmd}[args]{def}`` you should specify
@@ -2578,7 +2591,7 @@ def _texcleanup_parser():
         "-F",
         "--prepend-format-labels",
         type=str,
-        help='Add ARG to labels (e.g. "fig:ARG", "eq:ARG", ...; see ``--format-labels``).',
+        help='Add ARG to labels (e.g. "fig:ARG:...", "eq:ARG:..."; see ``--format-labels``).',
     )
 
     parser.add_argument(
@@ -2589,7 +2602,7 @@ def _texcleanup_parser():
     )
 
     parser.add_argument("-v", "--version", action="version", version=version)
-    parser.add_argument("files", nargs="+", type=str, help="TeX file (changed in-place).")
+    parser.add_argument("files", nargs="+", type=str, help="TeX file(s) (changed in-place).")
 
     return parser
 
@@ -2748,7 +2761,7 @@ def _texindent_parser():
     parser = argparse.ArgumentParser(description=desc)
 
     parser.add_argument("-v", "--version", action="version", version=version)
-    parser.add_argument("files", nargs="+", type=str, help="TeX file (changed in-place).")
+    parser.add_argument("files", nargs="+", type=str, help="TeX file(s) (changed in-place).")
 
     return parser
 
