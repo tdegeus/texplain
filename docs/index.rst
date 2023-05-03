@@ -7,6 +7,7 @@ Documentation
    :maxdepth: 1
 
    tools.rst
+   pre-commit.rst
    module.rst
 
 Indices and tables
