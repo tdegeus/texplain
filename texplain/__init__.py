@@ -853,6 +853,20 @@ def text_to_placeholders(
 
             -BASE-NOINDENT-1-
 
+    -   :py:class:`PlaceholderType.texindent_block`:
+
+        .. code-block:: latex
+
+            % \begin{texindent}
+            ...
+            % \end{texindent}
+
+        is replaced with
+
+        .. code-block:: latex
+
+            -BASE-TEXINDENT-1-
+
     -   :py:class:`PlaceholderType.verbatim`:
 
         .. code-block:: latex
@@ -1044,8 +1058,8 @@ def text_to_placeholders(
     :param placeholders_comments: List of placeholders that are comments (needed to search commands)
     :return:
         ``(text, placeholders)`` with
-        -  ``text``: Text with placeholders
-        -  ``placeholders``: List of placeholders
+            -  ``text``: Text with placeholders
+            -  ``placeholders``: List of placeholders
     """
 
     ret = []
@@ -1219,10 +1233,12 @@ def _is_placeholder(text: str, placeholders: list[Placeholder]) -> list[bool]:
 
 def _begin_end_one_separate_line(text: str, comment_placeholders: list[Placeholder]) -> str:
     r"""
-    Put :
+    Put:
+
     -   ``\begin{...}`` and ``\\end{...}``
     -   ``\[`` and ``\]``
     -   ``\if`` and ``\else`` and ``\fi``
+
     on separate lines.
 
     :param text: Text.
@@ -1350,7 +1366,7 @@ def indent(
         are placed on separate lines.
 
     :param argument:
-        Any option or argument that is more than one line long is placed on separate lines.
+        Any option or argument that spans more than one line is placed on separate lines.
         For example:
 
         .. code-block:: tex
@@ -1368,16 +1384,16 @@ def indent(
             } yyy
 
     :param inlinemath: Inline math is placed on one line.
-    :param linebreak: ``\\`` is followed by a linebreak.
+    :param linebreak: ``\\`` is followed by a newline.
 
     :param sentence:
         One sentence per line.
-        Every sentence should be on its own line,
+        Every sentence should start on a new line,
         and it should be (as much as possible) on a single line.
-        This is a subjective rule, and it is not always possible to follow it.
         The following rules of thumb are followed:
 
         -   A sentence ends with:
+
             -   A period, question mark, or exclamation mark.
             -   ``\begin{...}`` or ``\end{...}``.
             -   Two white lines.
@@ -1405,6 +1421,15 @@ def indent(
         .. code-block:: tex
 
             % \begin{texindent}{...}
+            ...
+            % \end{texindent}
+
+        where the ``{...}`` argument is a comma-separated list of options of this function;
+        for example:
+
+        .. code-block:: tex
+
+            % \begin{texindent}{sentence=False, inlinemath=False}
             ...
             % \end{texindent}
 
