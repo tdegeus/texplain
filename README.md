@@ -10,6 +10,9 @@
 
 ## command-line
 
+*   [texindent](https://texplain.readthedocs.io/en/latest/tools.html#texindent):
+    Automatic indentation and formatting of a TeX-file.
+
 *   [texcleanup](https://texplain.readthedocs.io/en/latest/tools.html#texcleanup):
     Apply any of the following options to a TeX-file:
 
@@ -18,9 +21,6 @@
     -   Rename a label.
     -   Ensure common prefixes for all labels.
     -   Ensure usage of `\cref` instead of `\ref`.
-
-*   [texindent](https://texplain.readthedocs.io/en/latest/tools.html#texindent):
-    Wrapper around [latexindent.pl](https://github.com/cmhughes/latexindent.pl) with augmented rules to make especially `oneSentencePerLine` more robust.
 
 *   [texplain](https://texplain.readthedocs.io/en/latest/tools.html#texplain):
     Create a directory with a TeX-file and only its dependencies
