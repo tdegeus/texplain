@@ -12,7 +12,6 @@ from shutil import copyfile
 import numpy as np
 from numpy.typing import ArrayLike
 from numpy.typing import NDArray
-from typing_extensions import deprecated
 
 from ._version import version  # noqa: F401
 from ._version import version_tuple  # noqa: F401
@@ -60,29 +59,6 @@ class PlaceholderType(enum.Enum):
     verbatim = enum.auto()
     let_command = enum.auto()
     newif_command = enum.auto()
-
-
-@deprecated("Use regex directly")
-def find_opening(
-    text: str,
-    opening: str,
-    ignore_escaped: bool = True,
-) -> list[int]:
-    r"""
-    Find opening 'bracket'.
-
-    :param text: The string to consider.
-    :param opening: The opening 'bracket' (e.g. "(", "[", "{", but also "%").
-    :param ignore_escaped: Ignore escaped 'bracket' (e.g. "\(", "\[", "\{", "\%").
-    :return: List of indices of opening 'brackets' (sorted by definition).
-    """
-
-    o = re.escape(opening)
-
-    if ignore_escaped:
-        o = r"(?<!\\)" + o
-
-    return [i.span()[0] for i in re.finditer(o, text)]
 
 
 def find_commented(text: str) -> list[list[int]]:
@@ -1211,27 +1187,6 @@ def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
     return "\n".join(lines)
 
 
-@deprecated("Use ``indent`` instead.")
-def align(
-    text: str,
-    environment: str,
-    align: str = "<",
-    base: str = "TEXINDENT-ALIGN",
-):
-    r"""
-    For all occurrences of an environment:
-    -   Place ``\begin{...}[...]{...}`` and ``\end{...}`` on own line.
-    -   Align ``&`` and ``\\`` of all lines that contain those alignment characters.
-
-    :param text: Text.
-    :param environment: Name of the environment.
-    :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
-    :param base: Base for temporary placeholders.
-    :return: Formatted text.
-    """
-    return indent(text, indent="")
-
-
 def _is_placeholder(text: str, placeholders: list[Placeholder]) -> list[bool]:
     """
     Check per character if it is a placeholder.
@@ -1366,7 +1321,7 @@ def indent(
     texindent: bool = True,
     noindent: bool = True,
 ) -> str:
-    """
+    r"""
     Indent text.
 
     :param text: The text to indent.
@@ -1374,8 +1329,8 @@ def indent(
     :param indentation:
         Set indentation of lines between:
 
-        -   ``\begin{...}[...]{...}`` and ``\\end{...}``.
-        -   ``\\[`` and ``\\]``.
+        -   ``\begin{...}[...]{...}`` and ``\end{...}``.
+        -   ``\[`` and ``\]``.
         -   ``{`` and ``}``.
         -   ``[`` and ``]`` (as command option).
 
@@ -1390,7 +1345,7 @@ def indent(
     :param symbols: In math-mode: all symbols are separated by a space.
 
     :param environment:
-        ``\begin{...}[...]{...}`` and ``\\end{...}`` (and ``\\[`` and ``\\]``)
+        ``\begin{...}[...]{...}`` and ``\end{...}`` (and ``\[`` and ``\]``)
         are placed on separate lines.
 
     :param argument:
@@ -1423,7 +1378,7 @@ def indent(
 
         -   A sentence ends with:
             -   A period, question mark, or exclamation mark.
-            -   ``\begin{...}`` or ``\\end{...}``.
+            -   ``\begin{...}`` or ``\end{...}``.
             -   Two white lines.
             -   ``\\``
             -   The end of an argument (``}`` or ``]``), see below.
@@ -1450,7 +1405,7 @@ def indent(
 
             % \begin{texindent}{...}
             ...
-            % \\end{texindent}
+            % \end{texindent}
 
     :param noindent:
         Verbatim environments and everything between
@@ -1459,7 +1414,7 @@ def indent(
 
             % \begin{noindent}
             ...
-            % \\end{noindent}
+            % \end{noindent}
 
         is not formatted.
 
@@ -2559,11 +2514,15 @@ def _texcleanup_parser():
                 Replace a command by another command.
                 This can also be 'removing' the command and keeping just a sequence of arguments.
                 This option is very much like a LaTeX command, but applied to the source.
-                For example::
+                For example:
+
+                .. code-block:: none
 
                     --replace-command "{\\TG}[2]" "#1"
 
-                Applies a change as follows::
+                Applies a change as follows:
+
+                .. code-block:: none
 
                     >>> This is a \\TG{text}{test}.
                     <<< This is a test.
@@ -2641,6 +2600,9 @@ def texcleanup(args: list[str]):
     """
 
     parser = _texcleanup_parser()
+    parser.description = re.sub(
+        r"(.*)(:\s*)(\.\. code-block:: none)(.*)", r"\1::\4", parser.description, re.MULTILINE
+    )
     args = parser.parse_args(args)
     assert all([os.path.isfile(file) for file in args.files])
 
