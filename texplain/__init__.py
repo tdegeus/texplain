@@ -1333,6 +1333,7 @@ def indent(
     argument: bool = True,
     inlinemath: bool = True,
     linebreak: bool = True,
+    itemize: bool = True,
     sentence: bool = True,
     alignment: bool = True,
     texindent: bool = True,
@@ -1385,6 +1386,7 @@ def indent(
 
     :param inlinemath: Inline math is placed on one line.
     :param linebreak: ``\\`` is followed by a newline.
+    :param itemize: Each ``\item`` is placed on a separate line.
 
     :param sentence:
         One sentence per line.
@@ -1522,6 +1524,10 @@ def indent(
     # \\ ends on line
     if linebreak:
         text = re.sub(r"(?<!\\)(\\\\)(\ *\n?)", r"\1\n", text)
+
+    # \item starts on a new line
+    if itemize:
+        text = re.sub(r"(\s*)(?<!\\)(\\item)", r"\n\2", text)
 
     # format tables: align if possible
     if alignment:
