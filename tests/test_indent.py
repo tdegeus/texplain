@@ -393,6 +393,28 @@ This is {
         self.assertEqual(ret.strip(), formatted.strip())
 
 
+class TestIndentItem(unittest.TestCase):
+    def test_simple(self):
+        text = r"""
+\begin{itemize} \item a \item b
+\item c \item d
+\item e \end{itemize}
+        """
+
+        formatted = r"""
+\begin{itemize}
+    \item a
+    \item b
+    \item c
+    \item d
+    \item e
+\end{itemize}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+
 class TestIndentCommand(unittest.TestCase):
     def test_command_punctuation(self):
         text = r"""
