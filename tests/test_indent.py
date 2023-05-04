@@ -414,6 +414,65 @@ class TestIndentItem(unittest.TestCase):
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_multiline(self):
+        text = r"""
+\begin{itemize} \item a \item b has a long
+text that spans multiple lines. But also multiple
+sentences.
+
+With even
+a new paragraph.
+\item c \item d
+\item e \end{itemize}
+        """
+
+        formatted = r"""
+\begin{itemize}
+    \item a
+    \item b has a long text that spans multiple lines.
+    But also multiple sentences.
+
+    With even a new paragraph.
+    \item c
+    \item d
+    \item e
+\end{itemize}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_nested(self):
+        text = r"""
+\begin{itemize} \item a \item b
+\item c \item d \begin{itemize} \item suba \item subb with
+some text.
+And another
+sentence.
+\item subc \item subd \end{itemize}
+\item e \end{itemize}
+        """
+
+        formatted = r"""
+\begin{itemize}
+    \item a
+    \item b
+    \item c
+    \item d
+    \begin{itemize}
+        \item suba
+        \item subb with some text.
+        And another sentence.
+        \item subc
+        \item subd
+    \end{itemize}
+    \item e
+\end{itemize}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
 
 class TestIndentCommand(unittest.TestCase):
     def test_command_punctuation(self):
