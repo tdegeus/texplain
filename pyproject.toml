@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+
+[project]
+authors = [{name = "Tom de Geus", email = "tom@geus.me"}]
+classifiers = ["License :: OSI Approved :: MIT License"]
+dependencies = ["numpy", "click"]
+description = "TeX file formatting"
+dynamic = ["version"]
+name = "texplain"
+readme = "README.md"
+requires-python = ">=3.6"
+
+[project.scripts]
+texcleanup = "texplain:_texcleanup_cli"
+texindent = "texplain:_texindent_cli"
+texplain = "texplain:_texplain_cli"
+
+[project.urls]
+Source = "https://github.com/tdegeus/texplain"
+
+[tool.setuptools_scm]
+write_to = "texplain/_version.py"
