@@ -11,7 +11,7 @@ repos:
   rev: v2.9.0
   hooks:
   - id: pretty-format-yaml
-    args: [--autofix, --indent, '2']
+    args: [--preserve-quotes, --autofix, --indent, '2']
   - id: pretty-format-toml
     args: [--autofix]
 - repo: https://github.com/pre-commit/pygrep-hooks
@@ -47,7 +47,7 @@ repos:
   rev: 6.0.0
   hooks:
   - id: flake8
-    args: [--max-line-length=100, --ignore=E203, --per-file-ignore=tests/test_one_sentence_per_line.py:E501, --per-file-ignore=tests/test_indent_long.py:E501]
+    args: ["--max-line-length=100", "--ignore=E203", "--per-file-ignores=tests/*.py:E501"]
 - repo: https://github.com/asottile/setup-cfg-fmt
   rev: v2.2.0
   hooks:
