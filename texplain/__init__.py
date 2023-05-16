@@ -588,7 +588,7 @@ def _filter_nested(indices: ArrayLike) -> ArrayLike:
 
 def _apply_placeholders(
     text: str,
-    indices: NDArray[np.int_] | list[tuple[int, int]],
+    indices: ArrayLike,
     base: str,
     name: str,
     ptype: PlaceholderType,
