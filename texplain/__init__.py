@@ -2533,14 +2533,14 @@ class TeX:
                     match = match[np.diff(match, axis=1).ravel() > 1]
                     if match.size == 0:
                         continue
-                    match = np.vstack((match, [-1, -1]))
+                    match = np.vstack((match, [None, None]))
                     ret = lines[i][: match[0, 0]]
                     for j in range(match.shape[0] - 1):
                         a = match[j, 0]
                         b = match[j, 1]
                         c = match[j + 1, 0]
                         ret += opening + lines[i][a + 1 : b] + closing + lines[i][b + 1 : c]
-                    lines[i] = ret + lines[i][-1]
+                    lines[i] = ret
 
         self.main = "\n".join(lines)
         return self
