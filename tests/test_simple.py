@@ -469,8 +469,14 @@ Overall, our approach explains why excitations.
         )
         test.append(
             [
-                'A "slipping load" is confusing, we replaced it with "frictional strength".',
-                "A ``slipping load'' is confusing, we replaced it with ``frictional strength''.",
+                'A text "with one quote", and "another one".',
+                "A text ``with one quote'', and ``another one''.",
+            ]
+        )
+        test.append(
+            [
+                'A text "with one quote", and "another one"',
+                "A text ``with one quote'', and ``another one''",
             ]
         )
         test.append(['Foo bar "bar foo"', "Foo bar ``bar foo''"])
