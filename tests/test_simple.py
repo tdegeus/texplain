@@ -473,6 +473,7 @@ Overall, our approach explains why excitations.
                 "A ``slipping load'' is confusing, we replaced it with ``frictional strength''.",
             ]
         )
+        test.append(['Foo bar "bar foo"', "Foo bar ``bar foo''"])
 
         for source, expect in test:
             tex = texplain.TeX(text=source)
