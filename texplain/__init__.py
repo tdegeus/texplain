@@ -2518,29 +2518,25 @@ class TeX:
         lines = self.main.splitlines()
 
         for replace, (opening, closing) in zip(['"', "'"], [("``", "''"), ("`", "'")]):
-            pattern = rf"(.*)({re.escape(replace)})(.*)({re.escape(replace)})(.*)"
             for i in range(len(lines)):
-                if re.match(pattern, lines[i]):
-                    try:
-                        match = np.sort(
-                            find_matching(lines[i], replace, replace, return_array=True)[:, 0]
-                        )
-                    except IndexError:
-                        continue
-                    if len(match) % 2 != 0:
-                        continue
-                    match = match.reshape(-1, 2)
-                    match = match[np.diff(match, axis=1).ravel() > 1]
-                    if match.size == 0:
-                        continue
-                    match = np.vstack((match, [None, None]))
-                    ret = lines[i][: match[0, 0]]
-                    for j in range(match.shape[0] - 1):
-                        a = match[j, 0]
-                        b = match[j, 1]
-                        c = match[j + 1, 0]
-                        ret += opening + lines[i][a + 1 : b] + closing + lines[i][b + 1 : c]
-                    lines[i] = ret
+                match = np.array(
+                    [i.span()[0] for i in re.finditer(r"(?<!\\)" + re.escape(replace), lines[i])]
+                )
+                if replace == "'":
+                    filter = np.diff(match, prepend=0) == 1
+                    filter = np.logical_or(filter, np.roll(filter, -1))
+                    match = match[~filter]
+                if match.size == 0 or match.size % 2 != 0:
+                    continue
+                match = match.reshape(-1, 2)
+                match = np.vstack((match, [None, None]))
+                ret = lines[i][: match[0, 0]]
+                for j in range(match.shape[0] - 1):
+                    a = match[j, 0]
+                    b = match[j, 1]
+                    c = match[j + 1, 0]
+                    ret += opening + lines[i][a + 1 : b] + closing + lines[i][b + 1 : c]
+                lines[i] = ret
 
         self.main = "\n".join(lines)
         return self
