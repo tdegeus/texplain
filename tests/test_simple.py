@@ -452,29 +452,32 @@ Overall, our approach explains why excitations.
         self.assertEqual(expect.strip(), str(tex).strip())
 
     def test_fix_quote(self):
-        source = 'This is text "with quotes".'
-        expect = "This is text ``with quotes''."
-        tex = texplain.TeX(text=source)
-        tex.fix_quotes().fix_quotes()
-        self.assertEqual(expect.strip(), str(tex).strip())
+        test = []
+        test.append(['This is text "with quotes".', "This is text ``with quotes''."])
+        test.append(
+            [
+                'This is text "with quotes" but not matching".',
+                'This is text "with quotes" but not matching".',
+            ]
+        )
+        test.append(["This is text 'with quotes'.", "This is text `with quotes'."])
+        test.append(
+            [
+                "This is text 'with quotes' but not matching'.",
+                "This is text 'with quotes' but not matching'.",
+            ]
+        )
+        test.append(
+            [
+                'A "slipping load" is confusing, we replaced it with "frictional strength".',
+                "A ``slipping load'' is confusing, we replaced it with ``frictional strength''.",
+            ]
+        )
 
-        source = 'This is text "with quotes" but not matching".'
-        expect = 'This is text "with quotes" but not matching".'
-        tex = texplain.TeX(text=source)
-        tex.fix_quotes().fix_quotes()
-        self.assertEqual(expect.strip(), str(tex).strip())
-
-        source = "This is text 'with quotes'."
-        expect = "This is text `with quotes'."
-        tex = texplain.TeX(text=source)
-        tex.fix_quotes().fix_quotes()
-        self.assertEqual(expect.strip(), str(tex).strip())
-
-        source = "This is text 'with quotes' but not matching'."
-        expect = "This is text 'with quotes' but not matching'."
-        tex = texplain.TeX(text=source)
-        tex.fix_quotes().fix_quotes()
-        self.assertEqual(expect.strip(), str(tex).strip())
+        for source, expect in test:
+            tex = texplain.TeX(text=source)
+            tex.fix_quotes().fix_quotes()
+            self.assertEqual(expect.strip(), str(tex).strip())
 
 
 if __name__ == "__main__":
