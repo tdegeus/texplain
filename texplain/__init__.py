@@ -2508,6 +2508,43 @@ class TeX:
                 re.IGNORECASE,
             )
 
+    def fix_quotes(self):
+        r"""
+        Replace:
+
+        *   ``"..."`` by ``\`\`...''``.
+        *   ``'...'`` by ``\`...'``.
+        """
+        lines = self.main.splitlines()
+
+        for replace, (opening, closing) in zip(['"', "'"], [("``", "''"), ("`", "'")]):
+            pattern = rf"(.*)({re.escape(replace)})(.*)({re.escape(replace)})(.*)"
+            for i in range(len(lines)):
+                if re.match(pattern, lines[i]):
+                    try:
+                        match = np.sort(
+                            find_matching(lines[i], replace, replace, return_array=True)[:, 0]
+                        )
+                    except IndexError:
+                        continue
+                    if len(match) % 2 != 0:
+                        continue
+                    match = match.reshape(-1, 2)
+                    match = match[np.diff(match, axis=1).ravel() > 1]
+                    if match.size == 0:
+                        continue
+                    match = np.vstack((match, [-1, -1]))
+                    ret = lines[i][: match[0, 0]]
+                    for j in range(match.shape[0] - 1):
+                        a = match[j, 0]
+                        b = match[j, 1]
+                        c = match[j + 1, 0]
+                        ret += opening + lines[i][a + 1 : b] + closing + lines[i][b + 1 : c]
+                    lines[i] = ret + lines[i][-1]
+
+        self.main = "\n".join(lines)
+        return self
+
 
 def bib_select(text: str, keys: list[str]) -> str:
     r"""
@@ -2632,6 +2669,13 @@ def _texcleanup_parser():
         help=r'Change "Fig.~\ref{...}" etc. to "\\cref{...}".',
     )
 
+    parser.add_argument(
+        "-a",
+        "--fix-quotes",
+        action="store_true",
+        help="Fix non-LaTeX quotation marks: \"...\" -> ``...''",
+    )
+
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("files", nargs="+", type=str, help="TeX file(s) (changed in-place).")
 
@@ -2675,6 +2719,9 @@ def texcleanup(args: list[str]):
 
         if args.use_cleveref:
             tex.use_cleveref()
+
+        if args.fix_quotes:
+            tex.fix_quotes()
 
         if tex.changed():
             with open(file, "w") as file:
