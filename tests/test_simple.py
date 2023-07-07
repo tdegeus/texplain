@@ -451,6 +451,31 @@ Overall, our approach explains why excitations.
         tex.replace_command(r"{\TG}[1]", "#1", ignore_commented=True)
         self.assertEqual(expect.strip(), str(tex).strip())
 
+    def test_fix_quote(self):
+        source = 'This is text "with quotes".'
+        expect = "This is text ``with quotes''."
+        tex = texplain.TeX(text=source)
+        tex.fix_quotes().fix_quotes()
+        self.assertEqual(expect.strip(), str(tex).strip())
+
+        source = 'This is text "with quotes" but not matching".'
+        expect = 'This is text "with quotes" but not matching".'
+        tex = texplain.TeX(text=source)
+        tex.fix_quotes().fix_quotes()
+        self.assertEqual(expect.strip(), str(tex).strip())
+
+        source = "This is text 'with quotes'."
+        expect = "This is text `with quotes'."
+        tex = texplain.TeX(text=source)
+        tex.fix_quotes().fix_quotes()
+        self.assertEqual(expect.strip(), str(tex).strip())
+
+        source = "This is text 'with quotes' but not matching'."
+        expect = "This is text 'with quotes' but not matching'."
+        tex = texplain.TeX(text=source)
+        tex.fix_quotes().fix_quotes()
+        self.assertEqual(expect.strip(), str(tex).strip())
+
 
 if __name__ == "__main__":
     unittest.main()
