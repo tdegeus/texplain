@@ -1812,30 +1812,22 @@ def _format_command(
 
 def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
     """
-    Classify characters to identify to which environment a label belongs.
+    Classify each character.
+    This can be used for example to figure out to which environment a label belongs.
 
     :param text: The text to classify.
     :return:
-        ``(categories, classification)`` where ``categories`` is the list of label categories
-        ``"eq"``, ``"fig"``, etc.) and ``classification`` is an array of the same length as ``text``
-        where each element is the index of the category to which the character belongs.
+        ``(categories, classification)`` where ``categories`` is the list of categories
+        (``"eq"``, ``"fig"``, etc.; with ``"misc"`` for unknown) and ``classification`` is an array
+        of the same length as ``text`` where each element is the index in ``categories`` to which
+        the character belongs.
     """
 
     categories = ["misc", "eq", "item", "note", "sec", "ch", "fig", "tab"]
-    classification = np.zeros(len(text), dtype=int)
+    starting = -1 * np.ones((len(text), len(categories)), dtype=int)
     braces = find_matching(text, "{", "}", ignore_escaped=True)
 
-    # ---
-
-    r = -1
-
-    for match in re.finditer(r"(\s*\\label\s*\{)", text):
-        i = match.span()[0]
-        j = braces[match.span()[1] - 1]
-        classification[i:j] = r
-        r -= 1
-
-    # ---
+    # "eq"
 
     r = categories.index("eq")
 
@@ -1847,7 +1839,7 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
         closing_match=1,
     )
     for i, j in index.items():
-        classification[i:j] = r
+        starting[i:j, r] = i
 
     index = find_matching(
         text,
@@ -1857,7 +1849,7 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
         closing_match=1,
     )
     for i, j in index.items():
-        classification[i:j] = r
+        starting[i:j, r] = i
 
     index = find_matching(
         text,
@@ -1867,9 +1859,9 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
         closing_match=1,
     )
     for i, j in index.items():
-        classification[i:j] = r
+        starting[i:j, r] = i
 
-    # ---
+    # "fig"
 
     r = categories.index("fig")
 
@@ -1881,9 +1873,9 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
         closing_match=1,
     )
     for i, j in index.items():
-        classification[i:j] = r
+        starting[i:j, r] = i
 
-    # ---
+    # "tab"
 
     r = categories.index("tab")
 
@@ -1895,9 +1887,9 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
         closing_match=1,
     )
     for i, j in index.items():
-        classification[i:j] = r
+        starting[i:j, r] = i
 
-    # ---
+    # "item"
 
     r = categories.index("item")
 
@@ -1909,7 +1901,7 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
         closing_match=1,
     )
     for i, j in index.items():
-        classification[i:j] = r
+        starting[i:j, r] = i
 
     index = find_matching(
         text,
@@ -1919,44 +1911,34 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
         closing_match=1,
     )
     for i, j in index.items():
-        classification[i:j] = r
+        starting[i:j, r] = i
 
-    # ---
+    # "note"
 
     r = categories.index("note")
 
     for match in re.finditer(r"(\\footnote\s*\{)", text):
         i = match.span()[0]
         j = braces[match.span()[1] - 1]
-        classification[i:j] = r
+        starting[i:j, r] = i
 
-    # ---
+    # "sec"
 
     r = categories.index("sec")
 
     for match in re.finditer(r"(\\)(sub)*(section\s*\{)", text):
         i = match.span()[0]
-        j = braces[match.span()[1] - 1]
-        classification[i:j] = r
+        starting[i:, r] = i
 
-        if classification[j + 1] < 0:
-            classification[classification == classification[j + 1]] = r
-
-    # ---
+    # "ch"
 
     r = categories.index("ch")
 
     for match in re.finditer(r"(\\)(chapter\s*\{)", text):
         i = match.span()[0]
-        j = braces[match.span()[1] - 1]
-        classification[i:j] = r
+        starting[i:, r] = i
 
-        if classification[j + 1] < 0:
-            classification[classification == classification[j + 1]] = r
-
-    # ---
-
-    return categories, np.where(classification < 0, categories.index("misc"), classification)
+    return categories, np.argmax(starting, axis=1)
 
 
 class TeX:

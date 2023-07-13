@@ -4,10 +4,6 @@ import texplain
 
 
 class MyTests(unittest.TestCase):
-    """
-    Tests
-    """
-
     def test_equation(self):
         text = r"""
         foo bar
@@ -70,6 +66,56 @@ class MyTests(unittest.TestCase):
         \label{misc:self-explenatory}
     \end{oframed}
 \end{example}
+        """
+
+        tex = texplain.TeX(text)
+        tex.format_labels()
+        self.assertEqual(str(tex).strip(), text.strip())
+
+    def test_hybrid(self):
+        text = r"""
+\begin{itemize}
+    \item
+    \begin{referee}
+        Some question
+    \end{referee}
+
+    Some response
+
+    \begin{figure}[htp]
+        \centering
+        \subfloat{\label{fig:1a}}
+        \subfloat{\label{fig:1b}}
+        \includegraphics[width=\linewidth]{foo}
+        \caption{Foo bar}
+        \label{fig:1}
+    \end{figure}
+\end{itemize}
+        """
+
+        tex = texplain.TeX(text)
+        tex.format_labels()
+        self.assertEqual(str(tex).strip(), text.strip())
+
+        # ---
+
+        text = r"""
+Foo bar
+
+\section{My section}
+%
+\label{sec:my}
+
+Foo bar
+
+\begin{figure}[htp]
+    \centering
+    \subfloat{\label{fig:1a}}
+    \subfloat{\label{fig:1b}}
+    \includegraphics[width=\linewidth]{foo}
+    \caption{Foo bar}
+    \label{fig:1}
+\end{figure}
         """
 
         tex = texplain.TeX(text)
