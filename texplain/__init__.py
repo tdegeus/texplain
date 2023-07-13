@@ -1527,7 +1527,7 @@ def indent(
 
     # \item starts on a new line
     if itemize:
-        text = re.sub(r"(\s*)(?<!\\)(\\item)", r"\n\2", text)
+        text = re.sub(r"(\n?\ *)(?<!\\)(\\item)", r"\n\2", text)
 
     # format tables: align if possible
     if alignment:
