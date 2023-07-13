@@ -414,6 +414,28 @@ class TestIndentItem(unittest.TestCase):
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_newline(self):
+        text = r"""
+\begin{itemize} \item a \item b
+
+\item c \item d
+\item e \end{itemize}
+        """
+
+        formatted = r"""
+\begin{itemize}
+    \item a
+    \item b
+
+    \item c
+    \item d
+    \item e
+\end{itemize}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_multiline(self):
         text = r"""
 \begin{itemize} \item a \item b has a long
