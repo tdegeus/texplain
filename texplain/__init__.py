@@ -1526,6 +1526,7 @@ def indent(
         text = re.sub(r"(?<!\\)(\\\\)(\ *\n?)", r"\1\n", text)
 
     # \item starts on a new line
+    # (any white line before \item is preserved)
     if itemize:
         text = re.sub(r"(\n?\ *)(?<!\\)(\\item)", r"\n\2", text)
 
