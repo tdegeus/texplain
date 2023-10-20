@@ -200,30 +200,16 @@ def find_matching(
     return find_matching_index(a, b, return_array=return_array)
 
 
-def _detail_find_option(
-    character: NDArray[np.bool_], index: int, braces: ArrayLike, ret: list[tuple[int]]
+def _detail_find_arg(
+    is_character: NDArray[np.bool_],
+    index: int,
+    braces: ArrayLike,
+    species: ArrayLike,
+    ret: list[tuple[int]],
 ) -> list[tuple[int]]:
     """
-    Find the matching brace.
-    This function is recursively called until the closing brace is followed by any character
-    that is not a space (or a comment).
-
-    :param character:
-        Per character, ``True`` if the character is not a space (nor a comment).
-
-    :param index:
-        Index from where to start searching.
-        May be the index of the opening brace or any space (or comment) before it.
-
-    :param braces:
-        Sorted list of indices of the opening and closing braces.
-        The closing braces are indicated by a negative index.
-
-    :param ret:
-        List of tuples of the indices of the opening and closing braces.
-
-    :return:
-        Updated ``ret``.
+    Nested call (``ret`` is also the return argument).
+    See :py:func:`_find_args` for details.
     """
 
     if len(braces) == 0:
@@ -232,51 +218,77 @@ def _detail_find_option(
     if braces[0] < 0:
         return ret
 
-    if np.any(character[index : braces[0]]) and braces[0] - index > 1:
+    if np.any(is_character[index : braces[0]]) and braces[0] - index > 1:
         return ret
 
     stack = []
 
-    for i, trial in enumerate(braces):
-        trial = braces[i]
+    keep = species == species[0]
+    mybraces = braces[keep]
+    myindex = np.arange(len(braces))[keep]
+
+    if len(mybraces) < 2:
+        return ret
+
+    for i, trial in enumerate(mybraces):
+        trial = mybraces[i]
         if trial >= 0:
             stack.append(trial)
         else:
             if len(stack) == 0:
                 raise IndexError(f"No closing closing bracket at for {index:d}")
-            open = stack.pop()
+            opening = stack.pop()
             if len(stack) == 0:
                 closing = -1 * trial
                 break
 
-    return _detail_find_option(character, closing + 1, braces[i + 1 :], ret + [(open, closing + 1)])
+    return _detail_find_arg(
+        is_character,
+        closing + 1,
+        braces[myindex[i] + 1 :],
+        species[myindex[i] + 1 :],
+        ret + [(opening, closing + 1)],
+    )
 
 
-def _find_option(
-    character: NDArray[np.bool_], index: int, opening: ArrayLike, closing: ArrayLike
+def _find_args(
+    is_character: NDArray[np.bool_],
+    index: int,
+    brackets: dict[ArrayLike],
 ) -> list[int]:
     """
-    Find indices of command options/arguments.
+    Find sequence of matching brackets.
+    For example::
 
-    :param character:
-        Per character, ``True`` if the character is not a space (nor a comment).
+        [...]{...}
 
-    :param index:
-        Index from where to start searching.
-        May be the index of the opening brace or any space (or comment) before it.
+    would correspond to::
 
-    :param opening: Index of all relevant opening brackets.
-    :param closing: Index of all relevant closing brackets.
+        >>> _find_args([1 1 1 1 1 1 1 1], 0, brackets={"[": [0], "]": [4], "{": [5], "}": [9]})
+        [(0, 4), (5, 9)]
 
+    The sequence is abandoned if a closing bracket is not following by an opening bracket,
+    or if the opening bracket is not matched.
+
+    :param is_character: Per character, ``True`` if the character is not a space/newline/comment.
+    :param index: Index from where to start searching.
+    :param brackets: Dictionary with e.g. ``{"{": [indices], "}": [indices], ...}``.
     :return: List of tuples with indices of opening and closing brackets of the options.
     """
 
-    if len(opening) == 0:
+    if len(brackets) == 0:
         return []
 
-    braces = np.concatenate((opening, -np.array(closing)))
-    braces = braces[np.argsort(np.abs(braces))]
-    return _detail_find_option(character, index, braces, [])
+    species = []
+    braces = []
+    for s, (o, c) in enumerate([("(", ")"), ("[", "]"), ("{", "}")]):
+        b = list(brackets.pop(o, [])) + [-i for i in brackets.pop(c, [])]
+        species += [s + 1] * len(b)
+        braces += b
+    species = np.array(species)
+    braces = np.array(braces)
+    sorter = np.argsort(np.abs(braces))
+    return _detail_find_arg(is_character, index, braces[sorter], species[sorter], [])
 
 
 # TODO: This function should be able to be limited to a given number of options and arguments.
@@ -288,6 +300,11 @@ def find_command(
 ) -> list[list[tuple[int]]]:
     """
     Find indices of commands, and their options, and arguments.
+    The following pattern is searched for:
+
+    -   Backslash
+    -   Word
+    -   Any number of matching ``[]`` and ``{}`` (in any order).
 
     :param text: Text.
     :param name: Name of command without backslash (e.g. ``"textbf"``).
@@ -320,68 +337,39 @@ def find_command(
     if len(cmd_start) == 0:
         return []
 
-    square_open = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\[)", text)])
-    square_closing = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\])", text)])
-    curly_open = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\{)", text)])
-    curly_closing = np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\})", text)])
+    # find brackets
+    brackets = {
+        "[": np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\[)", text)]),
+        "]": np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\])", text)]),
+        "{": np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\{)", text)]),
+        "}": np.array([i.span()[0] for i in re.finditer(r"(?<!\\)(\})", text)]),
+    }
 
     # ignore any match inside comments
     cmd_start = np.array(cmd_start)
     cmd_end = np.array(cmd_end)[~is_comment[cmd_start]]
     cmd_start = cmd_start[~is_comment[cmd_start]]
-    if square_open.size > 0:
-        square_open = square_open[~is_comment[square_open]]
-    if square_closing.size > 0:
-        square_closing = square_closing[~is_comment[square_closing]]
-    if curly_open.size > 0:
-        curly_open = curly_open[~is_comment[curly_open]]
-    if curly_closing.size > 0:
-        curly_closing = curly_closing[~is_comment[curly_closing]]
+    for key, value in brackets.items():
+        if value.size > 0:
+            brackets[key] = value[~is_comment[value]]
+
+    # per character: True if character is not a comment or a space/newline
+    is_character = ~np.logical_or(is_comment, [i == " " or i == "\n" for i in text] + [False])
 
     # search to which command brackets might belong
     # this is a rough estimate as commands might be nested
-    cmd_square_open = np.searchsorted(cmd_end, square_open, side="right") - 1
-    cmd_square_closing = np.searchsorted(cmd_end, square_closing, side="right") - 1
-    cmd_curly_open = np.searchsorted(cmd_end, curly_open, side="right") - 1
-    cmd_curly_closing = np.searchsorted(cmd_end, curly_closing, side="right") - 1
+    cmd_brackets = {
+        key: np.searchsorted(cmd_end, value, side="right") - 1 for key, value in brackets.items()
+    }
 
     ret = []
-    whitespace = np.logical_or(is_comment, [i == " " or i == "\n" for i in text] + [False])
-    character = ~whitespace  # any non-whitespace and non-comment character
-
     for icmd in range(len(cmd_end)):
-        i_square_open = square_open[cmd_square_open >= icmd]
-        i_square_closing = square_closing[cmd_square_closing >= icmd]
-        i_curly_open = curly_open[cmd_curly_open >= icmd]
-        i_curly_closing = curly_closing[cmd_curly_closing >= icmd]
-
+        ibrackets = {key: brackets[key][value >= icmd] for key, value in cmd_brackets.items()}
         item = [(cmd_start[icmd], cmd_end[icmd])]
-        index = cmd_end[icmd]
-        might_have_opt = True
-
-        if len(i_square_open) == 0:
-            might_have_opt = False
-        else:
-            if len(i_curly_open) > 0:
-                if i_curly_open[0] < i_square_open[0]:
-                    might_have_opt = False
-
-        if might_have_opt:
-            opts = _find_option(character, index, i_square_open, i_square_closing)
-
-            if len(opts) > 0:
-                index = opts[-1][1]
-                item += opts
-                i_curly_open = i_curly_open[i_curly_open >= index]
-                i_curly_closing = i_curly_closing[i_curly_closing >= index]
-
-        args = _find_option(character, index, i_curly_open, i_curly_closing)
-
+        args = _find_args(is_character, index=cmd_end[icmd], brackets=ibrackets)
         if len(args) > 0:
             item += args
-
         ret += [item]
-
     return ret
 
 

@@ -11,7 +11,6 @@ class MyTests(unittest.TestCase):
     def test_basic(self):
         text = r"This is some \foo \bar"
         ret = texplain.find_command(text)
-
         self.assertEqual(r"\foo", text[ret[0][0][0] : ret[0][0][1]])
 
     def test_argument(self):
@@ -109,6 +108,20 @@ class MyTests(unittest.TestCase):
 
         self.assertEqual(text[ret[3][0][0] : ret[3][0][1]], r"\end")
         self.assertEqual(text[ret[3][1][0] : ret[3][1][1]], r"{figure}")
+
+    def test_option_a(self):
+        text = r"\begin{figure}[htb]{a} Foo."
+        ret = texplain.find_command(text)
+        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\begin")
+        self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{figure}")
+        self.assertEqual(text[ret[0][2][0] : ret[0][2][1]], r"[htb]")
+        self.assertEqual(text[ret[0][3][0] : ret[0][3][1]], r"{a}")
+
+    def test_math(self):
+        text = r"\begin{equation} [0, 1) \end{equation}"
+        ret = texplain.find_command(text)
+        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\begin")
+        self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{equation}")
 
 
 if __name__ == "__main__":
