@@ -1593,8 +1593,8 @@ def indent(
             elif env == "document":
                 continue
             else:
-                opening = r"\\begin{" + env + r"}"
-                closing = r"\\end{" + env + r"}"
+                opening = r"\\begin{" + re.escape(env) + r"}"
+                closing = r"\\end{" + re.escape(env) + r"}"
             indices = find_matching(
                 text,
                 opening,
