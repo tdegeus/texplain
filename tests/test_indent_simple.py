@@ -412,6 +412,23 @@ some more text.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_environment_multiline_option_a(self):
+        text = r"""
+\begin{tcolorbox}[colback=green!5!white] Using a mesoscopic model.
+    See details.
+\end{tcolorbox}
+        """
+
+        formatted = r"""
+\begin{tcolorbox}[colback=green!5!white]
+    Using a mesoscopic model.
+    See details.
+\end{tcolorbox}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_environment_comment(self):
         text = r"""
 Some text \begin{equation} % some comment
