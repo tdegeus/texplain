@@ -3,6 +3,16 @@ import unittest
 import texplain
 
 
+def convert(text, indices):
+    ret = []
+    for cmd in indices:
+        iret = []
+        for arg in cmd:
+            iret.append(text[arg[0] : arg[1]])
+        ret.append(iret)
+    return ret
+
+
 class MyTests(unittest.TestCase):
     """
     Tests
@@ -10,95 +20,52 @@ class MyTests(unittest.TestCase):
 
     def test_basic(self):
         text = r"This is some \foo \bar"
-        ret = texplain.find_command(text)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(len(ret[0]), 1)
-        self.assertEqual(len(ret[1]), 1)
-        self.assertEqual(r"\foo", text[ret[0][0][0] : ret[0][0][1]])
-        self.assertEqual(r"\bar", text[ret[1][0][0] : ret[1][0][1]])
+        expect = [[r"\foo"], [r"\bar"]]
+        self.assertEqual(expect, convert(text, texplain.find_command(text)))
 
     def test_argument(self):
         text = r"This is some \foo{fooarg} \bar{[bararg}  {bararg2}"
-        ret = texplain.find_command(text)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(len(ret[0]), 2)
-        self.assertEqual(len(ret[1]), 3)
-        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\foo")
-        self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{fooarg}")
-
-        self.assertEqual(text[ret[1][0][0] : ret[1][0][1]], r"\bar")
-        self.assertEqual(text[ret[1][1][0] : ret[1][1][1]], r"{[bararg}")
-        self.assertEqual(text[ret[1][2][0] : ret[1][2][1]], r"{bararg2}")
+        expect = [[r"\foo", r"{fooarg}"], [r"\bar", r"{[bararg}", r"{bararg2}"]]
+        self.assertEqual(expect, convert(text, texplain.find_command(text)))
 
     def test_argument_comment(self):
         text = r"This is some \foo{fooarg} \bar{[bararg}  {bararg2}  % some } nonsense"
-        ret = texplain.find_command(text)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(len(ret[0]), 2)
-        self.assertEqual(len(ret[1]), 3)
-        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\foo")
-        self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{fooarg}")
-
-        self.assertEqual(text[ret[1][0][0] : ret[1][0][1]], r"\bar")
-        self.assertEqual(text[ret[1][1][0] : ret[1][1][1]], r"{[bararg}")
-        self.assertEqual(text[ret[1][2][0] : ret[1][2][1]], r"{bararg2}")
+        expect = [[r"\foo", r"{fooarg}"], [r"\bar", r"{[bararg}", r"{bararg2}"]]
+        self.assertEqual(expect, convert(text, texplain.find_command(text)))
 
     def test_argument_comment_a(self):
         text = r"""
         This is a text with a \command%
         % first comment
         [
-            option1
+            opt1
         ]%
         % second comment
         {
-            argument1
+            arg1
         }
 
         \bar
         [
-            option2
+            opt2
         ]
         % comment
         {
-            argument2
+            arg2
         }
         """
-        ret = texplain.find_command(text)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(len(ret[0]), 3)
-        self.assertEqual(len(ret[1]), 3)
-        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\command")
-        self.assertEqual(
-            text[ret[0][1][0] : ret[0][1][1]].replace(" ", "").replace("\n", ""), r"[option1]"
-        )
-        self.assertEqual(
-            text[ret[0][2][0] : ret[0][2][1]].replace(" ", "").replace("\n", ""), r"{argument1}"
-        )
-
-        self.assertEqual(text[ret[1][0][0] : ret[1][0][1]], r"\bar")
-        self.assertEqual(
-            text[ret[1][1][0] : ret[1][1][1]].replace(" ", "").replace("\n", ""), r"[option2]"
-        )
-        self.assertEqual(
-            text[ret[1][2][0] : ret[1][2][1]].replace(" ", "").replace("\n", ""), r"{argument2}"
-        )
+        expect = [[r"\command", r"[opt1]", r"{arg1}"], [r"\bar", r"[opt2]", r"{arg2}"]]
+        ret = convert(text, texplain.find_command(text))
+        ret = [[arg.replace(" ", "").replace("\n", "") for arg in cmd] for cmd in ret if cmd]
+        self.assertEqual(expect, ret)
 
     def test_option_argument(self):
         text = r"This is some \foo[fooopt]{fooarg} \bar [baropt] [{baropt2}] {[bararg}  {bararg2}"
-        ret = texplain.find_command(text)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(len(ret[0]), 3)
-        self.assertEqual(len(ret[1]), 5)
-        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\foo")
-        self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"[fooopt]")
-        self.assertEqual(text[ret[0][2][0] : ret[0][2][1]], r"{fooarg}")
-
-        self.assertEqual(text[ret[1][0][0] : ret[1][0][1]], r"\bar")
-        self.assertEqual(text[ret[1][1][0] : ret[1][1][1]], r"[baropt]")
-        self.assertEqual(text[ret[1][2][0] : ret[1][2][1]], r"[{baropt2}]")
-        self.assertEqual(text[ret[1][3][0] : ret[1][3][1]], r"{[bararg}")
-        self.assertEqual(text[ret[1][4][0] : ret[1][4][1]], r"{bararg2}")
+        expect = [
+            [r"\foo", r"[fooopt]", r"{fooarg}"],
+            [r"\bar", r"[baropt]", r"[{baropt2}]", r"{[bararg}", r"{bararg2}"],
+        ]
+        self.assertEqual(expect, convert(text, texplain.find_command(text)))
 
     def test_nested_command(self):
         text = r"""
@@ -106,45 +73,23 @@ class MyTests(unittest.TestCase):
     \subfloat{\label{fig:foo}}
 \end{figure}
         """
-        ret = texplain.find_command(text)
-        self.assertEqual(len(ret), 4)
-        self.assertEqual(len(ret[0]), 2)
-        self.assertEqual(len(ret[1]), 2)
-        self.assertEqual(len(ret[2]), 2)
-        self.assertEqual(len(ret[3]), 2)
-        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\begin")
-        self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{figure}")
-
-        self.assertEqual(text[ret[1][0][0] : ret[1][0][1]], r"\subfloat")
-        self.assertEqual(text[ret[1][1][0] : ret[1][1][1]], r"{\label{fig:foo}}")
-
-        self.assertEqual(text[ret[2][0][0] : ret[2][0][1]], r"\label")
-        self.assertEqual(text[ret[2][1][0] : ret[2][1][1]], r"{fig:foo}")
-
-        self.assertEqual(text[ret[3][0][0] : ret[3][0][1]], r"\end")
-        self.assertEqual(text[ret[3][1][0] : ret[3][1][1]], r"{figure}")
+        expect = [
+            [r"\begin", r"{figure}"],
+            [r"\subfloat", r"{\label{fig:foo}}"],
+            [r"\label", r"{fig:foo}"],
+            [r"\end", r"{figure}"],
+        ]
+        self.assertEqual(expect, convert(text, texplain.find_command(text)))
 
     def test_option_a(self):
         text = r"\begin{figure}[htb]{a} Foo."
-        ret = texplain.find_command(text)
-        self.assertEqual(len(ret), 1)
-        self.assertEqual(len(ret[0]), 4)
-        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\begin")
-        self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{figure}")
-        self.assertEqual(text[ret[0][2][0] : ret[0][2][1]], r"[htb]")
-        self.assertEqual(text[ret[0][3][0] : ret[0][3][1]], r"{a}")
+        expect = [[r"\begin", r"{figure}", r"[htb]", r"{a}"]]
+        self.assertEqual(expect, convert(text, texplain.find_command(text)))
 
     def test_math(self):
         text = r"\begin{equation} [0, 1) \end{equation}"
-        ret = texplain.find_command(text)
-        self.assertEqual(len(ret), 2)
-        self.assertEqual(len(ret[0]), 2)
-        self.assertEqual(len(ret[1]), 2)
-        self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\begin")
-        self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{equation}")
-
-        self.assertEqual(text[ret[1][0][0] : ret[1][0][1]], r"\end")
-        self.assertEqual(text[ret[1][1][0] : ret[1][1][1]], r"{equation}")
+        expect = [[r"\begin", r"{equation}"], [r"\end", r"{equation}"]]
+        self.assertEqual(expect, convert(text, texplain.find_command(text)))
 
 
 if __name__ == "__main__":
