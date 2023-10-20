@@ -11,12 +11,18 @@ class MyTests(unittest.TestCase):
     def test_basic(self):
         text = r"This is some \foo \bar"
         ret = texplain.find_command(text)
+        self.assertEqual(len(ret), 2)
+        self.assertEqual(len(ret[0]), 1)
+        self.assertEqual(len(ret[1]), 1)
         self.assertEqual(r"\foo", text[ret[0][0][0] : ret[0][0][1]])
+        self.assertEqual(r"\bar", text[ret[1][0][0] : ret[1][0][1]])
 
     def test_argument(self):
         text = r"This is some \foo{fooarg} \bar{[bararg}  {bararg2}"
         ret = texplain.find_command(text)
-
+        self.assertEqual(len(ret), 2)
+        self.assertEqual(len(ret[0]), 2)
+        self.assertEqual(len(ret[1]), 3)
         self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\foo")
         self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{fooarg}")
 
@@ -27,7 +33,9 @@ class MyTests(unittest.TestCase):
     def test_argument_comment(self):
         text = r"This is some \foo{fooarg} \bar{[bararg}  {bararg2}  % some } nonsense"
         ret = texplain.find_command(text)
-
+        self.assertEqual(len(ret), 2)
+        self.assertEqual(len(ret[0]), 2)
+        self.assertEqual(len(ret[1]), 3)
         self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\foo")
         self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{fooarg}")
 
@@ -57,7 +65,9 @@ class MyTests(unittest.TestCase):
         }
         """
         ret = texplain.find_command(text)
-
+        self.assertEqual(len(ret), 2)
+        self.assertEqual(len(ret[0]), 3)
+        self.assertEqual(len(ret[1]), 3)
         self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\command")
         self.assertEqual(
             text[ret[0][1][0] : ret[0][1][1]].replace(" ", "").replace("\n", ""), r"[option1]"
@@ -77,7 +87,9 @@ class MyTests(unittest.TestCase):
     def test_option_argument(self):
         text = r"This is some \foo[fooopt]{fooarg} \bar [baropt] [{baropt2}] {[bararg}  {bararg2}"
         ret = texplain.find_command(text)
-
+        self.assertEqual(len(ret), 2)
+        self.assertEqual(len(ret[0]), 3)
+        self.assertEqual(len(ret[1]), 5)
         self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\foo")
         self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"[fooopt]")
         self.assertEqual(text[ret[0][2][0] : ret[0][2][1]], r"{fooarg}")
@@ -94,9 +106,12 @@ class MyTests(unittest.TestCase):
     \subfloat{\label{fig:foo}}
 \end{figure}
         """
-
         ret = texplain.find_command(text)
-
+        self.assertEqual(len(ret), 4)
+        self.assertEqual(len(ret[0]), 2)
+        self.assertEqual(len(ret[1]), 2)
+        self.assertEqual(len(ret[2]), 2)
+        self.assertEqual(len(ret[3]), 2)
         self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\begin")
         self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{figure}")
 
@@ -112,6 +127,8 @@ class MyTests(unittest.TestCase):
     def test_option_a(self):
         text = r"\begin{figure}[htb]{a} Foo."
         ret = texplain.find_command(text)
+        self.assertEqual(len(ret), 1)
+        self.assertEqual(len(ret[0]), 4)
         self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\begin")
         self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{figure}")
         self.assertEqual(text[ret[0][2][0] : ret[0][2][1]], r"[htb]")
@@ -120,8 +137,14 @@ class MyTests(unittest.TestCase):
     def test_math(self):
         text = r"\begin{equation} [0, 1) \end{equation}"
         ret = texplain.find_command(text)
+        self.assertEqual(len(ret), 2)
+        self.assertEqual(len(ret[0]), 2)
+        self.assertEqual(len(ret[1]), 2)
         self.assertEqual(text[ret[0][0][0] : ret[0][0][1]], r"\begin")
         self.assertEqual(text[ret[0][1][0] : ret[0][1][1]], r"{equation}")
+
+        self.assertEqual(text[ret[1][0][0] : ret[1][0][1]], r"\end")
+        self.assertEqual(text[ret[1][1][0] : ret[1][1][1]], r"{equation}")
 
 
 if __name__ == "__main__":
