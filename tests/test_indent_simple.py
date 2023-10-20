@@ -226,6 +226,42 @@ some more text on interval $[0, 1)$.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_environment_star_a(self):
+        text = r"""
+\begin{figure*}[b]
+    \centering
+    \includegraphics[width=\linewidth]{example-image}
+\end{figure*}
+        """
+
+        formatted = r"""
+\begin{figure*}[b]
+    \centering
+    \includegraphics[width=\linewidth]{example-image}
+\end{figure*}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
+    def test_environment_star_b(self):
+        text = r"""
+\begin{figure*}[b]
+\centering
+\includegraphics[width=\linewidth]{example-image}
+\end{figure*}
+        """
+
+        formatted = r"""
+\begin{figure*}[b]
+    \centering
+    \includegraphics[width=\linewidth]{example-image}
+\end{figure*}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_environment_nested_a(self):
         text = r"""
 Some text \begin{equation} \begin{split} a = b \end{split} \end{equation} some more text.
