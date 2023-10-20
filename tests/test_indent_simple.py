@@ -395,6 +395,23 @@ some more text.
         ret = texplain.indent(text)
         self.assertEqual(ret.strip(), formatted.strip())
 
+    def test_environment_multiline_option(self):
+        text = r"""
+\begin{figure}[b] Foo.
+    Bar.
+\end{figure}
+        """
+
+        formatted = r"""
+\begin{figure}[b]
+    Foo.
+    Bar.
+\end{figure}
+        """
+
+        ret = texplain.indent(text)
+        self.assertEqual(ret.strip(), formatted.strip())
+
     def test_environment_comment(self):
         text = r"""
 Some text \begin{equation} % some comment
