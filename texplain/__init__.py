@@ -2513,12 +2513,13 @@ class TeX:
         return self
 
 
-def bib_select(text: str, keys: list[str]) -> str:
+def bib_select(text: str, keys: list[str], reorder: bool = False) -> str:
     r"""
     Limit a BibTeX file to a list of keys.
 
     :param test: The BibTeX file as string.
     :param keys: The list of keys to select.
+    :param reorder: If ``True`` the keys are reordered to match the order of ``keys``.
     :return: The (reduced) BibTeX file, as string.
     """
 
@@ -2526,7 +2527,7 @@ def bib_select(text: str, keys: list[str]) -> str:
 
     bib = list(filter(None, text.split("@")))[1:]
 
-    out = []
+    out = {}
 
     for i in bib:
         if re.match(r"(string\{)(.*)", i):
@@ -2535,10 +2536,17 @@ def bib_select(text: str, keys: list[str]) -> str:
             continue
         if re.match(r"(comment\{)(.*)", i, re.IGNORECASE):
             continue
-        if re.split(r"(.*\{)(.*)(,\n.*)", i)[2] in keys:
-            out += [i]
+        key = re.split(r"(.*\{)(.*)(,\n.*)", i)[2]
+        if key in keys:
+            out[key] = i
 
-    out = "\n@" + "\n@".join(out)
+    if reorder:
+        _, forward = np.unique(keys, return_index=True)
+        out = [out[keys[i]] for i in np.sort(forward)]
+    else:
+        out = [out[i] for i in out]
+
+    out = "\n@" + "\n\n@".join(out)
 
     while "\n\n\n" in out:
         out = out.replace("\n\n\n", "\n\n")
