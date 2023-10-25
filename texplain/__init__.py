@@ -2287,12 +2287,8 @@ class TeX:
 
         scmd = re.split(r"({)(\\\w*)(})(\[)([0-9]*)(\])", cmd)
         sreplace = re.split(r"({)(.*)(})", replace)
-
-        if len(scmd) != 8:
-            raise OSError(f'Unknown cmd = "{cmd}"')
-
-        if len(sreplace) != 5:
-            raise OSError(f'Unknown replace = "{replace}"')
+        assert len(scmd) == 8, f'Unknown cmd = "{cmd}"'
+        assert len(sreplace) == 5, f'Unknown replace = "{replace}"'
 
         cmd = scmd[2]
         replace = sreplace[2]
