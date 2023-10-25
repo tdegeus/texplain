@@ -2519,7 +2519,7 @@ def bib_select(text: str, keys: list[str], reorder: bool = False) -> str:
 
     :param test: The BibTeX file as string.
     :param keys: The list of keys to select.
-    :param reorder: If ``True`` the keys are reordered to match the order of ``keys``.
+    :param reorder: Reorder the entries in the bib-file to match the order of ``keys``.
     :return: The (reduced) BibTeX file, as string.
     """
 
