@@ -2523,10 +2523,11 @@ def bib_select(text: str, keys: list[str], reorder: bool = False) -> str:
     :return: The (reduced) BibTeX file, as string.
     """
 
+    _, forward = np.unique(keys, return_index=True)
+    keys = [keys[i] for i in np.sort(forward)]
+
     text = "\n" + text
-
     bib = list(filter(None, text.split("@")))[1:]
-
     out = {}
 
     for i in bib:
@@ -2541,8 +2542,7 @@ def bib_select(text: str, keys: list[str], reorder: bool = False) -> str:
             out[key] = i
 
     if reorder:
-        _, forward = np.unique(keys, return_index=True)
-        out = [out[keys[i]] for i in np.sort(forward)]
+        out = [out[key] for key in keys]
     else:
         out = [out[i] for i in out]
 
