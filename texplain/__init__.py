@@ -1856,9 +1856,9 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
 
     index = find_matching(
         text,
-        r"\begin{figure}",
-        r"\end{figure}",
-        escape=True,
+        r"\\begin\{figure\*?\}",
+        r"\\end\{figure\*?\}",
+        escape=False,
         closing_match=1,
     )
     for i, j in index.items():
@@ -1870,9 +1870,9 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
 
     index = find_matching(
         text,
-        r"\begin{table}",
-        r"\end{table}",
-        escape=True,
+        r"\\begin\{table\*?\}",
+        r"\\end\{table\*?\}",
+        escape=False,
         closing_match=1,
     )
     for i, j in index.items():
@@ -1884,9 +1884,9 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
 
     index = find_matching(
         text,
-        r"\begin{itemize}",
-        r"\end{itemize}",
-        escape=True,
+        r"\\begin\{itemize\*?\}",
+        r"\\end\{itemize\*?\}",
+        escape=False,
         closing_match=1,
     )
     for i, j in index.items():
@@ -1894,9 +1894,9 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
 
     index = find_matching(
         text,
-        r"\begin{enumerate}",
-        r"\end{enumerate}",
-        escape=True,
+        r"\\begin\{enumerate\*?\}",
+        r"\\end\{enumerate\*?\}",
+        escape=False,
         closing_match=1,
     )
     for i, j in index.items():
