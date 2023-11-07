@@ -58,6 +58,20 @@ class MyTests(unittest.TestCase):
         tex.format_labels()
         self.assertEqual(str(tex).strip(), text.strip())
 
+    def test_figure_b(self):
+        text = r"""
+        foo bar
+        \begin{figure*}
+            \label{fig:foo}
+            \caption{My caption}
+        \end{figure*}
+        baz
+        """
+
+        tex = texplain.TeX(text)
+        tex.format_labels()
+        self.assertEqual(str(tex).strip(), text.strip())
+
     def test_custom(self):
         text = r"""
 \begin{example}[H]
