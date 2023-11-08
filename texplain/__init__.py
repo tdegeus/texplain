@@ -2756,11 +2756,11 @@ def texplain(args: list[str]):
         new_includegraphics = []
 
         for i, (okey, ofile) in enumerate(includegraphics):
+            if ofile is None:
+                new_includegraphics += [(okey, None)]
+                continue
             nkey = f"figure_{i + 1:d}"
             ext = os.path.splitext(ofile)[1]
-            if ofile is None:
-                new_includegraphics += [(nkey, None)]
-                continue
             nfile = ofile.replace(os.path.normpath(okey), nkey)
             if len(os.path.splitext(nfile)[1]) == 0:
                 nfile += ext
