@@ -2041,6 +2041,8 @@ class TeX:
                 return os.path.relpath(os.path.join(dirname, name) + ".tex", dirname)
             if os.path.isfile(os.path.join(dirname, name) + ".bib"):
                 return os.path.relpath(os.path.join(dirname, name) + ".bib", dirname)
+            if re.match(r"(example-image)(-\w)?", name):
+                return None
 
             raise OSError(f"Cannot find {name:s}")
 
@@ -2058,12 +2060,8 @@ class TeX:
 
         self.main = tmp
 
-        # extract the filename
+        # add the filename
         out = [(i, filename(self.dirname, i)) for i in include]
-
-        # check for duplicates
-        filenames = [i[1] for i in out]
-        assert np.unique(np.array(filenames)).size == len(filenames)
 
         return out
 
@@ -2760,6 +2758,9 @@ def texplain(args: list[str]):
         for i, (okey, ofile) in enumerate(includegraphics):
             nkey = f"figure_{i + 1:d}"
             ext = os.path.splitext(ofile)[1]
+            if ofile is None:
+                new_includegraphics += [(nkey, None)]
+                continue
             nfile = ofile.replace(os.path.normpath(okey), nkey)
             if len(os.path.splitext(nfile)[1]) == 0:
                 nfile += ext
@@ -2767,6 +2768,8 @@ def texplain(args: list[str]):
 
         for (okey, ofile), (nkey, nfile) in zip(includegraphics, new_includegraphics):
             new.rename_float(okey, nkey, r"\includegraphics")
+            if ofile is None:
+                continue
             copyfile(os.path.join(old.dirname, ofile), os.path.join(new.dirname, nfile))
 
     # Copy/reduce BibTeX files
