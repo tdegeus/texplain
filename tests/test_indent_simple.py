@@ -31,7 +31,7 @@ def test_comment_d():
   %% e
  % f
 %% g
-        """
+"""
 
     formatted = r"""
 % a
@@ -41,7 +41,7 @@ def test_comment_d():
 %% e
 % f
 %% g
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -58,7 +58,7 @@ def test_comment_indent():
  % f
 \end{figure}
 %% g
-        """
+"""
 
     formatted = r"""
 % a
@@ -70,7 +70,7 @@ def test_comment_indent():
     % f
 \end{figure}
 %% g
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -79,11 +79,11 @@ def test_comment_indent():
 def test_noindent_verbatim():
     text = r"""
 Some text   \begin{verbatim} a = b \end{verbatim}    some more text.
-        """
+"""
 
     formatted = r"""
 Some text \begin{verbatim} a = b \end{verbatim} some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -98,7 +98,7 @@ Some text
 
 
 some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -106,7 +106,7 @@ Some text
 \begin{verbatim} a = b \end{verbatim}
 
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -119,7 +119,7 @@ Some  text
 should be ignored
 % \end{noindent}
   some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -127,7 +127,7 @@ Some text
 should be ignored
 % \end{noindent}
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -144,7 +144,7 @@ should be ignored
 
 
   some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -154,7 +154,7 @@ should be ignored
 % \end{noindent}
 
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -163,7 +163,7 @@ some more text.
 def test_environment():
     text = r"""
 Some text \begin{equation} a = b \end{equation} some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -171,7 +171,7 @@ Some text
     a = b
 \end{equation}
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -180,7 +180,7 @@ some more text.
 def test_environment_a():
     text = r"""
 Some text \begin{equation}a = b\end{equation} some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -188,7 +188,7 @@ Some text
     a = b
 \end{equation}
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -197,7 +197,7 @@ some more text.
 def test_environment_b():
     text = r"""
 Some text \begin{equation}[0, 1)\end{equation} some more text on interval $[0, 1)$.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -205,7 +205,7 @@ Some text
     [0, 1)
 \end{equation}
 some more text on interval $[0, 1)$.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -217,7 +217,7 @@ Some text \begin{equation}
 [0, 1)
 (2, 3)
 \end{equation} some more text on interval $[0, 1)$.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -226,7 +226,7 @@ Some text
     (2, 3)
 \end{equation}
 some more text on interval $[0, 1)$.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -238,14 +238,14 @@ def test_environment_star_a():
     \centering
     \includegraphics[width=\linewidth]{example-image}
 \end{figure*}
-        """
+"""
 
     formatted = r"""
 \begin{figure*}[b]
     \centering
     \includegraphics[width=\linewidth]{example-image}
 \end{figure*}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -257,14 +257,14 @@ def test_environment_star_b():
 \centering
 \includegraphics[width=\linewidth]{example-image}
 \end{figure*}
-        """
+"""
 
     formatted = r"""
 \begin{figure*}[b]
     \centering
     \includegraphics[width=\linewidth]{example-image}
 \end{figure*}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -273,7 +273,7 @@ def test_environment_star_b():
 def test_environment_nested_a():
     text = r"""
 Some text \begin{equation} \begin{split} a = b \end{split} \end{equation} some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -283,7 +283,7 @@ Some text
     \end{split}
 \end{equation}
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -292,7 +292,7 @@ some more text.
 def test_environment_nested_b():
     text = r"""
 Some text \begin{equation} \begin{equation} a = b \end{equation} \end{equation} some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -302,7 +302,7 @@ Some text
     \end{equation}
 \end{equation}
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -321,7 +321,7 @@ a = b
 \end{equation}
 \end{equation}
 some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -335,7 +335,7 @@ Some text
     \end{equation}
 \end{equation}
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -351,7 +351,7 @@ def test_environment_nested_d():
     \[
     x^2
     \]}
-        """
+"""
 
     formatted = r"""
 \parbox{
@@ -360,7 +360,7 @@ def test_environment_nested_d():
         x^2
     \]
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -371,7 +371,7 @@ def test_environment_multiline_a():
 Some text \begin{figure}
  \foo
  \bar \end{figure} some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -380,7 +380,7 @@ Some text
     \bar
 \end{figure}
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -391,7 +391,7 @@ def test_environment_multiline_b():
 Some text \begin{figure}
  \foo
  \bar \end{figure} \begin{equation} a = b \end{equation} some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -403,7 +403,7 @@ Some text
     a = b
 \end{equation}
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -414,14 +414,14 @@ def test_environment_multiline_option():
 \begin{figure}[b] Foo.
     Bar.
 \end{figure}
-        """
+"""
 
     formatted = r"""
 \begin{figure}[b]
     Foo.
     Bar.
 \end{figure}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -432,14 +432,14 @@ def test_environment_multiline_option_a():
 \begin{tcolorbox}[colback=green!5!white] Using a mesoscopic model.
     See details.
 \end{tcolorbox}
-        """
+"""
 
     formatted = r"""
 \begin{tcolorbox}[colback=green!5!white]
     Using a mesoscopic model.
     See details.
 \end{tcolorbox}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -449,7 +449,7 @@ def test_environment_comment():
     text = r"""
 Some text \begin{equation} % some comment
 a = b \end{equation} some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -457,7 +457,7 @@ Some text
     a = b
 \end{equation}
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -467,14 +467,14 @@ def test_environment_nested():
     text = r"""
 This is { \normalsize
 Some text}
-        """
+"""
 
     formatted = r"""
 This is {
     \normalsize
     Some text
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -485,7 +485,7 @@ def test_item_simple():
 \begin{itemize} \item a \item b
 \item c \item d
 \item e \end{itemize}
-        """
+"""
 
     formatted = r"""
 \begin{itemize}
@@ -495,7 +495,7 @@ def test_item_simple():
     \item d
     \item e
 \end{itemize}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -507,7 +507,7 @@ def test_item_newline():
 
 \item c \item d
 \item e \end{itemize}
-        """
+"""
 
     formatted = r"""
 \begin{itemize}
@@ -518,7 +518,7 @@ def test_item_newline():
     \item d
     \item e
 \end{itemize}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -534,7 +534,7 @@ With even
 a new paragraph.
 \item c \item d
 \item e \end{itemize}
-        """
+"""
 
     formatted = r"""
 \begin{itemize}
@@ -547,7 +547,7 @@ a new paragraph.
     \item d
     \item e
 \end{itemize}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -562,7 +562,7 @@ And another
 sentence.
 \item subc \item subd \end{itemize}
 \item e \end{itemize}
-        """
+"""
 
     formatted = r"""
 \begin{itemize}
@@ -579,7 +579,7 @@ sentence.
     \end{itemize}
     \item e
 \end{itemize}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -591,7 +591,7 @@ A start\footnote{
     This is a footnote
 }.
 A new sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == text.strip()
@@ -603,7 +603,7 @@ A start\footnote{
     This is a footnote
 }
 a continued sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == text.strip()
@@ -613,7 +613,7 @@ def test_command_punctuation_b():
     text = r"""
 \section{My? section}
 \label{sec:a}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == text.strip()
@@ -625,7 +625,7 @@ def test_command_label_equation():
     \label{eq:a}
     a = b
 \end{equation}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == text.strip()
@@ -636,7 +636,7 @@ def test_command_nested():
 \begin{figure}
     \subfloat{\label{fig:foo}}
 \end{figure}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == text.strip()
@@ -645,11 +645,11 @@ def test_command_nested():
 def test_one_sentence_per_line_quote():
     text = r"""
 This a ``sentence!'' And another.
-        """
+"""
 
     formatted = r"""
 This a ``sentence!'' And another.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -659,11 +659,11 @@ def test_one_sentence_per_line_full_quote():
     text = r"""
 ``This a sentence!'' And
 another.
-        """
+"""
 
     formatted = r"""
 ``This a sentence!'' And another.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -673,12 +673,12 @@ def test_one_sentence_per_line_brace():
     text = r"""
 This a sentence. And another
 (etc.).
-        """
+"""
 
     formatted = r"""
 This a sentence.
 And another (etc.).
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -687,12 +687,12 @@ And another (etc.).
 def test_one_sentence_per_line_full_brace():
     text = r"""
 (This a sentence.) (This a second sentence.) And another. And one more (?).
-        """
+"""
 
     formatted = r"""
 (This a sentence.) (This a second sentence.) And another.
 And one more (?).
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -708,7 +708,7 @@ is
 another.
 With a % another comment
 final statement.
-        """
+"""
 
     formatted = r"""
 This is % some comment
@@ -716,7 +716,7 @@ a sentence.
 And here is another.
 With a % another comment
 final statement.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -728,13 +728,13 @@ This is a text% with a comment
 that ends here.
 But this is
 not a comment.
-        """
+"""
 
     formatted = r"""
 This is a text% with a comment
 that ends here.
 But this is not a comment.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -747,13 +747,13 @@ first sentence.
 
 And the
 second sentence.
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
 
 And the second sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -766,14 +766,14 @@ long sentence.
 
 With some
 more words.
-        """
+"""
 
     formatted = r"""
 This is a \\
 long sentence.
 
 With some more words.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -790,7 +790,7 @@ With some \\ more. And some more words.
 another
 bit of
 text.
-        """
+"""
 
     formatted = r"""
 This is a \\
@@ -802,7 +802,7 @@ And some more words.
 
 \\
 Here is another bit of text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -820,7 +820,7 @@ With some \\ \\ more. And some more words.
 another
 bit of
 text.
-        """
+"""
 
     formatted = r"""
 This is a \\
@@ -835,7 +835,7 @@ And some more words.
 \\
 \\
 Here is another bit of text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -845,7 +845,7 @@ def test_one_sentence_per_line_newline_d():
     text = r"""
 \setkomavar{fromaddress}{EPFL\\
 Route de la Sorge\\ CH-1015 Lausanne, Switzerland}
-        """
+"""
 
     formatted = r"""
 \setkomavar{fromaddress}{
@@ -853,7 +853,7 @@ Route de la Sorge\\ CH-1015 Lausanne, Switzerland}
     Route de la Sorge\\
     CH-1015 Lausanne, Switzerland
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -871,7 +871,7 @@ words.
 And
 another
 following sentence.
-        """
+"""
 
     formatted = r"""
 This is a \\
@@ -879,7 +879,7 @@ long sentence.
 
 With some more words.
 And another following sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -896,7 +896,7 @@ And the
     sub sentence.
 \end{foo}
 second sentence.
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
@@ -906,7 +906,7 @@ And the
     With some sub sentence.
 \end{foo}
 second sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -919,13 +919,13 @@ first sentence.
 
 And \TG{?}{and some}{.} the
 second sentence.
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
 
 And \TG{?}{and some}{.} the second sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -941,7 +941,7 @@ A text with a
 footnote.
 } the
 second sentence.
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
@@ -949,7 +949,7 @@ This is the first sentence.
 And \footnote{
     A text with a footnote.
 } the second sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -961,7 +961,7 @@ A start\footnote{This is a footnote. With
     some poor formatting.
 }.
 A new sentence.
-        """
+"""
 
     formatted = r"""
 A start\footnote{
@@ -969,7 +969,7 @@ A start\footnote{
     With some poor formatting.
 }.
 A new sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -981,7 +981,7 @@ A start\footnote[Some option]{This is a footnote. With
     some poor formatting.
 }.
 A new sentence.
-        """
+"""
 
     formatted = r"""
 A start\footnote[Some option]{
@@ -989,7 +989,7 @@ A start\footnote[Some option]{
     With some poor formatting.
 }.
 A new sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1002,7 +1002,7 @@ A start\footnote{ %
     some poor formatting.
 }.
 A new sentence.
-        """
+"""
 
     formatted = r"""
 A start\footnote{ %
@@ -1010,7 +1010,7 @@ A start\footnote{ %
     With some poor formatting.
 }.
 A new sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1023,7 +1023,7 @@ A start\footnote{ %
     This is a footnote. With
     some poor formatting.
 } %
-        """
+"""
 
     formatted = r"""
 % my comment
@@ -1031,7 +1031,7 @@ A start\footnote{ %
     This is a footnote.
     With some poor formatting.
 } %
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1050,7 +1050,7 @@ A text with a \TG{ % some comment
 footnote.
 } the
 second sentence.
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
@@ -1061,7 +1061,7 @@ And \footnote{
     }
     footnote.
 } the second sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1081,7 +1081,7 @@ A text with a \TG{ % some comment
 footnote.
 } the
 second sentence.
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
@@ -1093,7 +1093,7 @@ And \footnote{
     }
     footnote.
 } the second sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1119,7 +1119,7 @@ to
 do
 }
 }
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
@@ -1137,7 +1137,7 @@ This is the first sentence.
         more formatting to do
     }
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1152,7 +1152,7 @@ Some text \emph{with some highlighting}. And two sentences.
 \end{something}
 }
 }
-        """
+"""
 
     formatted = r"""
 \some{
@@ -1163,7 +1163,7 @@ Some text \emph{with some highlighting}. And two sentences.
         \end{something}
     }
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1172,7 +1172,7 @@ Some text \emph{with some highlighting}. And two sentences.
 def test_math_environment_a():
     text = r"""
 Some text \[ a = b \] \[c = d\] some more text.
-        """
+"""
 
     formatted = r"""
 Some text
@@ -1183,7 +1183,7 @@ Some text
     c = d
 \]
 some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1193,7 +1193,7 @@ def test_code():
     text = r"""
 % a comment
 \if foo \else bar \fi
-        """
+"""
 
     formatted = r"""
 % a comment
@@ -1202,7 +1202,7 @@ def test_code():
 \else
     bar
 \fi
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1212,7 +1212,7 @@ def test_code_a():
     text = r"""
 % a comment
 some text \if@namecite foo \else bar \fi
-        """
+"""
 
     formatted = r"""
 % a comment
@@ -1222,7 +1222,7 @@ some text
 \else
     bar
 \fi
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1232,7 +1232,7 @@ def test_code_b():
     text = r"""
 % a comment
 some text \if@namecite \if@foo bar \fi \fi
-        """
+"""
 
     formatted = r"""
 % a comment
@@ -1242,7 +1242,7 @@ some text
         bar
     \fi
 \fi
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1255,7 +1255,7 @@ def test_code_c():
 \DeclareOption{namecite}{\let\if@namecite\iftrue}
 
 some text \if@namecite foo \else bar \fi
-        """
+"""
 
     formatted = r"""
 \newif\if@namecite
@@ -1268,7 +1268,7 @@ some text
 \else
     bar
 \fi
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()

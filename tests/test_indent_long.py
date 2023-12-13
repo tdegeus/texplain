@@ -28,7 +28,7 @@ que cada parte é de fato \emph{experimentada}. Enquanto no primeiro sentido há
 uma distinção entre o conteúdo da consciência e aquilo que é experimentado
 (e.g.\, entre a sensação e aquilo que é sentido), nesse último sentido aquilo
 que o ego ou a consciência experimenta \emph{é} seu conteúdo.
-        """
+"""
 
     formatted = r"""
 A distinção entre conteúdo \emph{real} e conteúdo \emph{intencional} está relacionada, ainda, à distinção entre o conceito husserliano de
@@ -41,7 +41,7 @@ No sentido fenomenológico, no entanto, é evidente que os eventos ou objetos ex
 Experimentar eventos exteriores, nesse sentido, significa direcionar certos atos de percepção a tais eventos, de modo que certos conteúdos constituem, então, uma unidade de consciência no fluxo unificado de um ego empírico.
 Nesse caso, temos um todo \emph{real} do qual se pode dizer que cada parte é de fato \emph{experimentada}.
 Enquanto no primeiro sentido há uma distinção entre o conteúdo da consciência e aquilo que é experimentado (e.g.\, entre a sensação e aquilo que é sentido), nesse último sentido aquilo que o ego ou a consciência experimenta \emph{é} seu conteúdo.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -78,7 +78,7 @@ que o ego ou a consciência experimenta \emph{é} seu conteúdo.
 \end{something}
 }
 }
-        """
+"""
 
     formatted = r"""
 \some{
@@ -97,7 +97,7 @@ que o ego ou a consciência experimenta \emph{é} seu conteúdo.
         \end{something}
     }
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -109,12 +109,12 @@ def test_latexindent_one_sentence_per_line_dot_followed_by_tilde():
     """
     text = r"""
 Here is a sentence (Fig.~\ref{dummy18}). Here is another sentence (Fig.~\ref{dummy19}).
-        """
+"""
 
     formatted = r"""
 Here is a sentence (Fig.~\ref{dummy18}).
 Here is another sentence (Fig.~\ref{dummy19}).
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -132,7 +132,7 @@ def test_latexindent_one_sentence_per_line_issue_321():
 I.e.\ it is a finite constant.
 
 \end{document}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == text.strip()
@@ -147,13 +147,13 @@ This is a very long sentence that I would like to be cut at the set line width w
 Sentences are put on different lines.
 This is a very long sentence that is formatted like it should and it
 should therefore not be touched by the formatter.
-        """
+"""
 
     formatted = r"""
 This is a very long sentence that I would like to be cut at the set line width which is however currently not done.
 Sentences are put on different lines.
 This is a very long sentence that is formatted like it should and it should therefore not be touched by the formatter.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -175,7 +175,7 @@ We can then deduce that
     \Delta F = \frac{h K}{H} \Delta R_s \sum\limits_{i=s}^n i \, = \frac{h K}{H}\Delta R_s (n+s)(n-s+1) / 2.
 \end{equation}
 which we verify in \cref{fig:2c}.
-        """
+"""
 
     formatted = r"""
 For a slip event at interface $s$, we have $\Delta R_s > 0$ and $\Delta R_i = 0$ for $i \neq s$, inducing
@@ -189,7 +189,7 @@ We can then deduce that
     \Delta F = \frac{h K}{H} \Delta R_s \sum\limits_{i=s}^n i \, = \frac{h K}{H}\Delta R_s (n+s)(n-s+1) / 2.
 \end{equation}
 which we verify in \cref{fig:2c}.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -211,7 +211,7 @@ some text with. e.G.\ A sentence.
 
 \subsection{Ph.D. example}
 other text. Ph.D.\ With sentences.
-        """
+"""
 
     formatted = r"""
 \section{e.G. example}
@@ -225,7 +225,7 @@ e.G.\ A sentence.
 \subsection{Ph.D. example}
 other text.
 Ph.D.\ With sentences.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -243,13 +243,13 @@ Xx xxxxxxxx, xxx xxxxxxxx xxxxxxxxxx, xxxxxxxxxx xxxxxxxxxxx xxxxxxxx xx x
   \cite{XxxxxXxXx:xxxx}.
  Xxxx x xxxxxxxx xx xxxxxx \emph{xxxxxxx} \cite{XxxxxXxXx:xxxx} xxx xx
    xxxxxxxx xxxxxxxxxxxxx xx x xxxxxxxx \emp{Xxxxxxx'x xxxxx}.
-        """
+"""
 
     formatted = r"""
 Xx xxxxxxxx, xxx xxxxxxxx xxxxxxxxxx, xxxxxxxxxx xxxxxxxxxxx xxxxxxxx xx x xxxxxxxx xx xxxx xx xxxxxxx \enquote{xxxxxx xxxx xxxxxxxxx}%
 \cite{XxxxxXxXx:xxxx}.
 Xxxx x xxxxxxxx xx xxxxxx \emph{xxxxxxx} \cite{XxxxxXxXx:xxxx} xxx xx xxxxxxxx xxxxxxxxxxxxx xx x xxxxxxxx \emp{Xxxxxxx'x xxxxx}.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -267,13 +267,13 @@ The filter does different things depending on the file format;
 
 C'est bon; à six
 heures on y va.
-        """
+"""
 
     formatted = r"""
 The filter does different things depending on the file format; in most cases it is determined on the output of the "file" command [2], [6], that recognizes lots of formats.
 
 C'est bon; à six heures on y va.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -288,7 +288,7 @@ def test_latexindent_one_sentence_per_line_mlep():
 
     text = r"""
 This is an example (i.e.~a test).  The unit is $\rm kg.m^{-2}.s^{-1}$.  Values goes from 0.02 to 0.74 Pa.  Here some space needed \hspace{0.5cm}.  The value is $\lambda=3.67$.  The URL is \url{www.scilab.org}.
-        """
+"""
 
     formatted = r"""
 This is an example (i.e.~a test).
@@ -297,7 +297,7 @@ Values goes from 0.02 to 0.74 Pa.
 Here some space needed \hspace{0.5cm}.
 The value is $\lambda=3.67$.
 The URL is \url{www.scilab.org}.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -337,7 +337,7 @@ This is a sentence.
         1 & 1 \\
     \end{tabular}
 \end{table}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == text.strip()
@@ -384,7 +384,7 @@ Desirable features of an accessible graph include the following \cite{Summers201
  \caption{Visualisation of the sonification from S7.}
  \label{fig:partipants-ferris-wheel}
 \end{figure}
-        """
+"""
 
     formatted = r"""
 \section*{Executive Summary}
@@ -423,7 +423,7 @@ Desirable features of an accessible graph include the following \cite{Summers201
     \caption{Visualisation of the sonification from S7.}
     \label{fig:partipants-ferris-wheel}
 \end{figure}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -439,7 +439,7 @@ has line breaks throughout its paragraph;% second comment
 we would like to combine% third comment
 the textwrapping% fourth comment
 and paragraph removal routine. % fifth comment
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == text.strip()
@@ -461,7 +461,7 @@ sixth sentence. $a$ is often
 referred to as
 an integer. furthermore
 we have that.
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
@@ -473,7 +473,7 @@ This is the fifth sentence?
 This is the sixth sentence.
 $a$ is often referred to as an integer.
 furthermore we have that.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1140,7 +1140,7 @@ As the Math SAC looks for ways to increase completion rates for students who
 place into developmental mathematics courses, serious attention will be given
 to plans that increase the consistency of classroom experience for students;
 consistency that is built upon evidence-based best practices.
-        """
+"""
 
     formatted = r"""
 % arara: pdflatex: {files: [MathSACpr2014]}
@@ -1534,7 +1534,7 @@ On the positive side, it provides an environment that has the potential to addre
 On the negative side, it can lead to very inconsistent experiences for students as they work their way through a sequence.
 The inconsistency is probably most prevalent and, unfortunately, most problematic at the DE level of instruction.
 As the Math SAC looks for ways to increase completion rates for students who place into developmental mathematics courses, serious attention will be given to plans that increase the consistency of classroom experience for students; consistency that is built upon evidence-based best practices.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -1891,7 +1891,7 @@ sustained practices.}
     sure that we provide as supportive and directed an opportunity for new faculty
     as possible so that the development happens in a positive and long-lasting
 way.}
-        """
+"""
 
     formatted = r"""
 % arara: pdflatex: {files: [MathSACpr2014]}
@@ -2137,7 +2137,7 @@ We look forward to working with the broader PCC community as we pursue our commo
     Formalized procedures for mentoring new faculty, full-time and part-time alike, should be adopted and strictly observed.
     Beginning a new job is a unique opportunity for rapid professional development, and we need to make sure that we provide as supportive and directed an opportunity for new faculty as possible so that the development happens in a positive and long-lasting way.
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2159,7 +2159,7 @@ As does
   1 & 2\\
 3&4\end{tabular}
 this one.
-        """
+"""
 
     formatted = r"""
 This sentence stretches
@@ -2174,7 +2174,7 @@ As does
     3 & 4
 \end{tabular}
 this one.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2212,7 +2212,7 @@ tenth sentence.
 This is
 the eleventh
 sentence.
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
@@ -2231,7 +2231,7 @@ This is the ninth sentence?
 This is the tenth sentence.
 \par
 This is the eleventh sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2264,7 +2264,7 @@ in the train of thought; don't read the paragraph unless you need to.
 Brave and experienced drivers at the controls of \TeX\ will gradually enter
 more and more of these hazardous areas, but for most applications the
 details won't matter.
-        """
+"""
 
     formatted = r"""
 % https://tex.stackexchange.com/questions/325505/best-practices-for-source-file-line-lengths/325511
@@ -2276,7 +2276,7 @@ In order to make it possible for many types of users to read this manual effecti
 \vbox{\hbox{\dbend}\vskip 11pt}
 appears at the beginning of a paragraph, it warns of a ``^{dangerous bend}'' in the train of thought; don't read the paragraph unless you need to.
 Brave and experienced drivers at the controls of \TeX\ will gradually enter more and more of these hazardous areas, but for most applications the details won't matter.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2294,7 +2294,7 @@ def test_latexindent_one_sentence_per_line_three_sentences_trailing_comments():
 This is the fourth
 sentence! This is the fifth sentence? This is the
 sixth sentence.
-        """
+"""
 
     formatted = r"""
 %This is the first
@@ -2304,7 +2304,7 @@ sixth sentence.
 This is the fourth sentence!
 This is the fifth sentence?
 This is the sixth sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2326,7 +2326,7 @@ third sentence.
 This is the fourth
 sentence! This is the fifth sentence? This is the
 sixth sentence.
-        """
+"""
 
     formatted = r"""
 This is %1st comment
@@ -2340,7 +2340,7 @@ third sentence.
 This is the fourth sentence!
 This is the fifth sentence?
 This is the sixth sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2356,13 +2356,13 @@ first sentence.
 
 This is the second
 sentence!
-        """
+"""
 
     formatted = r"""
 This is the first sentence.
 
 This is the second sentence!
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2387,7 +2387,7 @@ and beyond!
 This is the fourth
 sentence! This is the fifth sentence? This is the
 sixth sentence.
-        """
+"""
 
     formatted = r"""
 This is the fourth sentence!
@@ -2403,7 +2403,7 @@ a verbatim environment; and beyond!
 This is the fourth sentence!
 This is the fifth sentence?
 This is the sixth sentence.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2442,7 +2442,7 @@ decorate[decoration={zigzag,segment length=2cm,amplitude=0.3cm}] {
 % paragraph skips obeyed within tcolorbox
 parbox=false,
 }
-        """
+"""
 
     formatted = r"""
 \newtcolorbox{stars}{%
@@ -2470,7 +2470,7 @@ parbox=false,
     % paragraph skips obeyed within tcolorbox
     parbox=false,
 }
-        """
+"""
 
     ret = texplain.indent(text)
     # import pathlib
@@ -2512,7 +2512,7 @@ def test_latexindent_commands_pstrics1():
 }
 
 \end{document}
-        """
+"""
 
     formatted = r"""
 % arara: indent: {overwrite: true, silent: on}
@@ -2541,7 +2541,7 @@ def test_latexindent_commands_pstrics1():
 }
 
 \end{document}
-        """
+"""
 
     ret = texplain.indent(text)
     # import pathlib
@@ -2570,7 +2570,7 @@ def test_latexindent_commands_multipleBraces():
     \end{singlespace}%
     \pagestyle{plain}%
     \clearpage}{}{}
-        """
+"""
 
     formatted = r"""
 % arara: indent: {overwrite: yes, trace: on}
@@ -2591,7 +2591,7 @@ def test_latexindent_commands_multipleBraces():
     \pagestyle{plain}%
     \clearpage
 }{}{}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2609,7 +2609,7 @@ def test_latexindent_commands_issue_379():
          \node[PR] at (3.48, -1.5) {};
     \node[PR] at (3.48, -3.5) {};
         \node[PR] at (3.48, -1.5) {};
-        """
+"""
 
     formatted = r"""
 \foreach \i/\j in {0.5/$H_{0}$, 1.5/$H_{0}$ } {
@@ -2619,7 +2619,7 @@ def test_latexindent_commands_issue_379():
 \node[PR] at (3.48, -1.5) {};
 \node[PR] at (3.48, -3.5) {};
 \node[PR] at (3.48, -1.5) {};
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2659,13 +2659,13 @@ def test_latexindent_commands_isnextchar():
 \parbox{
 \@ifnextchar[{\@assignmentwithcutoff}{\@assignmentnocutoff}
 }
-        """
+"""
 
     formatted = r"""
 \parbox{
     \@ifnextchar[{\@assignmentwithcutoff}{\@assignmentnocutoff}
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2693,7 +2693,7 @@ def test_latexindent_nested_nested():
     \vskip 1.5em
     \thispagestyle{fancy}
 }
-        """
+"""
 
     formatted = r"""
 \renewcommand{\maketitle}{%
@@ -2719,7 +2719,7 @@ def test_latexindent_nested_nested():
     \vskip 1.5em
     \thispagestyle{fancy}
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2763,7 +2763,7 @@ to the figure \cref{fig:1}, and to the subfigures \cref{fig:1a} and \cref{fig:1b
 \kant[1-7]
 
 \end{document}
-        """
+"""
 
     formatted = r"""
 \documentclass{goose-article}
@@ -2801,7 +2801,7 @@ Here are the references: to the figure \cref{fig:1}, and to the subfigures \cref
 \kant[1-7]
 
 \end{document}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2814,7 +2814,7 @@ this is the first column with a long text following impeding alignment& and the 
 1 &2& 3\\
 40 & 50&60
 \end{tabular}
-        """
+"""
 
     formatted = r"""
 \begin{tabular}{ccc}
@@ -2822,7 +2822,7 @@ this is the first column with a long text following impeding alignment& and the 
     1 & 2 & 3 \\
     40 & 50 & 60
 \end{tabular}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2842,7 +2842,7 @@ dimension=2/n=10_dt=0,1/datetime=2023-01-01,12:00:00.h5
 is a completely legal name, but you can also read it automatically and interpret it easily by splitting first on the underscore and the slash to separate variables, and then on the equals sign to separate the name from the value.
     \end{oframed}
 \end{strategy}
-        """
+"""
 
     formatted = r"""
 \begin{strategy}[H]
@@ -2857,7 +2857,7 @@ dimension=2/n=10_dt=0,1/datetime=2023-01-01,12:00:00.h5
         is a completely legal name, but you can also read it automatically and interpret it easily by splitting first on the underscore and the slash to separate variables, and then on the equals sign to separate the name from the value.
     \end{oframed}
 \end{strategy}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2945,7 +2945,7 @@ def test_latexindent_code():
         \fi
     }
 \fi
-        """
+"""
 
     formatted = r"""
 \if@namecite
@@ -2977,7 +2977,7 @@ def test_latexindent_code():
         \fi
     }
 \fi
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -2998,7 +2998,7 @@ def test_latexindent_code_a():
         \fi
     \fi
 \fi
-        """
+"""
 
     formatted = r"""
 \if@narrow
@@ -3014,7 +3014,7 @@ def test_latexindent_code_a():
         \fi
     \fi
 \fi
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()

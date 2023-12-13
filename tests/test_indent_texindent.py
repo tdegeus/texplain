@@ -12,7 +12,7 @@ long sentence.
 And
 some
 more text.
-        """
+"""
 
     formatted = r"""
 This is a text.
@@ -21,7 +21,7 @@ This is a
 long sentence.
 % \end{texindent}
 And some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -44,7 +44,7 @@ long sentence.
 And
 some
 more text.
-        """
+"""
 
     formatted = r"""
 This is a text.
@@ -55,7 +55,7 @@ long sentence.
 % \end{texindent}
 
 And some more text.
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()

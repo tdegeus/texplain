@@ -8,7 +8,7 @@ a & b & c \\
 1 & 2 & 3 \\
 40 & 50 & 60
 \end{tabular}
-        """
+"""
 
     formatted = r"""
 \begin{tabular}{ccc}
@@ -16,7 +16,7 @@ a & b & c \\
     1  & 2  & 3  \\
     40 & 50 & 60
 \end{tabular}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -27,13 +27,13 @@ def test_tabular_align_empty():
 \begin{tabular}[t]{c}%
 \@author
 \end{tabular}
-        """
+"""
 
     formatted = r"""
 \begin{tabular}[t]{c}%
     \@author
 \end{tabular}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -46,7 +46,7 @@ def test_tabular_align_nested():
 \@author % foo
 \end{tabular}
 }
-        """
+"""
 
     formatted = r"""
 {
@@ -54,7 +54,7 @@ def test_tabular_align_nested():
         \@author % foo
     \end{tabular}
 }
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -67,7 +67,7 @@ def test_tabular_align_empty_leading_column():
 1 & 2 & 3 \\
 4 & 5 & 6
 \end{tabular}
-        """
+"""
 
     formatted = r"""
 \begin{tabular}[t]{ccc}
@@ -75,7 +75,7 @@ def test_tabular_align_empty_leading_column():
     1 & 2   & 3      \\
     4 & 5   & 6
 \end{tabular}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
@@ -88,7 +88,7 @@ def test_tabular_align_empty_column():
 & 2 & 3 \\
 & 5 & 6
 \end{tabular}
-        """
+"""
 
     formatted = r"""
 \begin{tabular}[t]{ccc}
@@ -96,7 +96,7 @@ def test_tabular_align_empty_column():
     & 2   & 3      \\
     & 5   & 6
 \end{tabular}
-        """
+"""
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()

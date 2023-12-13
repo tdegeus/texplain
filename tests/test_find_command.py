@@ -31,25 +31,25 @@ def test_argument_comment():
 
 def test_argument_comment_a():
     text = r"""
-        This is a text with a \command%
-        % first comment
-        [
-            opt1
-        ]%
-        % second comment
-        {
-            arg1
-        }
+This is a text with a \command%
+% first comment
+[
+    opt1
+]%
+% second comment
+{
+    arg1
+}
 
-        \bar
-        [
-            opt2
-        ]
-        % comment
-        {
-            arg2
-        }
-        """
+\bar
+[
+    opt2
+]
+% comment
+{
+    arg2
+}
+"""
     expect = [[r"\command", r"[opt1]", r"{arg1}"], [r"\bar", r"[opt2]", r"{arg2}"]]
     ret = convert(text, texplain.find_command(text))
     ret = [[arg.replace(" ", "").replace("\n", "") for arg in cmd] for cmd in ret if cmd]
@@ -70,7 +70,7 @@ def test_nested_command():
 \begin{figure}
     \subfloat{\label{fig:foo}}
 \end{figure}
-        """
+"""
     expect = [
         [r"\begin", r"{figure}"],
         [r"\subfloat", r"{\label{fig:foo}}"],

@@ -65,7 +65,7 @@ Foo\footnote{
 \label{sec-lc}
 
 Bar
-        """
+"""
 
     formatted = r"""
 \chapter{My chapter}
@@ -109,7 +109,7 @@ Foo\footnote{
 \label{sec:lc}
 
 Bar
-        """
+"""
 
     tex = texplain.TeX(text=text)
     expect = [
@@ -184,7 +184,7 @@ Foo
 \label{sec-lc}
 
 Bar
-        """
+"""
 
     formatted = r"""
 \chapter{My chapter}
@@ -225,7 +225,7 @@ Foo
 \label{sec:SI:lc}
 
 Bar
-        """
+"""
 
     tex = texplain.TeX(text=text)
     expect = [
@@ -264,12 +264,12 @@ This is my
 % actually I was working
   % and I think that
 final text.
-        """
+"""
 
     formatted = r"""
 This is my
 final text.
-        """
+"""
 
     tex = texplain.TeX(text=text)
     tex.remove_commentlines()
@@ -282,14 +282,14 @@ This is Sec.~\ref{sec:foo} what I would
 classically Eq.~\eqref{eq:bar} write,
 but it is maybe not Eq.~(\ref{eq:bar})
 this most efficient.
-        """
+"""
 
     formatted = r"""
 This is \cref{sec:foo} what I would
 classically \cref{eq:bar} write,
 but it is maybe not \cref{eq:bar}
 this most efficient.
-        """
+"""
 
     tex = texplain.TeX(text=text)
     tex.use_cleveref()
@@ -386,11 +386,11 @@ Overall, our approach explains why excitations.%, where $\omega_c$ cannot be rea
 %
 %Our analysis explains why string-like rearrangements are,
 %as otherwise excitations display too small displacements to probe the granularity of the material.
-        """
+"""
 
-    expect = """
+    expect = r"""
 Overall, our approach explains why excitations.
-        """
+"""
 
     tex = texplain.TeX(text=source)
     tex.remove_commentlines()
