@@ -1,11 +1,11 @@
 import filecmp
-import os
+import pathlib
 import shutil
 import subprocess
-import unittest
 
-basedir = os.path.dirname(os.path.realpath(__file__))
-tmpdir = os.path.join(basedir, "test1")
+basedir = pathlib.Path(__file__).parent
+tmpdir = basedir / "test1"
+tmpdir.mkdir(exist_ok=True)
 
 
 def readlines(filepath):
@@ -13,44 +13,23 @@ def readlines(filepath):
         return file.read().strip().splitlines()
 
 
-class MyTests(unittest.TestCase):
-    """
-    Tests
-    """
+def test_basic():
+    subprocess.run(["texplain", str(basedir / "input1" / "example.tex"), str(tmpdir)])
 
-    @classmethod
-    def tearDownClass(self):
-        shutil.rmtree(tmpdir)
+    for name in ["main.tex", "library.bib"]:
+        assert readlines(basedir / "output1" / name) == readlines(tmpdir / name)
 
-    def test_basic(self):
-        subprocess.run(["texplain", os.path.join(basedir, "input1", "example.tex"), tmpdir])
+    files = ["figure_1.pdf", "figure_2.pdf", "apalike.bst", "unsrtnat.bst", "goose-article.cls"]
 
-        for name in ["main.tex", "library.bib"]:
-            self.assertEqual(
-                readlines(os.path.join(basedir, "output1", name)),
-                readlines(os.path.join(tmpdir, name)),
-            )
+    for name in files:
+        assert filecmp.cmp(basedir / "output1" / name, tmpdir / name)
 
-        files = ["figure_1.pdf", "figure_2.pdf", "apalike.bst", "unsrtnat.bst", "goose-article.cls"]
+    renamed = {
+        "Sequential.pdf": "figure_1.pdf",
+        "Diverging.pdf": "figure_2.pdf",
+    }
 
-        for name in files:
-            self.assertTrue(
-                filecmp.cmp(os.path.join(basedir, "output1", name), os.path.join(tmpdir, name))
-            )
+    for key in renamed:
+        assert filecmp.cmp(basedir / "input1" / "figures" / key, tmpdir / renamed[key])
 
-        renamed = {
-            "Sequential.pdf": "figure_1.pdf",
-            "Diverging.pdf": "figure_2.pdf",
-        }
-
-        for key in renamed:
-            self.assertTrue(
-                filecmp.cmp(
-                    os.path.join(basedir, "input1", "figures", key),
-                    os.path.join(tmpdir, renamed[key]),
-                )
-            )
-
-
-if __name__ == "__main__":
-    unittest.main()
+    shutil.rmtree(tmpdir)

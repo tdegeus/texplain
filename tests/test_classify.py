@@ -1,11 +1,8 @@
-import unittest
-
 import texplain
 
 
-class MyTests(unittest.TestCase):
-    def test_equation(self):
-        text = r"""
+def test_equation():
+    text = r"""
         foo bar
         \begin{equation}
             \label{eq:foo}
@@ -14,13 +11,13 @@ class MyTests(unittest.TestCase):
         baz
         """
 
-        tex = texplain.TeX(text)
-        tex.format_labels()
-        self.assertEqual(str(tex).strip(), text.strip())
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
 
-        # --
+    # --
 
-        text = r"""
+    text = r"""
         My text
         \begin{equation}
             a = b
@@ -28,24 +25,26 @@ class MyTests(unittest.TestCase):
         \end{equation}
         """
 
-        tex = texplain.TeX(text)
-        tex.format_labels()
-        self.assertEqual(str(tex).strip(), text.strip())
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
 
-    def test_section(self):
-        text = r"""
+
+def test_section():
+    text = r"""
         foo bar
         \section{My section}
         \label{sec:foo}
         baz
         """
 
-        tex = texplain.TeX(text)
-        tex.format_labels()
-        self.assertEqual(str(tex).strip(), text.strip())
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
 
-    def test_figure(self):
-        text = r"""
+
+def test_figure():
+    text = r"""
         foo bar
         \begin{figure}
             \label{fig:foo}
@@ -54,12 +53,13 @@ class MyTests(unittest.TestCase):
         baz
         """
 
-        tex = texplain.TeX(text)
-        tex.format_labels()
-        self.assertEqual(str(tex).strip(), text.strip())
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
 
-    def test_figure_b(self):
-        text = r"""
+
+def test_figure_b():
+    text = r"""
         foo bar
         \begin{figure*}
             \label{fig:foo}
@@ -68,12 +68,13 @@ class MyTests(unittest.TestCase):
         baz
         """
 
-        tex = texplain.TeX(text)
-        tex.format_labels()
-        self.assertEqual(str(tex).strip(), text.strip())
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
 
-    def test_custom(self):
-        text = r"""
+
+def test_custom():
+    text = r"""
 \begin{example}[H]
     \begin{oframed}
         \caption{Self-explanatory vs documentation intensive}
@@ -82,12 +83,13 @@ class MyTests(unittest.TestCase):
 \end{example}
         """
 
-        tex = texplain.TeX(text)
-        tex.format_labels()
-        self.assertEqual(str(tex).strip(), text.strip())
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
 
-    def test_hybrid(self):
-        text = r"""
+
+def test_hybrid():
+    text = r"""
 \begin{itemize}
     \item
     \begin{referee}
@@ -107,13 +109,13 @@ class MyTests(unittest.TestCase):
 \end{itemize}
         """
 
-        tex = texplain.TeX(text)
-        tex.format_labels()
-        self.assertEqual(str(tex).strip(), text.strip())
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
 
-        # ---
+    # ---
 
-        text = r"""
+    text = r"""
 Foo bar
 
 \section{My section}
@@ -132,10 +134,6 @@ Foo bar
 \end{figure}
         """
 
-        tex = texplain.TeX(text)
-        tex.format_labels()
-        self.assertEqual(str(tex).strip(), text.strip())
-
-
-if __name__ == "__main__":
-    unittest.main()
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()

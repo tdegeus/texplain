@@ -1,15 +1,8 @@
-import unittest
-
 import texplain
 
 
-class TestAlignTabular(unittest.TestCase):
-    """
-    Alignment of tabular environments.
-    """
-
-    def test_align_no_newline(self):
-        text = r"""
+def test_tabular_align_no_newline():
+    text = r"""
 \begin{tabular}{ccc}
 a & b & c \\
 1 & 2 & 3 \\
@@ -17,7 +10,7 @@ a & b & c \\
 \end{tabular}
         """
 
-        formatted = r"""
+    formatted = r"""
 \begin{tabular}{ccc}
     a  & b  & c  \\
     1  & 2  & 3  \\
@@ -25,27 +18,29 @@ a & b & c \\
 \end{tabular}
         """
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_align_empty(self):
-        text = r"""
+
+def test_tabular_align_empty():
+    text = r"""
 \begin{tabular}[t]{c}%
 \@author
 \end{tabular}
         """
 
-        formatted = r"""
+    formatted = r"""
 \begin{tabular}[t]{c}%
     \@author
 \end{tabular}
         """
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_align_nested(self):
-        text = r"""
+
+def test_tabular_align_nested():
+    text = r"""
 {
 \begin{tabular}[t]{c}%
 \@author % foo
@@ -53,7 +48,7 @@ a & b & c \\
 }
         """
 
-        formatted = r"""
+    formatted = r"""
 {
     \begin{tabular}[t]{c}%
         \@author % foo
@@ -61,11 +56,12 @@ a & b & c \\
 }
         """
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_align_empty_leading_column(self):
-        text = r"""
+
+def test_tabular_align_empty_leading_column():
+    text = r"""
 \begin{tabular}[t]{ccc}
 & foo & foobar \\
 1 & 2 & 3 \\
@@ -73,7 +69,7 @@ a & b & c \\
 \end{tabular}
         """
 
-        formatted = r"""
+    formatted = r"""
 \begin{tabular}[t]{ccc}
       & foo & foobar \\
     1 & 2   & 3      \\
@@ -81,11 +77,12 @@ a & b & c \\
 \end{tabular}
         """
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_align_empty_column(self):
-        text = r"""
+
+def test_tabular_align_empty_column():
+    text = r"""
 \begin{tabular}[t]{ccc}
 & foo & foobar \\
 & 2 & 3 \\
@@ -93,7 +90,7 @@ a & b & c \\
 \end{tabular}
         """
 
-        formatted = r"""
+    formatted = r"""
 \begin{tabular}[t]{ccc}
     & foo & foobar \\
     & 2   & 3      \\
@@ -101,9 +98,5 @@ a & b & c \\
 \end{tabular}
         """
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
-
-
-if __name__ == "__main__":
-    unittest.main()
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
