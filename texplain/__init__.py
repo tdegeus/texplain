@@ -1341,7 +1341,7 @@ def indent(
         -   ``[`` and ``]`` (as command option).
 
         Comment lines follow indentation.
-        Requires: ``lstrip``, ``inlinemath``, ```environment``.
+        Requires: ``lstrip``, ``inlinemath``, ``environment``.
         To switch off indentation, set ``indentation=""``.
 
     :param rstrip: Remove trailing spaces on all lines.

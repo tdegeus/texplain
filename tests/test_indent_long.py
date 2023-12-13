@@ -1,19 +1,15 @@
-import unittest
+import pytest
 
 import texplain
 
 
-class TestLatexIndentOneSentencePerLine(unittest.TestCase):
+def test_latexindent_one_sentence_per_line_dbmrq():
     """
     From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    Important difference: whitespace before and after commands is preserved.
     """
 
-    def test_dbmrq(self):
-        """
-        Important difference: whitespace before and after commands is preserved.
-        """
-
-        text = r"""
+    text = r"""
 A distinção entre conteúdo \emph{real} e conteúdo \emph{intencional} está
 relacionada, ainda, à distinção entre o conceito husserliano de
 \emph{experiência} e o uso popular desse termo. No sentido comum,
@@ -32,9 +28,9 @@ que cada parte é de fato \emph{experimentada}. Enquanto no primeiro sentido há
 uma distinção entre o conteúdo da consciência e aquilo que é experimentado
 (e.g.\, entre a sensação e aquilo que é sentido), nesse último sentido aquilo
 que o ego ou a consciência experimenta \emph{é} seu conteúdo.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 A distinção entre conteúdo \emph{real} e conteúdo \emph{intencional} está relacionada, ainda, à distinção entre o conceito husserliano de
 \emph{experiência} e o uso popular desse termo.
 No sentido comum, o \term{experimentado} é um complexo de eventos exteriores, e o \term{experimentar} consiste em percepções (além de julgamentos e outros atos) nas quais tais eventos aparecem como objetos, e objetos frequentemente relacionados ao ego empírico.
@@ -45,17 +41,19 @@ No sentido fenomenológico, no entanto, é evidente que os eventos ou objetos ex
 Experimentar eventos exteriores, nesse sentido, significa direcionar certos atos de percepção a tais eventos, de modo que certos conteúdos constituem, então, uma unidade de consciência no fluxo unificado de um ego empírico.
 Nesse caso, temos um todo \emph{real} do qual se pode dizer que cada parte é de fato \emph{experimentada}.
 Enquanto no primeiro sentido há uma distinção entre o conteúdo da consciência e aquilo que é experimentado (e.g.\, entre a sensação e aquilo que é sentido), nesse último sentido aquilo que o ego ou a consciência experimenta \emph{é} seu conteúdo.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_dbmrq3(self):
-        """
-        Important difference: whitespace before and after commands is preserved.
-        """
 
-        text = r"""
+def test_latexindent_one_sentence_per_line_dbmrq3():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    Important difference: whitespace before and after commands is preserved.
+    """
+
+    text = r"""
 \some{
 \mycommand{
 \begin{something}
@@ -80,9 +78,9 @@ que o ego ou a consciência experimenta \emph{é} seu conteúdo.
 \end{something}
 }
 }
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \some{
     \mycommand{
         \begin{something}
@@ -99,26 +97,34 @@ que o ego ou a consciência experimenta \emph{é} seu conteúdo.
         \end{something}
     }
 }
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_dot_followed_by_tilde(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_dot_followed_by_tilde():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 Here is a sentence (Fig.~\ref{dummy18}). Here is another sentence (Fig.~\ref{dummy19}).
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 Here is a sentence (Fig.~\ref{dummy18}).
 Here is another sentence (Fig.~\ref{dummy19}).
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_issue_321(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_issue_321():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 \documentclass{article}
 
 \begin{document}
@@ -126,30 +132,38 @@ Here is another sentence (Fig.~\ref{dummy19}).
 I.e.\ it is a finite constant.
 
 \end{document}
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), text.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == text.strip()
 
-    def test_issue_355(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_issue_355():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 This is a very long sentence that I would like to be cut at the set line width which is however currently not done.
 Sentences are put on different lines.
 This is a very long sentence that is formatted like it should and it
 should therefore not be touched by the formatter.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 This is a very long sentence that I would like to be cut at the set line width which is however currently not done.
 Sentences are put on different lines.
 This is a very long sentence that is formatted like it should and it should therefore not be touched by the formatter.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_issue_376(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_issue_376():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 For a slip event at interface $s$, we have $\Delta R_s > 0$ and $\Delta R_i = 0$ for $i \neq s$, inducing
 \begin{equation}
     \label{eq:delta_fi}
@@ -161,9 +175,9 @@ We can then deduce that
     \Delta F = \frac{h K}{H} \Delta R_s \sum\limits_{i=s}^n i \, = \frac{h K}{H}\Delta R_s (n+s)(n-s+1) / 2.
 \end{equation}
 which we verify in \cref{fig:2c}.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 For a slip event at interface $s$, we have $\Delta R_s > 0$ and $\Delta R_i = 0$ for $i \neq s$, inducing
 \begin{equation}
     \label{eq:delta_fi}
@@ -175,18 +189,20 @@ We can then deduce that
     \Delta F = \frac{h K}{H} \Delta R_s \sum\limits_{i=s}^n i \, = \frac{h K}{H}\Delta R_s (n+s)(n-s+1) / 2.
 \end{equation}
 which we verify in \cref{fig:2c}.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_issue_392(self):
-        r"""
-        Difference with ``latexindent.pl``: abbrivations not automatically recognized.
-        Instead use ``"~"`` or ``"\ "`` to have a space after the abbreviation.
-        """
 
-        text = r"""
+def test_latexindent_one_sentence_per_line_issue_392():
+    r"""
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    Difference with ``latexindent.pl``: abbrivations not automatically recognized.
+    Instead use ``"~"`` or ``"\ "`` to have a space after the abbreviation.
+    """
+
+    text = r"""
 \section{e.G. example}
 some text with. e.G.~A sentence.
 
@@ -195,9 +211,9 @@ some text with. e.G.\ A sentence.
 
 \subsection{Ph.D. example}
 other text. Ph.D.\ With sentences.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \section{e.G. example}
 some text with.
 e.G.~A sentence.
@@ -209,35 +225,41 @@ e.G.\ A sentence.
 \subsection{Ph.D. example}
 other text.
 Ph.D.\ With sentences.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_kiryph1(self):
-        """
-        Difference: comment left in place.
-        """
 
-        text = r"""
+def test_latexindent_one_sentence_per_line_kiryph1():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    Difference: comment left in place.
+    """
+
+    text = r"""
 Xx xxxxxxxx, xxx xxxxxxxx xxxxxxxxxx, xxxxxxxxxx xxxxxxxxxxx xxxxxxxx xx x
  xxxxxxxx xx xxxx xx xxxxxxx \enquote{xxxxxx xxxx xxxxxxxxx}%
   \cite{XxxxxXxXx:xxxx}.
  Xxxx x xxxxxxxx xx xxxxxx \emph{xxxxxxx} \cite{XxxxxXxXx:xxxx} xxx xx
    xxxxxxxx xxxxxxxxxxxxx xx x xxxxxxxx \emp{Xxxxxxx'x xxxxx}.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 Xx xxxxxxxx, xxx xxxxxxxx xxxxxxxxxx, xxxxxxxxxx xxxxxxxxxxx xxxxxxxx xx x xxxxxxxx xx xxxx xx xxxxxxx \enquote{xxxxxx xxxx xxxxxxxxx}%
 \cite{XxxxxXxXx:xxxx}.
 Xxxx x xxxxxxxx xx xxxxxx \emph{xxxxxxx} \cite{XxxxxXxXx:xxxx} xxx xx xxxxxxxx xxxxxxxxxxxxx xx x xxxxxxxx \emp{Xxxxxxx'x xxxxx}.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_konfect(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_konfect():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 The filter does different things depending on the file format;
   in most cases
   it is determined on the output of the "file" command [2], [6], that recognizes
@@ -245,41 +267,47 @@ The filter does different things depending on the file format;
 
 C'est bon; à six
 heures on y va.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 The filter does different things depending on the file format; in most cases it is determined on the output of the "file" command [2], [6], that recognizes lots of formats.
 
 C'est bon; à six heures on y va.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_mlep(self):
-        r"""
-        Difference with ``latexindent.pl``: abbrivations not automatically recognized.
-        Instead use ``"~"`` or ``"\ "`` to have a space after the abbreviation.
-        """
 
-        text = r"""
+def test_latexindent_one_sentence_per_line_mlep():
+    r"""
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    Difference with ``latexindent.pl``: abbrivations not automatically recognized.
+    Instead use ``"~"`` or ``"\ "`` to have a space after the abbreviation.
+    """
+
+    text = r"""
 This is an example (i.e.~a test).  The unit is $\rm kg.m^{-2}.s^{-1}$.  Values goes from 0.02 to 0.74 Pa.  Here some space needed \hspace{0.5cm}.  The value is $\lambda=3.67$.  The URL is \url{www.scilab.org}.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 This is an example (i.e.~a test).
 The unit is $\rm kg.m^{-2}.s^{-1}$.
 Values goes from 0.02 to 0.74 Pa.
 Here some space needed \hspace{0.5cm}.
 The value is $\lambda=3.67$.
 The URL is \url{www.scilab.org}.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_mlep2(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_mlep2():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 The names (Smith, Doe, etc.) are inherited.
 
 Two items are used:
@@ -309,13 +337,17 @@ This is a sentence.
         1 & 1 \\
     \end{tabular}
 \end{table}
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), text.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == text.strip()
 
-    def test_more_code_blocks(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_more_code_blocks():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 \section*{Executive Summary}
 Sonifications are non-verbal representation of plots or graphs.
 This report details the results of an eSTEeM-funded project
@@ -352,9 +384,9 @@ Desirable features of an accessible graph include the following \cite{Summers201
  \caption{Visualisation of the sonification from S7.}
  \label{fig:partipants-ferris-wheel}
 \end{figure}
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \section*{Executive Summary}
 Sonifications are non-verbal representation of plots or graphs.
 This report details the results of an eSTEeM-funded project to investigate the efficacy of sonifications when presented to participants in study-like activities.
@@ -391,25 +423,33 @@ Desirable features of an accessible graph include the following \cite{Summers201
     \caption{Visualisation of the sonification from S7.}
     \label{fig:partipants-ferris-wheel}
 \end{figure}
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_multiple_sentences9(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_multiple_sentences9():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 This paragraph% first comment
 has line breaks throughout its paragraph;% second comment
 we would like to combine% third comment
 the textwrapping% fourth comment
 and paragraph removal routine. % fifth comment
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), text.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == text.strip()
 
-    def test_other_begins(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_other_begins():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 This is the first
 sentence. 7 is the second
 sentence. This is the
@@ -421,9 +461,9 @@ sixth sentence. $a$ is often
 referred to as
 an integer. furthermore
 we have that.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 This is the first sentence.
 7 is the second sentence.
 This is the third sentence.
@@ -433,13 +473,17 @@ This is the fifth sentence?
 This is the sixth sentence.
 $a$ is often referred to as an integer.
 furthermore we have that.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_pcc_program_review1(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_pcc_program_review1():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 % arara: pdflatex: {files: [MathSACpr2014]}
 % !arara: indent: {overwrite: yes}
 \chapter{Facilities and Support}
@@ -1096,9 +1140,9 @@ As the Math SAC looks for ways to increase completion rates for students who
 place into developmental mathematics courses, serious attention will be given
 to plans that increase the consistency of classroom experience for students;
 consistency that is built upon evidence-based best practices.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 % arara: pdflatex: {files: [MathSACpr2014]}
 % !arara: indent: {overwrite: yes}
 \chapter{Facilities and Support}
@@ -1490,13 +1534,17 @@ On the positive side, it provides an environment that has the potential to addre
 On the negative side, it can lead to very inconsistent experiences for students as they work their way through a sequence.
 The inconsistency is probably most prevalent and, unfortunately, most problematic at the DE level of instruction.
 As the Math SAC looks for ways to increase completion rates for students who place into developmental mathematics courses, serious attention will be given to plans that increase the consistency of classroom experience for students; consistency that is built upon evidence-based best practices.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_pcc_program_review2(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_pcc_program_review2():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 % arara: pdflatex: {files: [MathSACpr2014]}
 % !arara: indent: {overwrite: yes}
 \chapter[Faculty composition and qualifications]{Faculty:  reflect on the
@@ -1843,9 +1891,9 @@ sustained practices.}
     sure that we provide as supportive and directed an opportunity for new faculty
     as possible so that the development happens in a positive and long-lasting
 way.}
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 % arara: pdflatex: {files: [MathSACpr2014]}
 % !arara: indent: {overwrite: yes}
 \chapter[Faculty composition and qualifications]{
@@ -2089,13 +2137,17 @@ We look forward to working with the broader PCC community as we pursue our commo
     Formalized procedures for mentoring new faculty, full-time and part-time alike, should be adopted and strictly observed.
     Beginning a new job is a unique opportunity for rapid professional development, and we need to make sure that we provide as supportive and directed an opportunity for new faculty as possible so that the development happens in a positive and long-lasting way.
 }
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_sentence_across_blocks(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_sentence_across_blocks():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 This sentence stretches
 \[
   x^2
@@ -2107,9 +2159,9 @@ As does
   1 & 2\\
 3&4\end{tabular}
 this one.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 This sentence stretches
 \[
     x^2
@@ -2122,13 +2174,17 @@ As does
     3 & 4
 \end{tabular}
 this one.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_six_sentences_mutl_blank(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_six_sentences_mutl_blank():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 This is the first
 sentence. This is the second sentence. This is the
 third sentence.
@@ -2156,9 +2212,9 @@ tenth sentence.
 This is
 the eleventh
 sentence.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 This is the first sentence.
 This is the second sentence.
 This is the third sentence.
@@ -2175,17 +2231,19 @@ This is the ninth sentence?
 This is the tenth sentence.
 \par
 This is the eleventh sentence.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_textbook_snippet(self):
-        """
-        Difference: the double dollar signs have been removed.
-        """
 
-        text = r"""
+def test_latexindent_one_sentence_per_line_textbook_snippet():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    Difference: the double dollar signs have been removed.
+    """
+
+    text = r"""
 % https://tex.stackexchange.com/questions/325505/best-practices-for-source-file-line-lengths/325511
 This manual is intended for people who have never used \TeX\ before, as
 well as for experienced \TeX\ hackers. In other words, it's supposed to
@@ -2206,9 +2264,9 @@ in the train of thought; don't read the paragraph unless you need to.
 Brave and experienced drivers at the controls of \TeX\ will gradually enter
 more and more of these hazardous areas, but for most applications the
 details won't matter.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 % https://tex.stackexchange.com/questions/325505/best-practices-for-source-file-line-lengths/325511
 This manual is intended for people who have never used \TeX\ before, as well as for experienced \TeX\ hackers.
 In other words, it's supposed to be a panacea that satisfies everybody, at the risk of satisfying nobody.
@@ -2218,13 +2276,17 @@ In order to make it possible for many types of users to read this manual effecti
 \vbox{\hbox{\dbend}\vskip 11pt}
 appears at the beginning of a paragraph, it warns of a ``^{dangerous bend}'' in the train of thought; don't read the paragraph unless you need to.
 Brave and experienced drivers at the controls of \TeX\ will gradually enter more and more of these hazardous areas, but for most applications the details won't matter.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_three_sentences_trailing_comments(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_three_sentences_trailing_comments():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 %This is the first
 %sentence. This is the second sentence. This is the
 %third sentence.
@@ -2232,9 +2294,9 @@ Brave and experienced drivers at the controls of \TeX\ will gradually enter more
 This is the fourth
 sentence! This is the fifth sentence? This is the
 sixth sentence.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 %This is the first
 %sentence. This is the second sentence. This is the
 %third sentence.
@@ -2242,13 +2304,17 @@ sixth sentence.
 This is the fourth sentence!
 This is the fifth sentence?
 This is the sixth sentence.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_trailing_comments(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_trailing_comments():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 This is %1st comment
 the first%    2nd comment
 sentence.% 3rd comment
@@ -2260,9 +2326,9 @@ third sentence.
 This is the fourth
 sentence! This is the fifth sentence? This is the
 sixth sentence.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 This is %1st comment
 the first%    2nd comment
 sentence.% 3rd comment
@@ -2274,31 +2340,39 @@ third sentence.
 This is the fourth sentence!
 This is the fifth sentence?
 This is the sixth sentence.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_two_sentences(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_two_sentences():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 This is the
 first sentence.
 
 This is the second
 sentence!
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 This is the first sentence.
 
 This is the second sentence!
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_verbatim_test(self):
-        text = r"""
+
+def test_latexindent_one_sentence_per_line_verbatim_test():
+    """
+    From https://github.com/cmhughes/latexindent.pl/tree/main/test-cases/oneSentencePerLine
+    """
+    text = r"""
 This is the fourth
 sentence! This is the fifth sentence? This is the
 sixth sentence, and runs across
@@ -2313,9 +2387,9 @@ and beyond!
 This is the fourth
 sentence! This is the fifth sentence? This is the
 sixth sentence.
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 This is the fourth sentence!
 This is the fifth sentence?
 This is the sixth sentence, and runs across
@@ -2329,24 +2403,20 @@ a verbatim environment; and beyond!
 This is the fourth sentence!
 This is the fifth sentence?
 This is the sixth sentence.
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
 
-class TestLatexIndentCommands(unittest.TestCase):
+@pytest.mark.skip(reason="TODO: allow special formatting or use latexindent.pl as plugin")
+def test_latexindent_commands_stars_from_documentation():
     """
     https://github.com/cmhughes/latexindent.pl/blob/main/test-cases/commands
+
     """
 
-    @unittest.SkipTest
-    def test_stars_from_documentation(self):
-        """
-        TDOO: allow special formatting or use latexindent.pl as plugin
-        """
-
-        text = r"""
+    text = r"""
 \newtcolorbox{stars}{%
 enhanced jigsaw,
 breakable, % allow page breaks
@@ -2372,9 +2442,9 @@ decorate[decoration={zigzag,segment length=2cm,amplitude=0.3cm}] {
 % paragraph skips obeyed within tcolorbox
 parbox=false,
 }
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \newtcolorbox{stars}{%
     enhanced jigsaw,
     breakable, % allow page breaks
@@ -2400,21 +2470,22 @@ parbox=false,
     % paragraph skips obeyed within tcolorbox
     parbox=false,
 }
-        """
+"""
 
-        ret = texplain.indent(text)
-        # import pathlib
-        # pathlib.Path('tmp_ret.tex').write_text(ret)
-        # pathlib.Path('tmp_formatted.tex').write_text(formatted)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    # import pathlib
+    # pathlib.Path('tmp_ret.tex').write_text(ret)
+    # pathlib.Path('tmp_formatted.tex').write_text(formatted)
+    assert ret.strip() == formatted.strip()
 
-    @unittest.SkipTest
-    def test_pstrics1(self):
-        """
-        TODO: determine what the proper formatting should be
-        """
 
-        text = r"""
+@pytest.mark.skip(reason="TODO: determine what the proper formatting should be")
+def test_latexindent_commands_pstrics1():
+    """
+    https://github.com/cmhughes/latexindent.pl/blob/main/test-cases/commands
+    """
+
+    text = r"""
 % arara: indent: {overwrite: true, silent: on}
 \documentclass[pstricks]{standalone}
 \usepackage{pstricks,multido}
@@ -2441,9 +2512,9 @@ parbox=false,
 }
 
 \end{document}
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 % arara: indent: {overwrite: true, silent: on}
 \documentclass[pstricks]{standalone}
 \usepackage{pstricks,multido}
@@ -2470,16 +2541,20 @@ parbox=false,
 }
 
 \end{document}
-        """
+"""
 
-        ret = texplain.indent(text)
-        # import pathlib
-        # pathlib.Path('tmp_ret.tex').write_text(ret)
-        # pathlib.Path('tmp_formatted.tex').write_text(formatted)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    # import pathlib
+    # pathlib.Path('tmp_ret.tex').write_text(ret)
+    # pathlib.Path('tmp_formatted.tex').write_text(formatted)
+    assert ret.strip() == formatted.strip()
 
-    def test_multipleBraces(self):
-        text = r"""
+
+def test_latexindent_commands_multipleBraces():
+    """
+    https://github.com/cmhughes/latexindent.pl/blob/main/test-cases/commands
+    """
+    text = r"""
 % arara: indent: {overwrite: yes, trace: on}
 \xapptocmd{\tableofcontents}{%
     \end{singlespace}%
@@ -2495,9 +2570,9 @@ parbox=false,
     \end{singlespace}%
     \pagestyle{plain}%
     \clearpage}{}{}
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 % arara: indent: {overwrite: yes, trace: on}
 \xapptocmd{\tableofcontents}{%
     \end{singlespace}%
@@ -2516,13 +2591,17 @@ parbox=false,
     \pagestyle{plain}%
     \clearpage
 }{}{}
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_issue_379(self):
-        text = r"""
+
+def test_latexindent_commands_issue_379():
+    """
+    https://github.com/cmhughes/latexindent.pl/blob/main/test-cases/commands
+    """
+    text = r"""
 \foreach \i/\j in {0.5/$H_{0}$, 1.5/$H_{0}$ } {
         \node at (4.5, -\i) {\j};
     }
@@ -2530,9 +2609,9 @@ parbox=false,
          \node[PR] at (3.48, -1.5) {};
     \node[PR] at (3.48, -3.5) {};
         \node[PR] at (3.48, -1.5) {};
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \foreach \i/\j in {0.5/$H_{0}$, 1.5/$H_{0}$ } {
     \node at (4.5, -\i) {\j};
 }
@@ -2540,60 +2619,60 @@ parbox=false,
 \node[PR] at (3.48, -1.5) {};
 \node[PR] at (3.48, -3.5) {};
 \node[PR] at (3.48, -1.5) {};
-        """
+"""
 
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
+
+
+@pytest.mark.skip(reason="TODO: debug")
+def test_latexindent_commands_isnextchar():
+    """
+    https://github.com/cmhughes/latexindent.pl/blob/main/test-cases/commands
+
+    Traceback (most recent call last):
+      File "/Users/tdegeus/data/prog/src/texplain/tests/test_indent_long.py", line 2565, in test_isnextchar
         ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+              ^^^^^^^^^^^^^^^^^^^^^
+      File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 1169, in indent
+        text, placeholders_commands = text_to_placeholders(
+                                      ^^^^^^^^^^^^^^^^^^^^^
+      File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 891, in text_to_placeholders
+        text, placeholders = _detail_text_to_placholders(text, ptype, base, placeholders_comments)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 713, in _detail_text_to_placholders
+        components = find_command(text, is_comment=is_comment)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 337, in find_command
+        opts = _find_option(character, index, i_square_open, i_square_closing)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 248, in _find_option
+        return _detail_find_option(character, index, braces, [])
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 204, in _detail_find_option
+        if np.any(character[index : braces[0]]) and braces[0] - index > 1:
+                  ~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+    TypeError: slice indices must be integers or None or have an __index__ method
+    """
 
-    @unittest.SkipTest
-    def test_isnextchar(self):
-        """
-                TODO
-
-        Traceback (most recent call last):
-          File "/Users/tdegeus/data/prog/src/texplain/tests/test_indent_long.py", line 2565, in test_isnextchar
-            ret = texplain.indent(text)
-                  ^^^^^^^^^^^^^^^^^^^^^
-          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 1169, in indent
-            text, placeholders_commands = text_to_placeholders(
-                                          ^^^^^^^^^^^^^^^^^^^^^
-          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 891, in text_to_placeholders
-            text, placeholders = _detail_text_to_placholders(text, ptype, base, placeholders_comments)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 713, in _detail_text_to_placholders
-            components = find_command(text, is_comment=is_comment)
-                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 337, in find_command
-            opts = _find_option(character, index, i_square_open, i_square_closing)
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 248, in _find_option
-            return _detail_find_option(character, index, braces, [])
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-          File "/Users/tdegeus/miniforge3/envs/test/lib/python3.11/site-packages/texplain/__init__.py", line 204, in _detail_find_option
-            if np.any(character[index : braces[0]]) and braces[0] - index > 1:
-                      ~~~~~~~~~^^^^^^^^^^^^^^^^^^^
-        TypeError: slice indices must be integers or None or have an __index__ method
-        """
-
-        text = r"""
+    text = r"""
 \parbox{
 \@ifnextchar[{\@assignmentwithcutoff}{\@assignmentnocutoff}
 }
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \parbox{
     \@ifnextchar[{\@assignmentwithcutoff}{\@assignmentnocutoff}
 }
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
 
-class TestNested(unittest.TestCase):
-    def test_nested(self):
-        text = r"""
+def test_latexindent_nested_nested():
+    text = r"""
 \renewcommand{\maketitle}{%
     \newpage
     \null
@@ -2614,9 +2693,9 @@ class TestNested(unittest.TestCase):
     \vskip 1.5em
     \thispagestyle{fancy}
 }
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \renewcommand{\maketitle}{%
     \newpage
     \null
@@ -2640,13 +2719,14 @@ class TestNested(unittest.TestCase):
     \vskip 1.5em
     \thispagestyle{fancy}
 }
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_command_option_only(self):
-        text = r"""
+
+def test_latexindent_nested_command_option_only():
+    text = r"""
 \documentclass{goose-article}
 
 \title{General \LaTeX trick: reference to dummy subfigure}
@@ -2683,9 +2763,9 @@ to the figure \cref{fig:1}, and to the subfigures \cref{fig:1a} and \cref{fig:1b
 \kant[1-7]
 
 \end{document}
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \documentclass{goose-article}
 
 \title{General \LaTeX trick: reference to dummy subfigure}
@@ -2721,37 +2801,35 @@ Here are the references: to the figure \cref{fig:1}, and to the subfigures \cref
 \kant[1-7]
 
 \end{document}
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
 
-class TestAlign(unittest.TestCase):
-    def test_align_long(self):
-        text = r"""
+def test_latexindent_align_long():
+    text = r"""
 \begin{tabular}{ccc}
 this is the first column with a long text following impeding alignment& and the second column with a long text following impeding alignment& and the third column with a long text following impeding alignment\\
 1 &2& 3\\
 40 & 50&60
 \end{tabular}
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \begin{tabular}{ccc}
     this is the first column with a long text following impeding alignment & and the second column with a long text following impeding alignment & and the third column with a long text following impeding alignment \\
     1 & 2 & 3 \\
     40 & 50 & 60
 \end{tabular}
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
 
-class TestVerbatim(unittest.TestCase):
-    def test_verbatim(self):
-        text = r"""
+def test_latexindent_verbatim():
+    text = r"""
 \begin{strategy}[H]
     \begin{oframed}
         \caption{Machine-readable names}
@@ -2764,9 +2842,9 @@ dimension=2/n=10_dt=0,1/datetime=2023-01-01,12:00:00.h5
 is a completely legal name, but you can also read it automatically and interpret it easily by splitting first on the underscore and the slash to separate variables, and then on the equals sign to separate the name from the value.
     \end{oframed}
 \end{strategy}
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \begin{strategy}[H]
     \begin{oframed}
         \caption{Machine-readable names}
@@ -2779,13 +2857,14 @@ dimension=2/n=10_dt=0,1/datetime=2023-01-01,12:00:00.h5
         is a completely legal name, but you can also read it automatically and interpret it easily by splitting first on the underscore and the slash to separate variables, and then on the equals sign to separate the name from the value.
     \end{oframed}
 \end{strategy}
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_verbatim_a(self):
-        text = r'''
+
+def test_latexindent_verbatim_a():
+    text = r'''
 \begin{example}[H]
     \begin{oframed}
         \caption{Self-explanatory vs documentation intensive}
@@ -2810,7 +2889,7 @@ def property_1(a, b):
 \end{example}
         '''
 
-        formatted = r'''
+    formatted = r'''
 \begin{example}[H]
     \begin{oframed}
         \caption{Self-explanatory vs documentation intensive}
@@ -2835,13 +2914,12 @@ def property_1(a, b):
 \end{example}
         '''
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
 
-class TestCode(unittest.TestCase):
-    def test_code(self):
-        text = r"""
+def test_latexindent_code():
+    text = r"""
 \if@namecite
     \RequirePackage{natbib}
     \let\oldbibliography\bibliography
@@ -2867,9 +2945,9 @@ class TestCode(unittest.TestCase):
         \fi
     }
 \fi
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \if@namecite
     \RequirePackage{natbib}
     \let\oldbibliography\bibliography
@@ -2899,13 +2977,14 @@ class TestCode(unittest.TestCase):
         \fi
     }
 \fi
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
-    def test_code_a(self):
-        text = r"""
+
+def test_latexindent_code_a():
+    text = r"""
 \if@narrow
     \RequirePackage[left=40mm, right=40mm, top=30mm, bottom=30mm]{geometry}
 \else
@@ -2919,9 +2998,9 @@ class TestCode(unittest.TestCase):
         \fi
     \fi
 \fi
-        """
+"""
 
-        formatted = r"""
+    formatted = r"""
 \if@narrow
     \RequirePackage[left=40mm, right=40mm, top=30mm, bottom=30mm]{geometry}
 \else
@@ -2935,11 +3014,7 @@ class TestCode(unittest.TestCase):
         \fi
     \fi
 \fi
-        """
+"""
 
-        ret = texplain.indent(text)
-        self.assertEqual(ret.strip(), formatted.strip())
-
-
-if __name__ == "__main__":
-    unittest.main()
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()

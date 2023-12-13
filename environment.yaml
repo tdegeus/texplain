@@ -4,6 +4,7 @@ dependencies:
 - click
 - furo
 - numpy
+- pytest
 - python
 - setuptools_scm
 - sphinx
