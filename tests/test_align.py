@@ -100,3 +100,59 @@ def test_tabular_align_empty_column():
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
+
+
+def test_tabular_overflow():
+    text = r"""
+\begin{tabular}{lll}
+    \toprule
+    Foo & Bar  & Baz   \\
+    \midrule
+    $a$ & $b = 1000$ & $e$  \\
+    $c'$ & $d = 2$ & $f'$ \\
+    this is a very long column with a lot of text, this is a very long column with a lot of text & this is a very long column with a lot of text, this is a very long column with a lot of text & short \\
+    \bottomrule
+\end{tabular}
+"""
+
+    formatted = r"""
+\begin{tabular}{lll}
+    \toprule
+    Foo & Bar & Baz \\
+    \midrule
+    $a$ & $b = 1000$ & $e$ \\
+    $c'$ & $d = 2$ & $f'$ \\
+    this is a very long column with a lot of text, this is a very long column with a lot of text & this is a very long column with a lot of text, this is a very long column with a lot of text & short \\
+    \bottomrule
+\end{tabular}
+"""
+
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
+
+
+def test_tabular_math():
+    text = r"""
+\begin{tabular}{lll}
+    \toprule
+    Foo & Bar  & Baz   \\
+    \midrule
+    $a$ & $b = 1000$ & $e$  \\
+    $c'$ & $d = 2$ & $f'$ \\
+    \bottomrule
+\end{tabular}
+"""
+
+    formatted = r"""
+\begin{tabular}{lll}
+    \toprule
+    Foo  & Bar        & Baz  \\
+    \midrule
+    $a$  & $b = 1000$ & $e$  \\
+    $c'$ & $d = 2$    & $f'$ \\
+    \bottomrule
+\end{tabular}
+"""
+
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()

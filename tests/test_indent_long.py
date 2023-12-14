@@ -3018,3 +3018,38 @@ def test_latexindent_code_a():
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
+
+
+def test_bug102():
+    text = r"""
+\begin{table}[htp]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        Prediction  & Exponent  & Value  \\
+        \midrule
+        $P(S) \sim S^{-\tau}$ & $\tau$ & $1.27$ \\
+        $S \sim \ell^{d + \zeta}$ & $\zeta$ & $0.753$ \\
+        $\ell_c \sim |f_c - f|^{-\nu}$ & $\nu$ & $1 / (2 - \zeta)$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+"""
+
+    formatted = r"""
+\begin{table}[htp]
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        Prediction                     & Exponent & Value             \\
+        \midrule
+        $P(S) \sim S^{-\tau}$          & $\tau$   & $1.27$            \\
+        $S \sim \ell^{d + \zeta}$      & $\zeta$  & $0.753$           \\
+        $\ell_c \sim |f_c - f|^{-\nu}$ & $\nu$    & $1 / (2 - \zeta)$ \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+"""
+
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()

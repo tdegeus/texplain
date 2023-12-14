@@ -1129,7 +1129,9 @@ def _lstrip_lines(text: str) -> str:
 
 
 # TODO: maxwidth should be a parameter that can be configured externally
-def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
+def _align(
+    text: str, placeholders: dict[list[Placeholder]] = {}, align: str = "<", maxwidth: int = 100
+) -> str:
     r"""
     Align ``&`` and ``\\`` of all lines that contain those alignment characters.
 
@@ -1138,6 +1140,7 @@ def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
         contains ``\end{...}``. As this function is internal there is no assertion on this.
 
     :param text: Text.
+    :param placeholders: Dictionary with placeholders in effect.
     :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
     :param maxwidth:
         Alignment is applied only if the linewidth after alignment is smaller than ``maxwidth``.
@@ -1145,7 +1148,7 @@ def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
 
     :return: Aligned text.
     """
-
+    lookup = {i.placeholder: i.to_text(i.placeholder) for i in placeholders.get("inline_math", [])}
     lines = [line.strip() for line in text.strip().splitlines()]
     width = []
 
@@ -1164,11 +1167,11 @@ def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
         # if line contains &: compute the width of each column
         if "&" in line:
             if len(width) == 0:
-                width = [len(col) for col in line]
+                width = [len(lookup.get(col, col)) for col in line]
             else:
-                width += [len(col) for col in line[len(width) :]]
+                width += [len(lookup.get(col, col)) for col in line[len(width) :]]
                 for j in range(len(line)):
-                    width[j] = max(width[j], len(line[j]))
+                    width[j] = max(width[j], len(lookup.get(line[j], line[j])))
 
     # all lines start with &: remove leading spaces
     if all([lines[i][0] == "" for i in range(1, len(lines) - 1)]):
@@ -1176,16 +1179,24 @@ def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
         for i in range(1, len(lines) - 1):
             lines[i] = lines[i][1:]
 
-    if sum(width) < maxwidth:
-        fmt = " ".join("{" + str(i) + ":" + align + str(w) + "}" for i, w in enumerate(width))
-    else:
-        fmt = " ".join("{" + str(i) + "}" for i in range(len(width)))
+    # lines too line: no alignment is done
+    if sum(width) > maxwidth:
+        for i in range(1, len(lines) - 1):
+            lines[i] = " ".join(lines[i])
+        return "\n".join(lines)
+
+    fmt = ["{:" + align + str(w) + "}" for w in width]
 
     for i in range(1, len(lines) - 1):
         if "&" in lines[i]:
-            lines[i] = fmt.format(*(lines[i] + [""] * (len(width) - len(lines[i])))).rstrip()
-        else:
-            lines[i] = " ".join(lines[i])
+            for j in range(len(lines[i])):
+                if lines[i][j] in lookup:
+                    w = width[j] - len(lookup[lines[i][j]]) + len(lines[i][j])
+                    lines[i][j] = ("{:" + align + str(w) + "}").format(lines[i][j])
+                else:
+                    lines[i][j] = fmt[j].format(lines[i][j])
+
+        lines[i] = " ".join(lines[i])
 
     return "\n".join(lines)
 
@@ -1504,7 +1515,7 @@ def indent(
     if rstrip:
         text = _rstrip_lines(text.strip())
 
-    # keep track of placeholders in place
+    # keep track of placeholders in effect
     placeholders = {}
 
     # apply custom formatting to blocks ``% \begin{texindent}`` and ``% \end{texindent}``
@@ -1553,7 +1564,7 @@ def indent(
     if alignment:
         text, placeholders["table"] = text_to_placeholders(text, [PlaceholderType.tabular])
         for placeholder in placeholders["table"]:
-            placeholder.content = _align(placeholder.content)
+            placeholder.content = _align(placeholder.content, placeholders)
         text = text_from_placeholders(text, placeholders.pop("table"))
 
     # apply one sentence per line
