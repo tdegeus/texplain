@@ -1140,7 +1140,11 @@ def _align(
         contains ``\end{...}``. As this function is internal there is no assertion on this.
 
     :param text: Text.
-    :param placeholders: Dictionary with placeholders in effect.
+    :param placeholders:
+        Dictionary with placeholders in effect.
+        The content of inline-math placeholders is used for alignment.
+        The alignment will be correct after placeholder replacement
+        (i.e. the output will look not-aligned as long as the placeholders are in effect).
     :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
     :param maxwidth:
         Alignment is applied only if the linewidth after alignment is smaller than ``maxwidth``.
@@ -1148,50 +1152,55 @@ def _align(
 
     :return: Aligned text.
     """
-    lookup = {i.placeholder: i.to_text(i.placeholder) for i in placeholders.get("inline_math", [])}
-    lines = [line.strip() for line in text.strip().splitlines()]
-    width = []
 
+    lines = [line.strip() for line in text.strip().splitlines()]
     if len(lines) <= 3:
         return "\n".join(lines)
 
+    # split at & and \\, and strip all spaces around
+    cols = 0
     for i in range(1, len(lines) - 1):
-        # split at & and \\, and strip all spaces around
         line = re.split(r"((?<!\\)&)", lines[i])
         line = line[:-1] + re.split(r"((?<!\\)\\\\)", line[-1])
         line = list(filter(None, [i.strip() for i in line]))
         if line[0] == "&":
             line = [""] + line
         lines[i] = line
+        cols = max(cols, len(line))
 
-        # if line contains &: compute the width of each column
+    # compute the true with of each column
+    # (i.e. the width of the content of placeholders, not the width of the placeholder itself)
+    lookup = {i.placeholder: len(i.content) for i in placeholders.get("inline_math", [])}
+    true_width = np.zeros((len(lines), cols), dtype=int)
+    current_width = np.zeros_like(true_width)
+    for i in range(1, len(lines) - 1):
+        line = lines[i]
         if "&" in line:
-            if len(width) == 0:
-                width = [len(lookup.get(col, col)) for col in line]
-            else:
-                width += [len(lookup.get(col, col)) for col in line[len(width) :]]
-                for j in range(len(line)):
-                    width[j] = max(width[j], len(lookup.get(line[j], line[j])))
+            current_width[i, :len(line)] = [len(col) for col in line]
+            true_width[i, :len(line)] = [lookup.get(col, len(col)) for col in line]
+    # width of each column after alignment
+    col_width = np.max(true_width, axis=0)
 
     # all lines start with &: remove leading spaces
     if all([lines[i][0] == "" for i in range(1, len(lines) - 1)]):
-        width = width[1:]
+        col_width = col_width[1:]
         for i in range(1, len(lines) - 1):
             lines[i] = lines[i][1:]
 
-    # lines too line: no alignment is done
-    if sum(width) > maxwidth:
+    # lines too long: no alignment is done
+    if sum(col_width) > maxwidth:
         for i in range(1, len(lines) - 1):
             lines[i] = " ".join(lines[i])
         return "\n".join(lines)
 
-    fmt = ["{:" + align + str(w) + "}" for w in width]
+    fmt = ["{:" + align + str(w) + "}" for w in col_width]
 
+    lookup = {i.placeholder: i.to_text(i.placeholder) for i in placeholders.get("inline_math", [])}
     for i in range(1, len(lines) - 1):
         if "&" in lines[i]:
             for j in range(len(lines[i])):
                 if lines[i][j] in lookup:
-                    w = width[j] - len(lookup[lines[i][j]]) + len(lines[i][j])
+                    w = col_width[j] - len(lookup[lines[i][j]]) + len(lines[i][j])
                     lines[i][j] = ("{:" + align + str(w) + "}").format(lines[i][j])
                 else:
                     lines[i][j] = fmt[j].format(lines[i][j])
