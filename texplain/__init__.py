@@ -1309,6 +1309,62 @@ def _placeholders_indent(placeholders: list[Placeholder]) -> list[Placeholder]:
     return placeholders
 
 
+def _detail_indent_custom(text, texindent, noindent) -> tuple[str, list[Placeholder]]:
+    """
+    Apply custom formatting to blocks return them as placeholders.
+
+    :param text: Text.
+    :param texindent: See :py:func:`indent`.
+    :param noindent: See :py:func:`indent`.
+    :return: ``(text, placeholders)`` where ``placeholders`` is a list of placeholders.
+    """
+
+    # apply custom formatting to blocks ``% \begin{texindent}`` and ``% \end{texindent}``
+    # implies recursive call to ``indent`` with custom options
+    if texindent:
+        text, placeholders_texindent = text_to_placeholders(text, [PlaceholderType.texindent_block])
+        placeholders_texindent = _placeholders_lrsquash(placeholders_texindent)
+        placeholders_texindent = _placeholders_indent(placeholders_texindent)
+    else:
+        placeholders_texindent = []
+
+    # "noindent" blocks are kept exactly as they are
+    if noindent:
+        text, placeholders_noindent = text_to_placeholders(
+            text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
+        )
+        placeholders_noindent = _placeholders_lrsquash(placeholders_noindent)
+    else:
+        placeholders_noindent = []
+    placeholders_noindent += placeholders_texindent
+
+    return text, placeholders_noindent + placeholders_texindent
+
+
+def _detail_indent_comments(text, lstrip) -> tuple[str, list[Placeholder]]:
+    """
+    Format comments.
+
+    :param text: Text.
+    :param lstrip: See :py:func:`indent`.
+    :return: ``(text, placeholders)`` where ``placeholders`` is a list of placeholders.
+    """
+    text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
+    text, placeholders_rcomment = text_to_placeholders(text, [PlaceholderType.inline_comment])
+
+    if lstrip:
+        # line comments: remove leading whitespace
+        for placeholder in placeholders_comment:
+            placeholder.space_front = re.sub(r"(\n*)(\ *)", r"\1", placeholder.space_front)
+            placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+
+        # inline comments: remove duplicate leading spaces
+        for placeholder in placeholders_rcomment:
+            placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
+
+    return text, placeholders_comment + placeholders_rcomment
+
+
 def indent(
     text: str,
     indentation: str = "    ",
@@ -1448,40 +1504,15 @@ def indent(
     if rstrip:
         text = _rstrip_lines(text.strip())
 
-    # custom formatting
-    if texindent:
-        text, placeholders_texindent = text_to_placeholders(text, [PlaceholderType.texindent_block])
-        placeholders_texindent = _placeholders_lrsquash(placeholders_texindent)
-        placeholders_texindent = _placeholders_indent(placeholders_texindent)
-    else:
-        placeholders_texindent = []
+    # keep track of placeholders in place
+    placeholders = {}
 
+    # apply custom formatting to blocks ``% \begin{texindent}`` and ``% \end{texindent}``
     # "noindent" blocks are kept exactly as they are
-    if noindent:
-        text, placeholders_noindent = text_to_placeholders(
-            text, [PlaceholderType.noindent_block, PlaceholderType.verbatim]
-        )
-        placeholders_noindent = _placeholders_lrsquash(placeholders_noindent)
-    else:
-        placeholders_noindent = []
-    placeholders_noindent += placeholders_texindent
+    text, placeholders["noindent"] = _detail_indent_custom(text, texindent, noindent)
 
-    # comments: exclude from formatting
-    text, placeholders_comment = text_to_placeholders(text, [PlaceholderType.comment])
-    text, placeholders_rcomment = text_to_placeholders(text, [PlaceholderType.inline_comment])
-
-    if lstrip:
-        # line comments: remove leading whitespace
-        for placeholder in placeholders_comment:
-            placeholder.space_front = re.sub(r"(\n*)(\ *)", r"\1", placeholder.space_front)
-            placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
-
-        # inline comments: remove duplicate leading spaces
-        for placeholder in placeholders_rcomment:
-            placeholder.space_front = re.sub(r"\ +", r" ", placeholder.space_front)
-
-    # all comments are equal for the remainder of the implementation
-    placeholders_comments = placeholders_comment + placeholders_rcomment
+    # comments: strip whitespaces but do no further formatting
+    text, placeholders["comments"] = _detail_indent_comments(text, lstrip)
 
     # remove multiple newlines, duplicate spaces, and any leading whitespace
     if lstrip:
@@ -1492,10 +1523,10 @@ def indent(
         text = re.sub(r"(\ +)", r" ", text)
 
     # fold inline math
-    text, placeholders_inline_math = text_to_placeholders(text, [PlaceholderType.inline_math])
+    text, placeholders["inline_math"] = text_to_placeholders(text, [PlaceholderType.inline_math])
     # inline math: always on one line
     if inlinemath:
-        for placeholder in placeholders_inline_math:
+        for placeholder in placeholders["inline_math"]:
             placeholder.content = placeholder.content.replace("\n", " ")
             placeholder.content = re.sub(r"(\ +)", r" ", placeholder.content)
             placeholder.space_front = None
@@ -1503,11 +1534,11 @@ def indent(
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
     if environment:
-        text, placeholders_let = text_to_placeholders(
+        text, placeholders["let"] = text_to_placeholders(
             text, [PlaceholderType.let_command, PlaceholderType.newif_command]
         )
-        text = _begin_end_one_separate_line(text, placeholders_comments)
-        text = text_from_placeholders(text, placeholders_let)
+        text = _begin_end_one_separate_line(text, placeholders["comments"])
+        text = text_from_placeholders(text, placeholders.pop("let"))
 
     # \\ ends on line
     if linebreak:
@@ -1520,38 +1551,39 @@ def indent(
 
     # format tables: align if possible
     if alignment:
-        text, placeholders_table = text_to_placeholders(text, [PlaceholderType.tabular])
-        for placeholder in placeholders_table:
+        text, placeholders["table"] = text_to_placeholders(text, [PlaceholderType.tabular])
+        for placeholder in placeholders["table"]:
             placeholder.content = _align(placeholder.content)
-        text = text_from_placeholders(text, placeholders_table)
+        text = text_from_placeholders(text, placeholders.pop("table"))
 
     # apply one sentence per line
     if sentence or argument:
         assert lstrip
         assert rstrip
 
-        text, placeholders_ignore = text_to_placeholders(
+        text, placeholders["ignore"] = text_to_placeholders(
             text, [PlaceholderType.math, PlaceholderType.tabular]
         )
-        text, placeholders_commands = text_to_placeholders(
-            text, [PlaceholderType.command_like], placeholders_comments=placeholders_comments
+        text, placeholders["commands"] = text_to_placeholders(
+            text, [PlaceholderType.command_like], placeholders_comments=placeholders["comments"]
         )
         if sentence:
             text = _one_sentence_per_line(text)
         if argument:
-            for pl in placeholders_commands:
-                pl.content = _format_command(pl.content, placeholders_comments, sentence)
-        text = text_from_placeholders(text, placeholders_ignore + placeholders_commands)
+            for pl in placeholders["commands"]:
+                pl.content = _format_command(pl.content, placeholders["comments"], sentence)
+        text = text_from_placeholders(
+            text, placeholders.pop("ignore") + placeholders.pop("commands")
+        )
 
     # place placeholders where they belong to do indentation
     # thereafter they should not be repositioned
     text = text_from_placeholders(
-        text, placeholders_noindent + placeholders_comments, keep_placeholders=True
+        text, placeholders["noindent"] + placeholders["comments"], keep_placeholders=True
     )
-    for placeholder in placeholders_comments + placeholders_inline_math:
+    for placeholder in placeholders["comments"] + placeholders["inline_math"]:
         placeholder.space_front = None
         placeholder.space_back = None
-    placeholders = placeholders_noindent + placeholders_comments + placeholders_inline_math
 
     if indentation:
         assert lstrip
@@ -1601,7 +1633,7 @@ def indent(
             indent_level[lineno[indices[i, 0]] + 1 : lineno[indices[i, 1]]] += 1
 
         # add indentation to all command options ``[`` and ``]`` containing at least one ``\n``
-        commands = find_command(text, is_comment=_is_placeholder(text, placeholders_comments))
+        commands = find_command(text, is_comment=_is_placeholder(text, placeholders["comments"]))
         indices = []
         for command in commands:
             if len(command) < 2:
@@ -1633,7 +1665,7 @@ def indent(
             text[i] = indent_level[i] * indentation + text[i]
         text = "\n".join(text)
 
-    text = text_from_placeholders(text, placeholders)
+    text = text_from_placeholders(text, sum(placeholders.values(), []))
     return _rstrip_lines(text)
 
 
