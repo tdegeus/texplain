@@ -1130,7 +1130,7 @@ def _lstrip_lines(text: str) -> str:
 
 # TODO: maxwidth should be a parameter that can be configured externally
 def _align(
-    text: str, placeholders: dict[list[Placeholder]] = {}, align: str = "<", maxwidth: int = 100
+    text: str, placeholders: dict[list[Placeholder]] = {}, maxwidth: int = 100
 ) -> str:
     r"""
     Align ``&`` and ``\\`` of all lines that contain those alignment characters.
@@ -1145,7 +1145,6 @@ def _align(
         The content of inline-math placeholders is used for alignment.
         The alignment will be correct after placeholder replacement
         (i.e. the output will look not-aligned as long as the placeholders are in effect).
-    :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
     :param maxwidth:
         Alignment is applied only if the linewidth after alignment is smaller than ``maxwidth``.
         Otherwise, spaces are added around ``&`` and before ``\\``.
@@ -1171,19 +1170,24 @@ def _align(
     # compute the true with of each column
     # (i.e. the width of the content of placeholders, not the width of the placeholder itself)
     lookup = {i.placeholder: len(i.content) for i in placeholders.get("inline_math", [])}
-    true_width = np.zeros((len(lines), cols), dtype=int)
-    current_width = np.zeros_like(true_width)
-    for i in range(1, len(lines) - 1):
-        line = lines[i]
+    true_width = np.zeros((len(lines) - 2, cols), dtype=int)
+    has_col = np.zeros(true_width.shape, dtype=bool)
+    to_align = np.zeros((len(lines) - 2), dtype=bool)
+    for i in range(len(lines) - 2):
+        line = lines[i + 1]
         if "&" in line:
-            current_width[i, :len(line)] = [len(col) for col in line]
+            to_align[i] = True
+            has_col[i, : len(line)] = True
             true_width[i, :len(line)] = [lookup.get(col, len(col)) for col in line]
+
     # width of each column after alignment
     col_width = np.max(true_width, axis=0)
 
     # all lines start with &: remove leading spaces
     if all([lines[i][0] == "" for i in range(1, len(lines) - 1)]):
         col_width = col_width[1:]
+        true_width = true_width[:, 1:]
+        has_col = has_col[:, 1:]
         for i in range(1, len(lines) - 1):
             lines[i] = lines[i][1:]
 
@@ -1193,19 +1197,14 @@ def _align(
             lines[i] = " ".join(lines[i])
         return "\n".join(lines)
 
-    fmt = ["{:" + align + str(w) + "}" for w in col_width]
-
-    lookup = {i.placeholder: i.to_text(i.placeholder) for i in placeholders.get("inline_math", [])}
-    for i in range(1, len(lines) - 1):
-        if "&" in lines[i]:
-            for j in range(len(lines[i])):
-                if lines[i][j] in lookup:
-                    w = col_width[j] - len(lookup[lines[i][j]]) + len(lines[i][j])
-                    lines[i][j] = ("{:" + align + str(w) + "}").format(lines[i][j])
-                else:
-                    lines[i][j] = fmt[j].format(lines[i][j])
-
-        lines[i] = " ".join(lines[i])
+    # align columns if needed
+    apply = np.logical_and(true_width < col_width, has_col)
+    for i in range(len(lines) - 2):
+        if to_align[i]:
+            for j in np.argwhere(apply[i]).flatten():
+                w = col_width[j] - true_width[i, j]
+                lines[i + 1][j] += " " * w
+        lines[i + 1] = " ".join(lines[i + 1])
 
     return "\n".join(lines)
 
