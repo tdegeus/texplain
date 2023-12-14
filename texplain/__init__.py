@@ -1129,9 +1129,7 @@ def _lstrip_lines(text: str) -> str:
 
 
 # TODO: maxwidth should be a parameter that can be configured externally
-def _align(
-    text: str, placeholders: dict[list[Placeholder]] = {}, maxwidth: int = 100
-) -> str:
+def _align(text: str, placeholders: dict[list[Placeholder]] = {}, maxwidth: int = 100) -> str:
     r"""
     Align ``&`` and ``\\`` of all lines that contain those alignment characters.
 
@@ -1178,7 +1176,7 @@ def _align(
         if "&" in line:
             to_align[i] = True
             has_col[i, : len(line)] = True
-            true_width[i, :len(line)] = [lookup.get(col, len(col)) for col in line]
+            true_width[i, : len(line)] = [lookup.get(col, len(col)) for col in line]
 
     # width of each column after alignment
     col_width = np.max(true_width, axis=0)
