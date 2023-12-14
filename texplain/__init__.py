@@ -1129,7 +1129,7 @@ def _lstrip_lines(text: str) -> str:
 
 
 # TODO: maxwidth should be a parameter that can be configured externally
-def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
+def _align(text: str, placeholders: dict[list[Placeholder]] = {}, maxwidth: int = 100) -> str:
     r"""
     Align ``&`` and ``\\`` of all lines that contain those alignment characters.
 
@@ -1138,7 +1138,11 @@ def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
         contains ``\end{...}``. As this function is internal there is no assertion on this.
 
     :param text: Text.
-    :param align: Alignment of columns (``"<"``, ``">"`` or ``"^"``).
+    :param placeholders:
+        Dictionary with placeholders in effect.
+        The content of inline-math placeholders is used for alignment.
+        The alignment will be correct after placeholder replacement
+        (i.e. the output will look not-aligned as long as the placeholders are in effect).
     :param maxwidth:
         Alignment is applied only if the linewidth after alignment is smaller than ``maxwidth``.
         Otherwise, spaces are added around ``&`` and before ``\\``.
@@ -1147,45 +1151,58 @@ def _align(text: str, align: str = "<", maxwidth: int = 100) -> str:
     """
 
     lines = [line.strip() for line in text.strip().splitlines()]
-    width = []
-
     if len(lines) <= 3:
         return "\n".join(lines)
 
+    # split at & and \\, and strip all spaces around
+    cols = 0
     for i in range(1, len(lines) - 1):
-        # split at & and \\, and strip all spaces around
         line = re.split(r"((?<!\\)&)", lines[i])
         line = line[:-1] + re.split(r"((?<!\\)\\\\)", line[-1])
         line = list(filter(None, [i.strip() for i in line]))
         if line[0] == "&":
             line = [""] + line
         lines[i] = line
+        cols = max(cols, len(line))
 
-        # if line contains &: compute the width of each column
+    # compute the true with of each column
+    # (i.e. the width of the content of placeholders, not the width of the placeholder itself)
+    lookup = {i.placeholder: len(i.content) for i in placeholders.get("inline_math", [])}
+    true_width = np.zeros((len(lines) - 2, cols), dtype=int)
+    has_col = np.zeros(true_width.shape, dtype=bool)
+    to_align = np.zeros((len(lines) - 2), dtype=bool)
+    for i in range(len(lines) - 2):
+        line = lines[i + 1]
         if "&" in line:
-            if len(width) == 0:
-                width = [len(col) for col in line]
-            else:
-                width += [len(col) for col in line[len(width) :]]
-                for j in range(len(line)):
-                    width[j] = max(width[j], len(line[j]))
+            to_align[i] = True
+            has_col[i, : len(line)] = True
+            true_width[i, : len(line)] = [lookup.get(col, len(col)) for col in line]
+
+    # width of each column after alignment
+    col_width = np.max(true_width, axis=0)
 
     # all lines start with &: remove leading spaces
     if all([lines[i][0] == "" for i in range(1, len(lines) - 1)]):
-        width = width[1:]
+        col_width = col_width[1:]
+        true_width = true_width[:, 1:]
+        has_col = has_col[:, 1:]
         for i in range(1, len(lines) - 1):
             lines[i] = lines[i][1:]
 
-    if sum(width) < maxwidth:
-        fmt = " ".join("{" + str(i) + ":" + align + str(w) + "}" for i, w in enumerate(width))
-    else:
-        fmt = " ".join("{" + str(i) + "}" for i in range(len(width)))
-
-    for i in range(1, len(lines) - 1):
-        if "&" in lines[i]:
-            lines[i] = fmt.format(*(lines[i] + [""] * (len(width) - len(lines[i])))).rstrip()
-        else:
+    # lines too long: no alignment is done
+    if sum(col_width) > maxwidth:
+        for i in range(1, len(lines) - 1):
             lines[i] = " ".join(lines[i])
+        return "\n".join(lines)
+
+    # align columns if needed
+    apply = np.logical_and(true_width < col_width, has_col)
+    for i in range(len(lines) - 2):
+        if to_align[i]:
+            for j in np.argwhere(apply[i]).flatten():
+                w = col_width[j] - true_width[i, j]
+                lines[i + 1][j] += " " * w
+        lines[i + 1] = " ".join(lines[i + 1])
 
     return "\n".join(lines)
 
@@ -1504,7 +1521,7 @@ def indent(
     if rstrip:
         text = _rstrip_lines(text.strip())
 
-    # keep track of placeholders in place
+    # keep track of placeholders in effect
     placeholders = {}
 
     # apply custom formatting to blocks ``% \begin{texindent}`` and ``% \end{texindent}``
@@ -1553,7 +1570,7 @@ def indent(
     if alignment:
         text, placeholders["table"] = text_to_placeholders(text, [PlaceholderType.tabular])
         for placeholder in placeholders["table"]:
-            placeholder.content = _align(placeholder.content)
+            placeholder.content = _align(placeholder.content, placeholders)
         text = text_from_placeholders(text, placeholders.pop("table"))
 
     # apply one sentence per line
