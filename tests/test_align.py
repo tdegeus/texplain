@@ -156,3 +156,30 @@ def test_tabular_math():
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
+
+
+def test_tabular_math_empty():
+    text = r"""
+\begin{tabular}{lll}
+    \toprule
+    Foo & Bar  & Baz   \\
+    \midrule
+    $a$ & & $e$  \\
+    $c'$ & $d = 2$ & $f'$ \\
+    \bottomrule
+\end{tabular}
+"""
+
+    formatted = r"""
+\begin{tabular}{lll}
+    \toprule
+    Foo  & Bar     & Baz  \\
+    \midrule
+    $a$  &         & $e$  \\
+    $c'$ & $d = 2$ & $f'$ \\
+    \bottomrule
+\end{tabular}
+"""
+
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()

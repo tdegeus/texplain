@@ -1160,10 +1160,18 @@ def _align(text: str, placeholders: dict[list[Placeholder]] = {}, maxwidth: int 
         line = re.split(r"((?<!\\)&)", lines[i])
         line = line[:-1] + re.split(r"((?<!\\)\\\\)", line[-1])
         line = list(filter(None, [i.strip() for i in line]))
-        if line[0] == "&":
-            line = [""] + line
-        lines[i] = line
-        cols = max(cols, len(line))
+        # ensure that there is always a string or empty string before "&""
+        icol = np.arange(len(line))
+        for j in np.argwhere(np.array(line) == "&").flatten():
+            if j == 0:
+                icol += 1
+            elif line[j - 1] == "&":
+                icol[j:] += 1
+        ret = ["" for _ in range(np.max(icol) + 1)]
+        for j in range(len(line)):
+            ret[icol[j]] = line[j]
+        lines[i] = ret
+        cols = max(cols, len(ret))
 
     # compute the true with of each column
     # (i.e. the width of the content of placeholders, not the width of the placeholder itself)
