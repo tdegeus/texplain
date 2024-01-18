@@ -1,3 +1,5 @@
+import pytest
+
 import texplain
 
 
@@ -75,6 +77,24 @@ baz
 
 def test_custom():
     text = r"""
+\begin{example}[H]
+    \begin{oframed}
+        \caption{Self-explanatory vs documentation intensive}
+        \label{misc:self-explenatory}
+    \end{oframed}
+\end{example}
+"""
+
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
+
+
+@pytest.mark.skip(reason="TODO: find solution")
+def test_custom_nested():
+    text = r"""
+\section{My section}
+
 \begin{example}[H]
     \begin{oframed}
         \caption{Self-explanatory vs documentation intensive}
