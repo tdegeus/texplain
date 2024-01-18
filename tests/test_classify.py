@@ -108,6 +108,49 @@ def test_custom_nested():
     assert str(tex).strip() == text.strip()
 
 
+def test_nested():
+    text = r"""
+\begin{appendices}
+
+    \section{My section}
+    \label{sec:mysec}
+
+    \begin{figure}[H]
+        \caption{Self-explanatory vs documentation intensive}
+        \label{fig:self-explenatory}
+    \end{figure}
+
+\end{appendices}
+"""
+
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
+
+
+@pytest.mark.skip(reason="TODO: find solution")
+def test_nested_custom():
+    text = r"""
+\begin{appendices}
+
+    \section{My section}
+    \label{sec:mysec}
+
+    \begin{example}[H]
+        \begin{oframed}
+            \caption{Self-explanatory vs documentation intensive}
+            \label{misc:self-explenatory}
+        \end{oframed}
+    \end{example}
+
+\end{appendices}
+"""
+
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
+
+
 def test_hybrid():
     text = r"""
 \begin{itemize}
