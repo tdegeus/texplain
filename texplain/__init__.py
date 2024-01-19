@@ -534,10 +534,11 @@ class GeneratePlaceholder:
 
     :param base: The base of the placeholder.
     :param name: The name of the placeholder.
+    :param start: The starting index of the placeholder.
     """
 
-    def __init__(self, base: str, name: str):
-        self.i = 0
+    def __init__(self, base: str, name: str, start: int = 0):
+        self.i = start
         self.base = base
         self.name = name
 
@@ -581,6 +582,7 @@ def _apply_placeholders(
     name: str,
     ptype: PlaceholderType,
     filter_nested: bool = True,
+    start: int = 0,
 ) -> tuple[str, list[Placeholder]]:
     """
     Replace text with placeholders.
@@ -591,6 +593,7 @@ def _apply_placeholders(
     :param name: The name of the placeholder, see :py:class:`GeneratePlaceholder`.
     :param ptype: The type of placeholder, see :py:class:`PlaceholderType`.
     :param filter_nested: If ``True``, nested placeholders are skipped.
+    :param start: The starting index of the placeholder.
     :return:
         ``(text, placeholders)`` where:
         - ``text`` is the text with the placeholders.
@@ -608,7 +611,7 @@ def _apply_placeholders(
     if filter_nested:
         indices = _filter_nested(indices)
 
-    gen = GeneratePlaceholder(base, name)
+    gen = GeneratePlaceholder(base, name, start)
     search_placeholder = gen.search_placeholder
     assert re.match(search_placeholder, text) is None
 
@@ -730,13 +733,14 @@ def _detail_text_to_placholders(
 
     if ptype == PlaceholderType.inline_math:
         ret = []
+        name = "inlinemath".upper()
         pattern = r"(?<!\\)(\$)"
         indices = []
         for i in re.finditer(pattern, text):
             indices.append(i.span()[0])
         indices = np.array(indices, dtype=int).reshape((-1, 2))
         indices[:, 1] += 1
-        text, placeholders = _apply_placeholders(text, indices, base, "inlinemath".upper(), ptype)
+        text, placeholders = _apply_placeholders(text, indices, base, name, ptype)
         for placeholder in placeholders:
             placeholder.space_front = None
             placeholder.space_back = None
@@ -745,7 +749,7 @@ def _detail_text_to_placholders(
         indices = find_matching(
             text, r"\\\(", r"\\\)", escape=False, closing_match=1, return_array=True
         )
-        text, placeholders = _apply_placeholders(text, indices, base, "inlinemath".upper(), ptype)
+        text, placeholders = _apply_placeholders(text, indices, base, name, ptype, start=len(ret))
         ret += placeholders
 
         indices = find_matching(
@@ -757,7 +761,7 @@ def _detail_text_to_placholders(
             closing_match=1,
             return_array=True,
         )
-        text, placeholders = _apply_placeholders(text, indices, base, "inlinemath".upper(), ptype)
+        text, placeholders = _apply_placeholders(text, indices, base, name, ptype, start=len(ret))
         ret += placeholders
 
         return text, ret
