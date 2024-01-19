@@ -1389,9 +1389,30 @@ def formatter_math(text: str) -> str:
     text = re.sub(r"([=\+\*\-\/\<\>])([\w\\])", r"\1 \2", text)
 
     # add spaces around arithmetic operators (\leq, \sim, ...)
-    for operator in [r"leq", r"geq", r"sim", r"simeq", r"approx", r"equiv", r"neq", r"rightarrow", r"leftarrow", r"uparrow", r"downarrow", r"leftrightarrow", r"updownarrow", r"leftrightarrows", r"updownarrows"]:
+    for operator in [
+        "leq",
+        "geq",
+        "sim",
+        "simeq",
+        "approx",
+        "equiv",
+        "neq",
+        "rightarrow",
+        "leftarrow",
+        "uparrow",
+        "downarrow",
+        "leftrightarrow",
+        "updownarrow",
+        "leftrightarrows",
+        "updownarrows",
+    ]:
         text = re.sub(r"([\w\(\)\{\}])(\\%s)(\s)(\s*)" % operator, r"\1 \2\3", text)
         text = re.sub(r"(\\%s)(\s)(\s*)([\w\\])" % operator, r"\1\2\4", text)
+
+    # add spaces around arithmetic operators (:=)
+    for operator in [":="]:
+        text = re.sub(r"([\w\(\)\{\}])(%s)(\s)(\s*)" % operator, r"\1 \2\3", text)
+        text = re.sub(r"(%s)(\s)(\s*)([\w\\])" % operator, r"\1\2\4", text)
 
     # remove spaces for signs
     text = re.sub(r"([\{\(])(\s*)([\\\+\-\<\>])(\s*)", r"\1\3", text)
