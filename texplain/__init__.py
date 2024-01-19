@@ -725,6 +725,9 @@ def _detail_text_to_placholders(
                     skip = True
                 if re.match(r"(?<!\\)(\\end{)", line):
                     skip = True
+                # existing placeholder
+                if re.match(r"(\-%s\-)(\w*\-)*(\d+\-)" % base, line):
+                    skip = True
                 n = len(line)
                 if not skip:
                     all_indices += [[starting, starting + n]]

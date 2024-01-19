@@ -181,12 +181,12 @@ which we verify in \cref{fig:2c}.
 For a slip event at interface $s$, we have $\Delta R_s > 0$ and $\Delta R_i = 0$ for $i \neq s$, inducing
 \begin{equation}
     \label{eq:delta_fi}
-    \Delta f_i = K\Delta R_s \,\, \mathrm{for} \,\, i \geq s ; \quad \Delta f_i=0 \,\, \mathrm{otherwise}.
+    \Delta f_i = K\Delta R_s \,\, \mathrm{for} \,\, i \geq s ; \quad \Delta f_i = 0 \,\, \mathrm{otherwise}.
 \end{equation}
 We can then deduce that
 \begin{equation}
     \label{eq:DR_DF_multi}
-    \Delta F = \frac{h K}{H} \Delta R_s \sum\limits_{i=s}^n i \, = \frac{h K}{H}\Delta R_s (n+s)(n-s+1) / 2.
+    \Delta F = \frac{h K}{H} \Delta R_s \sum\limits_{i = s}^n i \, = \frac{h K}{H}\Delta R_s (n + s)(n - s + 1) / 2.
 \end{equation}
 which we verify in \cref{fig:2c}.
 """
@@ -339,8 +339,40 @@ This is a sentence.
 \end{table}
 """
 
+    formatted = r"""
+The names (Smith, Doe, etc.) are inherited.
+
+Two items are used:
+\begin{itemize}
+    \item Item 1.
+    \item Item 2.
+\end{itemize}
+
+The energy is defined as
+\begin{equation}
+    E = m c^2
+\end{equation}
+where m is the mass.
+
+\begin{table}[htbp]
+    \caption{\label{tab1} Here is the legend.}
+    \begin{tabular}{cc}
+        1 & 1 \\
+    \end{tabular}
+\end{table}
+
+This is a sentence.
+
+\begin{table}[htbp]
+    \caption{\label{tab1} Here is the legend.}
+    \begin{tabular}{cc}
+        1 & 1 \\
+    \end{tabular}
+\end{table}
+"""
+
     ret = texplain.indent(text)
-    assert ret.strip() == text.strip()
+    assert ret.strip() == formatted.strip()
 
 
 def test_latexindent_one_sentence_per_line_more_code_blocks():
