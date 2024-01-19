@@ -1434,6 +1434,14 @@ def formatter_math(text: str) -> str:
 
 
 def _formatter_inline_math(text: str) -> str:
+    """
+    Apply :py:func:`formatter_math` to a string that includes inline math commands.
+    For example ``\(a+b\)`` applies ``"\(" + formatter_math("a+b") + "\)"``.
+
+    :param text: Math string, including inline math commands.
+    :return: Formatted math string, including inline math commands.
+    """
+
     if text[:2] == "$$" and text[-2:] == "$$":
         return "$$" + formatter_math(text[2:-2]) + "$$"
     if text[0] == "$" and text[-1] == "$":
