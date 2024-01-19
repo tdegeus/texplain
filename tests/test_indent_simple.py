@@ -1285,3 +1285,46 @@ Some text $a = b$ with $c = d$ some more text and \(e = f\) to \begin{math} g = 
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
+
+
+def test_format_math_equation():
+    text = r"""
+\begin{equation} a= b \end{equation}
+and
+\begin{equation}
+    c=d \label{eq:foo}
+\end{equation}
+and
+\begin{equation}
+    e=f
+    \label{eq:foo}
+\end{equation}
+and
+\begin{equation}
+    \label{eq:foo}
+    g=h
+\end{equation}
+"""
+
+    formatted = r"""
+\begin{equation}
+    a = b
+\end{equation}
+and
+\begin{equation}
+    c = d \label{eq:foo}
+\end{equation}
+and
+\begin{equation}
+    e = f
+    \label{eq:foo}
+\end{equation}
+and
+\begin{equation}
+    \label{eq:foo}
+    g = h
+\end{equation}
+"""
+
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
