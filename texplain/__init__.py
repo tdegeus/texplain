@@ -1418,18 +1418,18 @@ def formatter_math(text: str) -> str:
         "leftrightarrows",
         "updownarrows",
     ]:
-        text = re.sub(r"([\w\(\)\{\}])(\\%s)(\s)(\s*)" % operator, r"\1 \2\3", text)
-        text = re.sub(r"(\\%s)(\s)(\s*)([\w\\])" % operator, r"\1\2\4", text)
+        text = re.sub(r"([a-zA-Z0-9\(\)\{\}])(\\%s)(\s)(\s*)" % operator, r"\1 \2\3", text)
+        text = re.sub(r"(\\%s)(\s)(\s*)([a-zA-Z0-9\\])" % operator, r"\1\2\4", text)
 
     # add spaces around arithmetic operators (:=)
     for operator in [":="]:
-        text = re.sub(r"([\w\(\)\{\}])(%s)(\s)(\s*)" % operator, r"\1 \2\3", text)
-        text = re.sub(r"(%s)(\s)(\s*)([\w\\])" % operator, r"\1\2\4", text)
+        text = re.sub(r"([a-zA-Z0-9\(\)\{\}])(%s)(\s)(\s*)" % operator, r"\1 \2\3", text)
+        text = re.sub(r"(%s)(\s)(\s*)([a-zA-Z0-9\\])" % operator, r"\1\2\4", text)
 
     # remove spaces for signs
     text = re.sub(r"([\{\(])(\s*)([\\\+\-])(\s*)", r"\1\3", text)
     text = re.sub(r"^(\s*)([\+\-])(\s*)(.*)", r"\2\4", text)
-    text = re.sub(r"(\=)(\s*)([\+\-])(\s*)(\w)", r"\1 \3\5", text)
+    text = re.sub(r"(\=)(\s*)([\+\-])(\s*)([a-zA-Z0-9])", r"\1 \3\5", text)
 
     return text
 
