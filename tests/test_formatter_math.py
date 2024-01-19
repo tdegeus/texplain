@@ -10,6 +10,7 @@ def test_arithmetic():
     assert texplain.formatter_math(r"\theta>0") == r"\theta > 0"
     assert texplain.formatter_math(r"P(x)\sim x^\theta") == r"P(x) \sim x^\theta"
     assert texplain.formatter_math(r"a\simeq 0.2") == r"a \simeq 0.2"
+    assert texplain.formatter_math(r"\lambda_+") == r"\lambda_+"
 
 
 def test_comma():

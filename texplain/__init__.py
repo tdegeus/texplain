@@ -1397,8 +1397,8 @@ def formatter_math(text: str) -> str:
     text = text.strip()
 
     # add spaces around arithmetic operators (simple)
-    text = re.sub(r"([\w\(\)\{\}])([=\+\*\-\/\<\>])", r"\1 \2", text)
-    text = re.sub(r"([=\+\*\-\/\<\>])([\w\\])", r"\1 \2", text)
+    text = re.sub(r"([a-zA-Z0-9\(\)\{\}])([=\+\*\-\/\<\>])", r"\1 \2", text)
+    text = re.sub(r"([=\+\*\-\/\<\>])([a-zA-Z0-9\\])", r"\1 \2", text)
 
     # add spaces around arithmetic operators (\leq, \sim, ...)
     for operator in [
