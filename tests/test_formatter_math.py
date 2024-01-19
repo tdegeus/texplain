@@ -16,7 +16,10 @@ def test_comma():
     assert texplain.formatter_math(r"\tau, \nu, \ldots") == r"\tau, \nu, \ldots"
 
 
-def test_braces():
+def test_sign():
+    assert texplain.formatter_math(r" - b") == r"-b"
+    assert texplain.formatter_math(r"- b") == r"-b"
+    assert texplain.formatter_math(r"-b") == r"-b"
     assert texplain.formatter_math(r"{ - b}") == r"{-b}"
     assert texplain.formatter_math(r"{- b}") == r"{-b}"
     assert texplain.formatter_math(r"{-b}") == r"{-b}"
