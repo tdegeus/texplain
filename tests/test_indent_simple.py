@@ -1276,11 +1276,11 @@ some text
 
 def test_format_math_inline():
     text = r"""
-Some text $a = b$ with $c=d$ some more text and \(e=f\).
+Some text $a = b$ with $c=d$ some more text and \(e=f\) to \begin{math}g=h\end{math}.
 """
 
     formatted = r"""
-Some text $a = b$ with $c=d$ some more text and \(e=f\).
+Some text $a = b$ with $c = d$ some more text and \(e = f\) to \begin{math} g = h \end{math}.
 """
 
     ret = texplain.indent(text)

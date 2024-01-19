@@ -1374,6 +1374,34 @@ def _detail_indent_custom(text, texindent, noindent) -> tuple[str, list[Placehol
     return text, placeholders_noindent + placeholders_texindent
 
 
+def formatter_math(text: str) -> str:
+    """
+    Format a math string.
+
+    :param text: Math string. Assumed one line in math mode (without ``$``).
+    :return: Formatted math string.
+    """
+    assert len(text.splitlines()) == 1
+    text = text.strip()
+    text = re.sub(r"([\w\(\)\{\}])([=\+\*\-\/\<\>])", r"\1 \2", text)
+    text = re.sub(r"([=\+\*\-\/\<\>])([\w\\])", r"\1 \2", text)
+    text = re.sub(r"([\{\(])(\s*)([\\\+\-\<\>])(\s*)", r"\1\3", text)
+    return text
+
+
+def _formatter_inline_math(text: str) -> str:
+    if text[:2] == "$$" and text[-2:] == "$$":
+        return "$$" + formatter_math(text[2:-2]) + "$$"
+    if text[0] == "$" and text[-1] == "$":
+        return "$" + formatter_math(text[1:-1]) + "$"
+    if text[:2] == r"\(" and text[-2:] == r"\)":
+        return r"\(" + formatter_math(text[2:-2]) + r"\)"
+    if text[:12] == r"\begin{math}" and text[-10:] == r"\end{math}":
+        return r"\begin{math} " + formatter_math(text[12:-10]) + r" \end{math}"
+
+    return text
+
+
 def _detail_indent_comments(text, lstrip) -> tuple[str, list[Placeholder]]:
     """
     Format comments.
@@ -1415,6 +1443,7 @@ def indent(
     alignment: bool = True,
     texindent: bool = True,
     noindent: bool = True,
+    format_math: bool = True,
 ) -> str:
     r"""
     Indent text.
@@ -1523,6 +1552,11 @@ def indent(
 
         is not formatted.
 
+    format_math:
+        Format math.
+        Adds spaces around arithmetic, e.g. ``$a+b$`` is formatted to ``$a + b$``.
+        Removes spaces around signs, e.g. ``$a^{- b}$`` is formatted to ``$a^{-b}$``.
+
     :return: The indented text.
     """
 
@@ -1564,6 +1598,10 @@ def indent(
             placeholder.content = re.sub(r"(\ +)", r" ", placeholder.content)
             placeholder.space_front = None
             placeholder.space_back = None
+    # format inline math
+    if format_math:
+        for placeholder in placeholders["inline_math"]:
+            placeholder.content = _formatter_inline_math(placeholder.content)
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
     if environment:
