@@ -1554,8 +1554,8 @@ def indent(
 
     format_math:
         Format math.
-        Adds spaces around arithmetic, e.g. ``$a+b$`` is formatted to ``$a + b$``.
-        Removes spaces around signs, e.g. ``$a^{- b}$`` is formatted to ``$a^{-b}$``.
+        Adds spaces around arithmetic, e.g. ``a+b`` is formatted to ``a + b``.
+        Removes spaces around signs, e.g. ``a^{- b}`` is formatted to ``a^{-b}``.
 
     :return: The indented text.
     """
