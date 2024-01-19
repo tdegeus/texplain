@@ -1383,9 +1383,19 @@ def formatter_math(text: str) -> str:
     """
     assert len(text.splitlines()) == 1
     text = text.strip()
+
+    # add spaces around arithmetic operators (simple)
     text = re.sub(r"([\w\(\)\{\}])([=\+\*\-\/\<\>])", r"\1 \2", text)
     text = re.sub(r"([=\+\*\-\/\<\>])([\w\\])", r"\1 \2", text)
+
+    # add spaces around arithmetic operators (\leq, \sim, ...)
+    for operator in [r"leq", r"geq", r"sim", r"simeq", r"approx", r"equiv", r"neq"]:
+        text = re.sub(r"([\w\(\)\{\}])(\\%s)" % operator, r"\1 \2", text)
+        text = re.sub(r"(\\%s)([\w\\])" % operator, r"\1 \2", text)
+
+    # remove spaces for signs
     text = re.sub(r"([\{\(])(\s*)([\\\+\-\<\>])(\s*)", r"\1\3", text)
+
     return text
 
 
