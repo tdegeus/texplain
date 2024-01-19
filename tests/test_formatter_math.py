@@ -23,3 +23,4 @@ def test_sign():
     assert texplain.formatter_math(r"{ - b}") == r"{-b}"
     assert texplain.formatter_math(r"{- b}") == r"{-b}"
     assert texplain.formatter_math(r"{-b}") == r"{-b}"
+    assert texplain.formatter_math(r"a = -0.30") == r"a = -0.30"

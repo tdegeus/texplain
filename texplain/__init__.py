@@ -1429,6 +1429,7 @@ def formatter_math(text: str) -> str:
     # remove spaces for signs
     text = re.sub(r"([\{\(])(\s*)([\\\+\-])(\s*)", r"\1\3", text)
     text = re.sub(r"^(\s*)([\+\-])(\s*)(.*)", r"\2\4", text)
+    text = re.sub(r"([\+\-])(\s*)([0-9])", r"\1\3", text)
 
     return text
 
