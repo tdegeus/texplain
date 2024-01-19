@@ -1272,3 +1272,16 @@ some text
 
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
+
+
+def test_format_math_inline():
+    text = r"""
+Some text $a = b$ with $c=d$ some more text and \(e=f\).
+"""
+
+    formatted = r"""
+Some text $a = b$ with $c=d$ some more text and \(e=f\).
+"""
+
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
