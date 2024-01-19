@@ -1375,10 +1375,19 @@ def _detail_indent_custom(text, texindent, noindent) -> tuple[str, list[Placehol
 
 
 def formatter_math(text: str) -> str:
-    """
+    r"""
     Format a math string.
 
-    :param text: Math string. Assumed one line in math mode (without ``$``).
+    *   Add spaces around arithmetic, e.g.:
+
+        -   ``a+b`` becomes ``a + b``
+        -   ``a\leq b`` becomes ``a \leq b``
+
+    *   Remove spaces around signs, e.g.:
+
+        -   ``a^{- b}`` becomes ``a^{-b}``
+
+    :param text: Math string. Assumed one line in math mode (without e.g. ``$``).
     :return: Formatted math string.
     """
     assert len(text.splitlines()) == 1
@@ -1429,7 +1438,6 @@ def _formatter_inline_math(text: str) -> str:
         return r"\(" + formatter_math(text[2:-2]) + r"\)"
     if text[:12] == r"\begin{math}" and text[-10:] == r"\end{math}":
         return r"\begin{math} " + formatter_math(text[12:-10]) + r" \end{math}"
-
     return text
 
 
@@ -1583,11 +1591,7 @@ def indent(
 
         is not formatted.
 
-    format_math:
-        Format math.
-        Adds spaces around arithmetic, e.g. ``a+b`` is formatted to ``a + b``.
-        Removes spaces around signs, e.g. ``a^{- b}`` is formatted to ``a^{-b}``.
-
+    format_math: Format math, see :py:func:`formatter_math`.
     :return: The indented text.
     """
 
@@ -1645,6 +1649,13 @@ def indent(
     # \\ ends on line
     if linebreak:
         text = re.sub(r"(?<!\\)(\\\\)(\ *\n?)", r"\1\n", text)
+
+    # format display math
+    if format_math:
+        text, placeholders["math_line"] = text_to_placeholders(text, [PlaceholderType.math_line])
+        for placeholder in placeholders["math_line"]:
+            placeholder.content = formatter_math(placeholder.content)
+        text = text_from_placeholders(text, placeholders.pop("math_line"))
 
     # \item starts on a new line
     # (any white line before \item is preserved)
