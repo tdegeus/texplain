@@ -77,8 +77,7 @@ This a text \begin{math} a = b
 """
 
     formatted = r"""
-This a text \begin{math} a = b
-\end{math} with
+This a text \begin{math} a = b \end{math} with
 \begin{equation}
 a = b
 \end{equation}
