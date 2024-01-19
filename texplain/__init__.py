@@ -723,10 +723,9 @@ def _detail_text_to_placholders(
                 skip = False
                 if re.match(r"(?<!\\)(\\begin{)", line):
                     skip = True
-                if re.match(r"(?<!\\)(\\end{)", line):
+                elif re.match(r"(?<!\\)(\\end{)", line):
                     skip = True
-                # existing placeholder
-                if re.match(r"(\-%s\-)(\w*\-)*(\d+\-)" % base, line):
+                elif re.match(r"(\-%s\-)(\w*\-)*(\d+\-)" % base, line):  # existing placeholder
                     skip = True
                 n = len(line)
                 if not skip:
