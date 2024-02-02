@@ -1698,6 +1698,48 @@ def indent(
     return _rstrip_lines(text)
 
 
+def _argument_block_one_per_line(text: str) -> str:
+    r"""
+    Detect is text is a(n) (list of) arguments.
+    The text should not contain the argument itself:
+    ``\foo{a, b}`` is not allowed, but should be ``a, b``.
+
+    For example::
+
+        a=b, c=d, e=f
+
+    is formatted to::
+
+        a=b,
+        c=d,
+        e=f
+
+    Argument structure:
+
+        *   ``\w*\s*\=.*``: word followed by ``=`` and anything.
+        *   ``\w*``: word.
+
+    :param text: Text.
+    :return: Formatted text.
+    """
+    arguments = re.split(r"(?<!\\)(\,)", text)
+    arguments = [i.strip() for i in arguments]
+    arguments = list(filter(None, arguments))
+    closing_comma = arguments[-1] == ","
+    arguments = list(filter(lambda i: i != ",", arguments))
+
+    for arg in arguments:
+        if not (re.match(r"(^\w*\s*\=.*$)+", arg) or re.match(r"(^\w*$)", arg)):
+            return text
+
+    ret = ",\n".join(arguments)
+
+    if closing_comma:
+        ret += ","
+
+    return ret
+
+
 def _detail_one_sentence_per_line(text: str) -> str:
     """
     Split text into sentences.
@@ -1730,6 +1772,11 @@ def _one_sentence_per_line(
     :param text: Text.
     :param fold: List of placeholder types to fold before formatting (and restore after).
     :param base: Base name for placeholders.
+
+    :param command:
+        Check if the text are arguments of a command, and format one argument per line.
+        TODO: rename argument: ``command`` is not intuitive.
+
     :return: Formatted text.
     """
 
@@ -1772,9 +1819,7 @@ def _one_sentence_per_line(
         ret += _detail_one_sentence_per_line(text[start:])
 
     if command:
-        match = [i for i in re.finditer(r"(\w*\=.*\,\ )+", ret)]
-        if len(match) > 0:
-            ret = ",\n".join(ret.split(", "))
+        ret = _argument_block_one_per_line(ret)
 
     return text_from_placeholders(ret, placeholders)
 
