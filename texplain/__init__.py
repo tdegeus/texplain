@@ -2751,6 +2751,15 @@ def _texcleanup_parser():
         help="Fix non-LaTeX quotation marks: \"...\" -> ``...''",
     )
 
+    parser.add_argument(
+        "--re-sub",
+        nargs=2,
+        type=str,
+        action="append",
+        metavar=("pattern", "repl"),
+        help="Apply ``re.sub(pattern, repl, text)``.",
+    )
+
     parser.add_argument("-v", "--version", action="version", version=version)
     parser.add_argument("files", nargs="+", type=str, help="TeX file(s) (changed in-place).")
 
@@ -2797,6 +2806,9 @@ def texcleanup(args: list[str]):
 
         if args.fix_quotes:
             tex.fix_quotes()
+
+        for pattern, repl in args.re_sub:
+            tex.main = re.sub(pattern, repl, tex.main)
 
         if tex.changed():
             with open(file, "w") as file:
