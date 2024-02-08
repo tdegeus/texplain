@@ -1174,6 +1174,10 @@ def _align(text: str, placeholders: dict[list[Placeholder]] = {}, maxwidth: int 
         ret = ["" for _ in range(np.max(icol) + 1)]
         for j in range(len(line)):
             ret[icol[j]] = line[j]
+        # add empty column if the line ends with "& \\"
+        if len(ret) >= 2:
+            if ret[-2] == "&" and ret[-1] == r"\\":
+                ret.insert(-1, "")
         lines[i] = ret
         cols = max(cols, len(ret))
 
@@ -1204,7 +1208,7 @@ def _align(text: str, placeholders: dict[list[Placeholder]] = {}, maxwidth: int 
     # lines too long: no alignment is done
     if sum(col_width) > maxwidth:
         for i in range(1, len(lines) - 1):
-            lines[i] = " ".join(lines[i])
+            lines[i] = " ".join(filter(None, lines[i]))
         return "\n".join(lines)
 
     # align columns if needed

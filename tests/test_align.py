@@ -17,7 +17,6 @@ a & b & c \\
     40 & 50 & 60
 \end{tabular}
 """
-
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
 
@@ -34,7 +33,6 @@ def test_tabular_align_empty():
     \@author
 \end{tabular}
 """
-
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
 
@@ -55,7 +53,6 @@ def test_tabular_align_nested():
     \end{tabular}
 }
 """
-
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
 
@@ -76,7 +73,28 @@ def test_tabular_align_empty_leading_column():
     4 & 5   & 6
 \end{tabular}
 """
+    ret = texplain.indent(text)
+    assert ret.strip() == formatted.strip()
 
+
+def test_tabular_align_empty_trailing_column():
+    text = r"""
+\begin{tabular}[t]{ccc}
+& foo & foobar \\
+1 & 2 & \\
+4 & 5 & d \\
+& &
+\end{tabular}
+"""
+
+    formatted = r"""
+\begin{tabular}[t]{ccc}
+      & foo & foobar \\
+    1 & 2   &        \\
+    4 & 5   & d      \\
+      &     &
+\end{tabular}
+"""
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
 
@@ -97,7 +115,6 @@ def test_tabular_align_empty_column():
     & 5   & 6
 \end{tabular}
 """
-
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
 
@@ -109,7 +126,8 @@ def test_tabular_overflow():
     Foo & Bar  & Baz   \\
     \midrule
     $a$ & $b = 1000$ & $e$  \\
-    $c'$ & $d = 2$ & $f'$ \\
+    $c'$& $d = 2$ & $f'$ \\
+    a & & \\
     this is a very long column with a lot of text, this is a very long column with a lot of text & this is a very long column with a lot of text, this is a very long column with a lot of text & short \\
     \bottomrule
 \end{tabular}
@@ -122,11 +140,11 @@ def test_tabular_overflow():
     \midrule
     $a$ & $b = 1000$ & $e$ \\
     $c'$ & $d = 2$ & $f'$ \\
+    a & & \\
     this is a very long column with a lot of text, this is a very long column with a lot of text & this is a very long column with a lot of text, this is a very long column with a lot of text & short \\
     \bottomrule
 \end{tabular}
 """
-
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
 
@@ -153,7 +171,6 @@ def test_tabular_math():
     \bottomrule
 \end{tabular}
 """
-
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
 
@@ -180,6 +197,5 @@ def test_tabular_math_empty():
     \bottomrule
 \end{tabular}
 """
-
     ret = texplain.indent(text)
     assert ret.strip() == formatted.strip()
