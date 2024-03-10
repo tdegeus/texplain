@@ -1,5 +1,3 @@
-import pytest
-
 import texplain
 
 
@@ -90,7 +88,6 @@ def test_custom():
     assert str(tex).strip() == text.strip()
 
 
-@pytest.mark.skip(reason="TODO: find solution")
 def test_custom_nested():
     text = r"""
 \section{My section}
@@ -128,7 +125,6 @@ def test_nested():
     assert str(tex).strip() == text.strip()
 
 
-@pytest.mark.skip(reason="TODO: find solution")
 def test_nested_custom():
     text = r"""
 \begin{appendices}

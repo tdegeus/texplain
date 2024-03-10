@@ -6,6 +6,7 @@ import pathlib
 import re
 import sys
 import textwrap
+from collections import defaultdict
 from copy import deepcopy
 from shutil import copyfile
 
@@ -386,22 +387,23 @@ def remove_comments(text: str) -> str:
     return "\n".join(text)
 
 
-def environments(text: str) -> list[str]:
-    r"""
-    Return list with present environments.
-    This corresponds to the text between ``\begin{...}`` and ``\end{...}``.
-    """
-
+def _environments_impl(text: str, curly_braces: dict) -> list[str]:
     ret = []
-    curly_braces = find_matching(text, "{", "}", ignore_escaped=True)
-
     for i in re.finditer(r"\\begin{.*}", text):
         opening = i.span(0)[0] + 6
         closing = curly_braces[opening]
         i = opening + 1
         ret += [text[i:closing]]
-
     return list(set(ret))
+
+
+def environments(text: str) -> list[str]:
+    r"""
+    Return list with present environments.
+    This corresponds to the text between ``\begin{...}`` and ``\end{...}``.
+    """
+    braces = find_matching(text, "{", "}", ignore_escaped=True)
+    return _environments_impl(text=text, curly_braces=braces)
 
 
 class Placeholder:
@@ -1926,91 +1928,32 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
     starting = -1 * np.ones((len(text), len(categories)), dtype=int)
     braces = find_matching(text, "{", "}", ignore_escaped=True)
 
-    # "eq"
+    envs = defaultdict(list)
+    for env in _environments_impl(text=text, curly_braces=braces):
+        name = re.split(r"(\w*)(\*?)", env)[1]
+        if name in ["equation", "align", "eqnarray"]:
+            envs["eq"].append(env)
+        elif name in ["figure"]:
+            envs["fig"].append(env)
+        elif name in ["table"]:
+            envs["tab"].append(env)
+        elif name in ["itemize", "enumerate"]:
+            envs["tab"].append(env)
+        else:
+            envs["misc"].append(env)
 
-    r = categories.index("eq")
-
-    index = find_matching(
-        text,
-        r"\\begin\{equation\*?\}",
-        r"\\end\{equation\*?\}",
-        escape=False,
-        closing_match=1,
-    )
-    for i, j in index.items():
-        starting[i:j, r] = i
-
-    index = find_matching(
-        text,
-        r"\\begin\{align\*?\}",
-        r"\\end\{align\*?\}",
-        escape=False,
-        closing_match=1,
-    )
-    for i, j in index.items():
-        starting[i:j, r] = i
-
-    index = find_matching(
-        text,
-        r"\\begin\{eqnarray\*?\}",
-        r"\\end\{eqnarray\*?\}",
-        escape=False,
-        closing_match=1,
-    )
-    for i, j in index.items():
-        starting[i:j, r] = i
-
-    # "fig"
-
-    r = categories.index("fig")
-
-    index = find_matching(
-        text,
-        r"\\begin\{figure\*?\}",
-        r"\\end\{figure\*?\}",
-        escape=False,
-        closing_match=1,
-    )
-    for i, j in index.items():
-        starting[i:j, r] = i
-
-    # "tab"
-
-    r = categories.index("tab")
-
-    index = find_matching(
-        text,
-        r"\\begin\{table\*?\}",
-        r"\\end\{table\*?\}",
-        escape=False,
-        closing_match=1,
-    )
-    for i, j in index.items():
-        starting[i:j, r] = i
-
-    # "item"
-
-    r = categories.index("item")
-
-    index = find_matching(
-        text,
-        r"\\begin\{itemize\*?\}",
-        r"\\end\{itemize\*?\}",
-        escape=False,
-        closing_match=1,
-    )
-    for i, j in index.items():
-        starting[i:j, r] = i
-
-    index = find_matching(
-        text,
-        r"\\begin\{enumerate\*?\}",
-        r"\\end\{enumerate\*?\}",
-        escape=False,
-        closing_match=1,
-    )
-    for i, j in index.items():
-        starting[i:j, r] = i
+    for category, names in envs.items():
+        r = categories.index(category)
+        for name in names:
+            index = find_matching(
+                text,
+                r"\\begin\{" + re.escape(name) + r"\}",
+                r"\\end\{" + re.escape(name) + r"\}",
+                escape=False,
+                closing_match=1,
+            )
+            for i, j in index.items():
+                starting[i:j, r] = i
 
     # "note"
 
@@ -2021,21 +1964,24 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
         j = braces[match.span()[1] - 1]
         starting[i:j, r] = i
 
-    # "sec"
+    # "sec" / "ch"
 
-    r = categories.index("sec")
+    patterns = {
+        "sec": r"(\\)(sub)*(section\s*\{)",
+        "ch": r"(\\)(chapter\s*\{)",
+    }
 
-    for match in re.finditer(r"(\\)(sub)*(section\s*\{)", text):
-        i = match.span()[0]
-        starting[i:, r] = i
+    for category, pattern in patterns.items():
 
-    # "ch"
+        r = categories.index(category)
 
-    r = categories.index("ch")
-
-    for match in re.finditer(r"(\\)(chapter\s*\{)", text):
-        i = match.span()[0]
-        starting[i:, r] = i
+        for match in re.finditer(pattern, text):
+            i = match.span()[0]
+            j = braces[match.span()[1] - 1]
+            for label in re.finditer(r"(\\)(label\{)", text[j + 1 :]):
+                s = label.span()[1] + j + 1
+                e = braces[s - 1]
+                starting[i:e, r] = i
 
     return categories, np.argmax(starting, axis=1)
 
