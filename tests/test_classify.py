@@ -1,10 +1,10 @@
-import pytest
-
 import texplain
 
 
 def test_equation():
-    text = r"""
+    texts = []
+
+    t = r"""
 foo bar
 \begin{equation}
     \label{eq:foo}
@@ -12,24 +12,21 @@ foo bar
 \end{equation}
 baz
 """
+    texts.append(t)
 
-    tex = texplain.TeX(text)
-    tex.format_labels()
-    assert str(tex).strip() == text.strip()
-
-    # --
-
-    text = r"""
+    t = r"""
 My text
 \begin{equation}
     a = b
     \label{eq:qew}
 \end{equation}
 """
+    texts.append(t)
 
-    tex = texplain.TeX(text)
-    tex.format_labels()
-    assert str(tex).strip() == text.strip()
+    for text in texts:
+        tex = texplain.TeX(text)
+        tex.format_labels()
+        assert str(tex).strip() == text.strip()
 
 
 def test_section():
@@ -39,7 +36,6 @@ foo bar
 \label{sec:foo}
 baz
 """
-
     tex = texplain.TeX(text)
     tex.format_labels()
     assert str(tex).strip() == text.strip()
@@ -54,7 +50,6 @@ foo bar
 \end{figure}
 baz
 """
-
     tex = texplain.TeX(text)
     tex.format_labels()
     assert str(tex).strip() == text.strip()
@@ -69,14 +64,15 @@ foo bar
 \end{figure*}
 baz
 """
-
     tex = texplain.TeX(text)
     tex.format_labels()
     assert str(tex).strip() == text.strip()
 
 
 def test_custom():
-    text = r"""
+    texts = []
+
+    t0 = r"""
 \begin{example}[H]
     \begin{oframed}
         \caption{Self-explanatory vs documentation intensive}
@@ -84,32 +80,35 @@ def test_custom():
     \end{oframed}
 \end{example}
 """
+    texts.append(t0)
 
-    tex = texplain.TeX(text)
-    tex.format_labels()
-    assert str(tex).strip() == text.strip()
+    texts.append("\n\n".join([r"\section{My section}"]) + t0)
+    texts.append("\n\n".join([r"\section{My section}", r"\label{sec:mysec}"]) + t0)
 
-
-@pytest.mark.skip(reason="TODO: find solution")
-def test_custom_nested():
-    text = r"""
-\section{My section}
-
-\begin{example}[H]
-    \begin{oframed}
-        \caption{Self-explanatory vs documentation intensive}
-        \label{misc:self-explenatory}
-    \end{oframed}
-\end{example}
-"""
-
-    tex = texplain.TeX(text)
-    tex.format_labels()
-    assert str(tex).strip() == text.strip()
+    for text in texts:
+        tex = texplain.TeX(text)
+        tex.format_labels()
+        assert str(tex).strip() == text.strip()
 
 
 def test_nested():
-    text = r"""
+    texts = []
+
+    t = r"""
+\begin{appendices}
+
+    \section{My section}
+
+    \begin{figure}[H]
+        \caption{Self-explanatory vs documentation intensive}
+        \label{fig:self-explenatory}
+    \end{figure}
+
+\end{appendices}
+"""
+    texts.append(t)
+
+    t = r"""
 \begin{appendices}
 
     \section{My section}
@@ -122,15 +121,9 @@ def test_nested():
 
 \end{appendices}
 """
+    texts.append(t)
 
-    tex = texplain.TeX(text)
-    tex.format_labels()
-    assert str(tex).strip() == text.strip()
-
-
-@pytest.mark.skip(reason="TODO: find solution")
-def test_nested_custom():
-    text = r"""
+    t = r"""
 \begin{appendices}
 
     \section{My section}
@@ -145,14 +138,18 @@ def test_nested_custom():
 
 \end{appendices}
 """
+    texts.append(t)
 
-    tex = texplain.TeX(text)
-    tex.format_labels()
-    assert str(tex).strip() == text.strip()
+    for text in texts:
+        tex = texplain.TeX(text)
+        tex.format_labels()
+        assert str(tex).strip() == text.strip()
 
 
 def test_hybrid():
-    text = r"""
+    texts = []
+
+    t = r"""
 \begin{itemize}
     \item
     \begin{referee}
@@ -171,14 +168,9 @@ def test_hybrid():
     \end{figure}
 \end{itemize}
 """
+    texts.append(t)
 
-    tex = texplain.TeX(text)
-    tex.format_labels()
-    assert str(tex).strip() == text.strip()
-
-    # ---
-
-    text = r"""
+    t = r"""
 Foo bar
 
 \section{My section}
@@ -196,7 +188,9 @@ Foo bar
     \label{fig:1}
 \end{figure}
 """
+    texts.append(t)
 
-    tex = texplain.TeX(text)
-    tex.format_labels()
-    assert str(tex).strip() == text.strip()
+    for text in texts:
+        tex = texplain.TeX(text)
+        tex.format_labels()
+        assert str(tex).strip() == text.strip()
