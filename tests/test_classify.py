@@ -105,6 +105,24 @@ def test_custom_nested():
     assert str(tex).strip() == text.strip()
 
 
+def test_custom_nested2():
+    text = r"""
+\section{My section}
+\label{sec:mysec}
+
+\begin{example}[H]
+    \begin{oframed}
+        \caption{Self-explanatory vs documentation intensive}
+        \label{misc:self-explenatory}
+    \end{oframed}
+\end{example}
+"""
+
+    tex = texplain.TeX(text)
+    tex.format_labels()
+    assert str(tex).strip() == text.strip()
+
+
 def test_nested():
     text = r"""
 \begin{appendices}

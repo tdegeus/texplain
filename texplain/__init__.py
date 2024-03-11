@@ -1981,7 +1981,10 @@ def _classify_for_label(text: str) -> tuple[list[str], NDArray[np.int_]]:
             for label in re.finditer(r"(\\)(label\{)", text[j + 1 :]):
                 s = label.span()[1] + j + 1
                 e = braces[s - 1]
-                starting[i:e, r] = i
+                between = remove_comments(text[j + 1 : s - 7])
+                if len(between.strip()) == 0:
+                    starting[i:e, r] = i
+                break
 
     return categories, np.argmax(starting, axis=1)
 
