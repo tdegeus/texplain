@@ -28,7 +28,7 @@ repos:
   rev: 24.1.1
   hooks:
   - id: black
-    args: [--safe, --quiet, --line-length=100]
+    args: [--safe, --quiet, --line-length=100, --preview]
 - repo: https://github.com/PyCQA/autoflake
   rev: v2.2.1
   hooks:

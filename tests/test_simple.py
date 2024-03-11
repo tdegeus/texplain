@@ -453,31 +453,23 @@ def test_remove_command_d():
 def test_fix_quote():
     test = []
     test.append(['This is text "with quotes".', "This is text ``with quotes''."])
-    test.append(
-        [
-            'This is text "with quotes" but not matching".',
-            'This is text "with quotes" but not matching".',
-        ]
-    )
+    test.append([
+        'This is text "with quotes" but not matching".',
+        'This is text "with quotes" but not matching".',
+    ])
     test.append(["This is text 'with quotes'.", "This is text `with quotes'."])
-    test.append(
-        [
-            "This is text 'with quotes' but not matching'.",
-            "This is text 'with quotes' but not matching'.",
-        ]
-    )
-    test.append(
-        [
-            'A text "with one quote", and "another one".',
-            "A text ``with one quote'', and ``another one''.",
-        ]
-    )
-    test.append(
-        [
-            'A text "with one quote", and "another one"',
-            "A text ``with one quote'', and ``another one''",
-        ]
-    )
+    test.append([
+        "This is text 'with quotes' but not matching'.",
+        "This is text 'with quotes' but not matching'.",
+    ])
+    test.append([
+        'A text "with one quote", and "another one".',
+        "A text ``with one quote'', and ``another one''.",
+    ])
+    test.append([
+        'A text "with one quote", and "another one"',
+        "A text ``with one quote'', and ``another one''",
+    ])
     test.append(['Foo bar "bar foo"', "Foo bar ``bar foo''"])
 
     for source, expect in test:
