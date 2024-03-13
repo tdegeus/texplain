@@ -1,0 +1,30 @@
+import texplain
+
+
+def test_arithmetic():
+    assert texplain.formatter_math(r"i-1") == r"i - 1"
+    assert texplain.formatter_math(r"a=b") == r"a = b"
+    assert texplain.formatter_math(r"a:=b") == r"a := b"
+    assert texplain.formatter_math(r"a-b") == r"a - b"
+    assert texplain.formatter_math(r"a\leq b") == r"a \leq b"
+    assert texplain.formatter_math(r"\theta>0") == r"\theta > 0"
+    assert texplain.formatter_math(r"P(x)\sim x^\theta") == r"P(x) \sim x^\theta"
+    assert texplain.formatter_math(r"a\simeq 0.2") == r"a \simeq 0.2"
+    assert texplain.formatter_math(r"\lambda_+") == r"\lambda_+"
+
+
+def test_comma():
+    assert texplain.formatter_math(r"1,2") == r"1,2"
+    assert texplain.formatter_math(r"\tau, \nu, \ldots") == r"\tau, \nu, \ldots"
+
+
+def test_sign():
+    assert texplain.formatter_math(r" - b") == r"-b"
+    assert texplain.formatter_math(r"- b") == r"-b"
+    assert texplain.formatter_math(r"-b") == r"-b"
+    assert texplain.formatter_math(r"{ - b}") == r"{-b}"
+    assert texplain.formatter_math(r"{- b}") == r"{-b}"
+    assert texplain.formatter_math(r"{-b}") == r"{-b}"
+    assert texplain.formatter_math(r"\gamma=-0.30") == r"\gamma = -0.30"
+    assert texplain.formatter_math(r"a = - 0.30") == r"a = -0.30"
+    assert texplain.formatter_math(r"r_0 = -w / 2") == r"r_0 = -w / 2"

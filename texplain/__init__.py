@@ -725,7 +725,9 @@ def _detail_text_to_placholders(
                 skip = False
                 if re.match(r"(?<!\\)(\\begin{)", line):
                     skip = True
-                if re.match(r"(?<!\\)(\\end{)", line):
+                elif re.match(r"(?<!\\)(\\end{)", line):
+                    skip = True
+                elif re.match(r"(\-%s\-)(\w*\-)*(\d+\-)" % base, line):  # existing placeholder
                     skip = True
                 n = len(line)
                 if not skip:
@@ -1376,6 +1378,83 @@ def _detail_indent_custom(text, texindent, noindent) -> tuple[str, list[Placehol
     return text, placeholders_noindent + placeholders_texindent
 
 
+def formatter_math(text: str) -> str:
+    r"""
+    Format a math string.
+
+    *   Add spaces around arithmetic, e.g.:
+
+        -   ``a+b`` becomes ``a + b``
+        -   ``a\leq b`` becomes ``a \leq b``
+
+    *   Remove spaces around signs, e.g.:
+
+        -   ``a^{- b}`` becomes ``a^{-b}``
+
+    :param text: Math string. Assumed one line in math mode (without e.g. ``$``).
+    :return: Formatted math string.
+    """
+    assert len(text.splitlines()) == 1
+    text = text.strip()
+
+    # add spaces around arithmetic operators (simple)
+    text = re.sub(r"([a-zA-Z0-9\(\)\{\}])([=\+\*\-\/\<\>])", r"\1 \2", text)
+    text = re.sub(r"([=\+\*\-\/\<\>])([a-zA-Z0-9\\])", r"\1 \2", text)
+
+    # add spaces around arithmetic operators (\leq, \sim, ...)
+    for operator in [
+        "leq",
+        "geq",
+        "sim",
+        "simeq",
+        "approx",
+        "equiv",
+        "neq",
+        "rightarrow",
+        "leftarrow",
+        "uparrow",
+        "downarrow",
+        "leftrightarrow",
+        "updownarrow",
+        "leftrightarrows",
+        "updownarrows",
+    ]:
+        text = re.sub(r"([a-zA-Z0-9\(\)\{\}])(\\%s)(\s)(\s*)" % operator, r"\1 \2\3", text)
+        text = re.sub(r"(\\%s)(\s)(\s*)([a-zA-Z0-9\\])" % operator, r"\1\2\4", text)
+
+    # add spaces around arithmetic operators (:=)
+    for operator in [":="]:
+        text = re.sub(r"([a-zA-Z0-9\(\)\{\}])(%s)(\s)(\s*)" % operator, r"\1 \2\3", text)
+        text = re.sub(r"(%s)(\s)(\s*)([a-zA-Z0-9\\])" % operator, r"\1\2\4", text)
+
+    # remove spaces for signs
+    text = re.sub(r"([\{\(])(\s*)([\\\+\-])(\s*)", r"\1\3", text)
+    text = re.sub(r"^(\s*)([\+\-])(\s*)(.*)", r"\2\4", text)
+    text = re.sub(r"(\=)(\s*)([\+\-])(\s*)([a-zA-Z0-9])", r"\1 \3\5", text)
+
+    return text
+
+
+def _formatter_inline_math(text: str) -> str:
+    r"""
+    Apply :py:func:`formatter_math` to a string that includes inline math commands.
+    For example ``\(a+b\)`` applies ``"\(" + formatter_math("a+b") + "\)"``.
+
+    :param text: Math string, including inline math commands.
+    :return: Formatted math string, including inline math commands.
+    """
+
+    if text[:2] == "$$" and text[-2:] == "$$":
+        return "$$" + formatter_math(text[2:-2]) + "$$"
+    if text[0] == "$" and text[-1] == "$":
+        return "$" + formatter_math(text[1:-1]) + "$"
+    if text[:2] == r"\(" and text[-2:] == r"\)":
+        return r"\(" + formatter_math(text[2:-2]) + r"\)"
+    if text[:12] == r"\begin{math}" and text[-10:] == r"\end{math}":
+        return r"\begin{math} " + formatter_math(text[12:-10]) + r" \end{math}"
+    return text
+
+
 def _detail_indent_comments(text, lstrip) -> tuple[str, list[Placeholder]]:
     """
     Format comments.
@@ -1417,6 +1496,7 @@ def indent(
     alignment: bool = True,
     texindent: bool = True,
     noindent: bool = True,
+    format_math: bool = True,
 ) -> str:
     r"""
     Indent text.
@@ -1525,6 +1605,7 @@ def indent(
 
         is not formatted.
 
+    format_math: Format math, see :py:func:`formatter_math`.
     :return: The indented text.
     """
 
@@ -1566,6 +1647,10 @@ def indent(
             placeholder.content = re.sub(r"(\ +)", r" ", placeholder.content)
             placeholder.space_front = None
             placeholder.space_back = None
+    # format inline math
+    if format_math:
+        for placeholder in placeholders["inline_math"]:
+            placeholder.content = _formatter_inline_math(placeholder.content)
 
     # put ``\begin{...}``/ ``\end{...}`` and ``\[`` / ``\]`` on a newline
     if environment:
@@ -1578,6 +1663,13 @@ def indent(
     # \\ ends on line
     if linebreak:
         text = re.sub(r"(?<!\\)(\\\\)(\ *\n?)", r"\1\n", text)
+
+    # format display math
+    if format_math:
+        text, placeholders["math_line"] = text_to_placeholders(text, [PlaceholderType.math_line])
+        for placeholder in placeholders["math_line"]:
+            placeholder.content = formatter_math(placeholder.content)
+        text = text_from_placeholders(text, placeholders.pop("math_line"))
 
     # \item starts on a new line
     # (any white line before \item is preserved)
