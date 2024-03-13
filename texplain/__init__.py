@@ -1001,6 +1001,8 @@ def text_to_placeholders(
             {...}
             \foo[...]{...}
             {\foo[...]{...}}
+            \\
+            \\[...]
 
         is replaced with
 
@@ -1478,7 +1480,9 @@ def indent(
             -   A period, question mark, or exclamation mark.
             -   ``\begin{...}`` or ``\end{...}``.
             -   Two white lines.
-            -   ``\\``
+            -   ``\\``, ``\\*``, ``\\[...]``, or ``\\*[...]``.
+            -   ``\linebreak`` or ``\linebreak[...]``.
+            -   ``\newline``.
             -   The end of an argument (``}`` or ``]``), see below.
             -   A command on the next line.
 
@@ -1791,12 +1795,15 @@ def _one_sentence_per_line(
     # format in blocks separated by blocks between ``(start, end)`` in ``skip``
     skip = []
 
+    #TODO: may be irrelevant as already converted to placeholders
     # \begin{...}
     skip += [i.span() for i in re.finditer(r"(?<!\\)(\\)(begin\{\w*\}\s*)", text)]
 
+    #TODO: may be irrelevant as already converted to placeholders
     # \end{...}
     skip += [i.span() for i in re.finditer(r"(?<!\\)(\\)(end\{\w*\}\s*)", text)]
 
+    #TODO: convert to placeholders?
     # \\
     skip += [i.span() for i in re.finditer(r"(\\\\)", text)]
 
